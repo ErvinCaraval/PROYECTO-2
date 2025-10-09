@@ -1,6 +1,6 @@
 const { db } = require('../firebase');
 
-// List all public games with 'waiting' status
+// List all public games with 'waiting' statu
 exports.listPublicGames = async (req, res) => {
   try {
     const snapshot = await db.collection('games')
