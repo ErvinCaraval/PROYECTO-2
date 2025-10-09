@@ -39,5 +39,5 @@ jobs:
     name: Run Frontend-v2 Workflow
     needs: detect-changes
     if: needs.detect-changes.outputs.frontend_changed == 'true'
-    uses: ./.github/workflows/frontend-ci.yml
+    uses: ./.github/workflows/ci-cd.yml
     secrets: inherit
