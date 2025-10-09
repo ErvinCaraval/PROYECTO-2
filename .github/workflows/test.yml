@@ -11,13 +11,11 @@ permissions:
   security-events: write
 
 jobs:
-  test-matrix:
+  test-and-deploy: # El nombre del job se simplifica, ya que no hay matriz
     name: Test & Deploy Backend-v1
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [20, 22] # Versiones estables de Node
+    # El bloque 'strategy: matrix' se elimina por completo
 
     env:
       COVERAGE_THRESHOLD: 95
@@ -31,14 +29,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js 20 # Se especifica la versión directamente
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: '20' # Se usa un valor fijo en lugar de la variable de la matriz
           cache: 'npm'
-          cache-dependency-path: backend-v1/package-lock.json # <-- ¡Añade esta línea!
+          cache-dependency-path: backend-v1/package-lock.json
 
-      
       - name: Install dependencies
         run: |
           npm ci
@@ -47,15 +44,12 @@ jobs:
       - name: Run unit tests
         run: npm run test:unit -- --coverage --coverageReporters=json --coverageReporters=html
 
-      
       - name: Run integration tests
         run: npm run test:integration
 
-      
       - name: Run coverage tests
         run: npm run test:coverage
 
-     
       - name: Dependency Security Audit
         if: github.event_name == 'pull_request'
         run: |
@@ -73,7 +67,6 @@ jobs:
             fi
           fi
 
-      
       - name: Initialize CodeQL
         if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
         uses: github/codeql-action/init@v3
@@ -84,11 +77,11 @@ jobs:
         if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
         uses: github/codeql-action/analyze@v3
 
-      
       - name: Upload coverage reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
+          # El nombre del artefacto ya no necesita ser único
           name: backend-coverage-reports
           path: backend-v1/tests/reports/
 
@@ -96,16 +89,15 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
+          # El nombre del artefacto ya no necesita ser único
           name: backend-test-logs
           path: backend-v1/tests/logs/
 
-      
       - name: Cleanup old artifacts
         run: |
           find backend-v1/tests/logs/ -type f -mtime +14 -delete || true
           find backend-v1/tests/reports/ -type f -mtime +14 -delete || true
 
-      
       - name: Deploy to Render
         if: success() && github.ref == 'refs/heads/main'
         env:
@@ -117,3 +109,4 @@ jobs:
           else
             echo "⚠️ RENDER_DEPLOY_HOOK secret not found, skipping deployment."
           fi
+

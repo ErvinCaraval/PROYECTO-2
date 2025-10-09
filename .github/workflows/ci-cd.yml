@@ -54,8 +54,7 @@ jobs:
         run: |
           node -e "(async()=>{const { chromium }=require('playwright'); const p=chromium.executablePath(); if(p){console.log(p)} else {console.error('no-chrome'); process.exit(1)} })()" > ../chrome-path.txt
           if [ -s ../chrome-path.txt ]; then echo "CHROME_PATH=$(cat ../chrome-path.txt)" >> $GITHUB_ENV; fi
-        # Este comando necesita ejecutarse en la raíz para escribir correctamente en GITHUB_ENV
-        working-directory: .
+        # Se elimina 'working-directory: .' para que se ejecute en el directorio por defecto 'frontend-v2'
 
       - name: Run Lighthouse (LHCI)
         env:
@@ -63,6 +62,7 @@ jobs:
         run: |
           npm install -g @lhci/cli@0.8 || true
           echo "Using CHROME_PATH=$CHROME_PATH"
+          # LHCI necesita buscar el directorio 'dist' que está dentro de 'frontend-v2'
           npx http-server ./dist -p 8080 --silent &
           npx -y @lhci/cli@0.8 autorun --collect.url=http://localhost:8080 --upload.target=temporary-public-storage || (echo "LHCI failed - printing environment" && env)
 
