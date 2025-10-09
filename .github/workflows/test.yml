@@ -99,14 +99,7 @@ jobs:
           find backend-v1/tests/reports/ -type f -mtime +14 -delete || true
 
       - name: Deploy to Render
-        if: success() && github.ref == 'refs/heads/main'
-        env:
-          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        if: success()
         run: |
-          if [ -n "$RENDER_DEPLOY_HOOK" ]; then
-            echo "🚀 Deploying backend-v1 to Render..."
-            curl -X POST "$RENDER_DEPLOY_HOOK"
-          else
-            echo "⚠️ RENDER_DEPLOY_HOOK secret not found, skipping deployment."
-          fi
+          curl -X POST "https://api.render.com/deploy/srv-d3a8d0gdl3ps73ejnqm0?key=NTPVmXWOAVU"
 
