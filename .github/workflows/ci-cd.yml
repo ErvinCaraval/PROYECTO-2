@@ -1,21 +1,19 @@
-name: CI-CD - Tests & Deploy
+name: Frontend - CI/CD
 
 on:
   workflow_call:
     secrets: inherit
 
 concurrency:
-  group: ci-cd-${{ github.ref }}
+  group: frontend-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,10 +35,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Unit tests
+      - name: Run unit tests
         run: npm run test:unit
 
-      - name: Build
+      - name: Build project
         run: npm run build
 
       - name: Install Playwright browsers
@@ -63,10 +61,10 @@ jobs:
       - name: Run Playwright E2E tests
         run: npm run test:e2e
 
-      - name: Visual tests
+      - name: Run visual tests
         run: npm run test:visual
 
-      - name: Accessibility (a11y) tests
+      - name: Run accessibility (a11y) tests
         run: npm run test:a11y
 
       - name: Upload Playwright report
@@ -83,7 +81,7 @@ jobs:
           name: eslint-report
           path: reports/eslint.json
 
-      - name: Auto-push generated changes (optional)
+      - name: Auto-push generated changes
         if: success()
         run: |
           if [ "${{ secrets.ALLOW_AUTO_PUSH }}" = "true" ]; then
@@ -96,13 +94,12 @@ jobs:
             echo "Auto-push disabled. Set secret ALLOW_AUTO_PUSH=true to enable."
           fi
 
-      - name: Deploy to Vercel (via CLI)
+      - name: Deploy to Vercel
         if: success()
         run: |
           if [ -n "${{ secrets.VERCEL_TOKEN }}" ]; then
             npm i -g vercel
             npx vercel --prod --confirm --token "${{ secrets.VERCEL_TOKEN }}"
           else
-            echo "VERCEL_TOKEN not set - skipping Vercel deploy"
+            echo "VERCEL_TOKEN not set - skipping deploy"
           fi
-
