@@ -1,6 +1,6 @@
 # BrainBlitz - Plan de Implementación de Funcionalidades de Accesibilidad
 
-## 📋 Resumen del Proyecto..
+## 📋 Resumen del Proyecto...
 
 Este documento describe el plan de implementación para agregar funcionalidades integrales de accesibilidad a BrainBlitz, un juego de trivia multijugador. El proyecto involucra 5 desarrolladores: 1 Desarrollador Backend y 4 Desarrolladores Frontend.
 
