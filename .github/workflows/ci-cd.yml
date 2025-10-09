@@ -2,7 +2,7 @@ name: Frontend - CI/CD
 
 on:
   workflow_call:
-    secrets: inherit
+ 
 
 concurrency:
   group: frontend-ci-${{ github.ref }}
