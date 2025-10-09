@@ -244,6 +244,136 @@ Implementar funcionalidades de accesibilidad para permitir que usuarios con disc
 - Funciona tanto con preguntas manuales como generadas por IA
 - Probado con grupos mixtos (usuarios con y sin modo de voz)
 
+### US9: Reconocimiento de Respuestas por Voz
+
+**C (Contexto)**: Los usuarios en modo de voz necesitan responder a las preguntas del juego mediante comandos de voz en lugar de hacer clic en las opciones.
+
+**O (Objetivo)**: Permitir que los usuarios respondan a las preguntas del juego usando reconocimiento de voz para una experiencia completamente hands-free.
+
+**N (Necesidad)**: Habilitar participación completa de usuarios con discapacidades visuales que no pueden ver las opciones de respuesta en pantalla.
+
+**E (Entidad)**: Sistema de reconocimiento de voz, respuestas de usuario, y validación de respuestas.
+
+**S (Soporte)**: Implementación frontend con Web Speech API para reconocimiento de voz, backend para procesamiento y validación de respuestas habladas, integración con el sistema de juego existente.
+
+**S (Suposición)**: El navegador soporta Web Speech API, los usuarios pueden hablar claramente, el sistema puede distinguir entre opciones de respuesta.
+
+**A (Criterios de Aceptación)**:
+- Los usuarios pueden responder diciendo "A", "B", "C", "D" o "primera opción", "segunda opción", etc.
+- El sistema reconoce correctamente las respuestas de voz con al menos 90% de precisión
+- Se proporciona feedback visual y auditivo cuando el sistema está escuchando
+- El sistema confirma la respuesta reconocida antes de enviarla
+- Los usuarios pueden repetir su respuesta si no fue reconocida correctamente
+- El reconocimiento de voz funciona en tiempo real sin afectar el tiempo del juego
+- Se registra el uso del reconocimiento de voz en el historial de interacciones
+- Funciona en navegadores Chrome, Edge y Firefox
+- Probado con diferentes acentos y niveles de ruido de fondo
+- Integración completa con el sistema de puntuación y ranking existente
+
+### 🔧 **Detalles Técnicos de Implementación - US9: Reconocimiento de Respuestas por Voz**
+
+#### **Frontend (Web Speech API)**
+```javascript
+// Implementación en frontend-v2/src/services/voiceRecognition.js
+class VoiceRecognitionService {
+  constructor() {
+    this.recognition = new webkitSpeechRecognition();
+    this.recognition.lang = 'es-ES';
+    this.recognition.continuous = false;
+    this.recognition.interimResults = false;
+  }
+
+  async recognizeAnswer(questionOptions) {
+    return new Promise((resolve, reject) => {
+      this.recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.toLowerCase();
+        const matchedOption = this.matchAnswer(transcript, questionOptions);
+        resolve(matchedOption);
+      };
+      
+      this.recognition.onerror = reject;
+      this.recognition.start();
+    });
+  }
+
+  matchAnswer(transcript, options) {
+    // Buscar coincidencias directas: "A", "B", "C", "D"
+    const directMatch = options.find(option => 
+      transcript.includes(option.toLowerCase())
+    );
+    
+    // Buscar coincidencias por posición: "primera", "segunda", etc.
+    const positionMatch = this.matchByPosition(transcript, options);
+    
+    return directMatch || positionMatch || transcript;
+  }
+}
+```
+
+#### **Backend (Procesamiento y Validación)**
+```javascript
+// Implementación en backend-v1/controllers/voiceController.js
+exports.validateVoiceResponse = async (req, res) => {
+  const { userId, questionId, voiceResponse, questionOptions } = req.body;
+  
+  try {
+    // Validar respuesta de voz contra opciones
+    const validation = await validateResponse(voiceResponse, questionOptions);
+    
+    // Registrar interacción de voz
+    await db.collection('voiceInteractions').add({
+      userId,
+      questionId,
+      voiceResponse,
+      validation,
+      timestamp: new Date(),
+      accuracy: validation.confidence
+    });
+    
+    res.json({ 
+      valid: validation.isValid, 
+      matchedOption: validation.matchedOption,
+      confidence: validation.confidence 
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+```
+
+#### **Integración con WebSocket**
+```javascript
+// Eventos WebSocket para respuestas de voz
+socket.on('voice-answer', async (data) => {
+  const { userId, questionId, voiceResponse } = data;
+  
+  // Procesar respuesta de voz
+  const validation = await voiceController.validateVoiceResponse({
+    userId, questionId, voiceResponse
+  });
+  
+  // Enviar resultado a todos los jugadores
+  socket.broadcast.emit('voice-answer-result', {
+    userId, validation, timestamp: new Date()
+  });
+});
+```
+
+#### **Esquema de Base de Datos**
+```javascript
+// Colección: voiceInteractions
+{
+  userId: "string",
+  questionId: "string", 
+  voiceResponse: "string",
+  matchedOption: "string",
+  confidence: "number",
+  timestamp: "Date",
+  gameId: "string",
+  sessionId: "string"
+}
+```
+
 ---
 
 ## 📋 Backlog del Producto
@@ -258,6 +388,7 @@ Implementar funcionalidades de accesibilidad para permitir que usuarios con disc
 | US6 | Sistema de tutorial de audio | Media | 7SP | Desarrollador Frontend | Frontend | Crear componente de tutorial de audio con instrucciones generadas por TTS |
 | US7 | Configuración administrativa de accesibilidad | Baja | 4SP | Desarrollador Backend | Backend | Extender AdminPage.jsx con controles de accesibilidad y análisis |
 | US8 | Integración del modo de voz con el juego | Alta | 6SP | Desarrollador Frontend | Frontend | Asegurar que el modo de voz funcione con el sistema multijugador WebSocket |
+| US9 | Reconocimiento de respuestas por voz | Alta | 10SP | Desarrollador Frontend + Backend | Frontend + Backend | Web Speech API frontend + procesamiento y validación backend |
 
 ---
 
@@ -279,8 +410,9 @@ Implementar funcionalidades integrales de accesibilidad para BrainBlitz, permiti
 - US5: Almacenamiento del historial de interacciones de voz (6SP) - **BACKEND COMPLETO**
 - US7: Configuración administrativa de accesibilidad (4SP) - **BACKEND COMPLETO**
 - US8: Integración del modo de voz con el juego (6SP) - **BACKEND COMPLETO**
+- US9: Procesamiento y validación de respuestas por voz (4SP) - **BACKEND COMPLETO**
 
-**Total de Story Points Backend**: 19SP
+**Total de Story Points Backend**: 23SP
 
 #### **Sprint Frontend (16-21 de Octubre): Implementación de UI/UX**
 **Objetivo**: Implementar todas las funcionalidades frontend usando las APIs del backend ya terminadas.
@@ -294,8 +426,9 @@ Implementar funcionalidades integrales de accesibilidad para BrainBlitz, permiti
 - US6: Sistema de tutorial de audio (7SP)
 - US7: Panel administrativo frontend (2SP)
 - US8: Integración frontend del modo de voz (3SP)
+- US9: Reconocimiento de voz con Web Speech API (6SP) - **FRONTEND COMPLETO**
 
-**Total de Story Points Frontend**: 35SP
+**Total de Story Points Frontend**: 41SP
 
 ---
 
@@ -316,51 +449,59 @@ Implementar funcionalidades integrales de accesibilidad para BrainBlitz, permiti
 - ✅ Endpoint de registro actualizado y probado
 - ✅ Documentación Swagger actualizada
 
-#### **Día 2 (8 de Octubre): US1 + US5 - Validación y Diseño de Historial**
+#### **Día 2 (8 de Octubre): US1 + US5 + US9 - Validación y Diseño de Historial y Voz**
 **Tareas Críticas:**
 - [ ] **Completar US1**: Pruebas de integración, manejo de errores
 - [ ] **Diseñar US5**: Crear esquema para colección `voiceInteractions`
+- [ ] **Diseñar US9**: Crear esquema para procesamiento de respuestas por voz
 - [ ] **Esquema Firebase**: Definir estructura completa de datos de voz
 - [ ] **Seguridad**: Implementar autenticación para endpoints de voz
+- [ ] **Validación de Voz**: Diseñar sistema de validación de respuestas habladas
 
 **Entregables del Día:**
 - ✅ US1 completamente terminado
 - ✅ Esquema `voiceInteractions` diseñado y documentado
 - ✅ Sistema de autenticación implementado
 
-#### **Día 3 (9 de Octubre): US5 - Endpoints de Historial de Voz**
+#### **Día 3 (9 de Octubre): US5 + US9 - Endpoints de Historial de Voz y Procesamiento**
 **Tareas Críticas:**
 - [ ] **Crear colección**: Implementar `voiceInteractions` en Firebase
 - [ ] **Endpoint POST**: `POST /api/voice-interactions` para registrar interacciones
 - [ ] **Endpoint GET**: `GET /api/voice-interactions/:userId` para obtener historial
 - [ ] **Endpoint DELETE**: `DELETE /api/voice-interactions/:userId` para limpiar datos
 - [ ] **Endpoint STATS**: `GET /api/voice-interactions/stats/:userId` para estadísticas
+- [ ] **Endpoint Voice Processing**: `POST /api/voice-responses/validate` para validar respuestas habladas
+- [ ] **Endpoint Voice Recognition**: `POST /api/voice-responses/process` para procesar respuestas de voz
 
 **Entregables del Día:**
 - ✅ Todos los endpoints de `voiceInteractions` funcionando
 - ✅ Sistema de logging de interacciones de voz operativo
 - ✅ Endpoints probados y documentados
 
-#### **Día 4 (10 de Octubre): US7 - Controles Administrativos**
+#### **Día 4 (10 de Octubre): US7 + US9 - Controles Administrativos y Validación de Voz**
 **Tareas Críticas:**
 - [ ] **Endpoint Admin Stats**: `GET /api/admin/accessibility-stats` para estadísticas globales
 - [ ] **Endpoint Admin Settings**: `PUT /api/admin/accessibility-settings` para configuración global
 - [ ] **Endpoint Admin Users**: `GET /api/admin/voice-mode-users` para lista de usuarios
 - [ ] **Sistema de Análisis**: Implementar métricas de adopción del modo de voz
 - [ ] **Reportes**: Crear sistema de generación de reportes de accesibilidad
+- [ ] **Validación de Voz**: Implementar algoritmo de validación de respuestas habladas
+- [ ] **Procesamiento de Voz**: Crear sistema de procesamiento de respuestas de voz
 
 **Entregables del Día:**
 - ✅ Todos los endpoints administrativos funcionando
 - ✅ Sistema de análisis y métricas implementado
 - ✅ Generación de reportes operativa
 
-#### **Día 5 (11 de Octubre): US8 - Compatibilidad WebSocket**
+#### **Día 5 (11 de Octubre): US8 + US9 - Compatibilidad WebSocket y Integración de Voz**
 **Tareas Críticas:**
 - [ ] **Análisis WebSocket**: Revisar eventos existentes para compatibilidad con modo de voz
 - [ ] **Optimización**: Asegurar que WebSocket no se degrade con modo de voz
 - [ ] **Pruebas**: Probar WebSocket con modo de voz habilitado
 - [ ] **Rendimiento**: Optimizar transferencia de datos para juegos con voz
 - [ ] **Documentación**: Documentar cambios en WebSocket
+- [ ] **Integración de Voz**: Integrar sistema de reconocimiento de voz con WebSocket
+- [ ] **Eventos de Voz**: Crear eventos WebSocket para respuestas de voz
 
 **Entregables del Día:**
 - ✅ WebSocket compatible con modo de voz
@@ -548,6 +689,24 @@ GET /api/admin/voice-mode-users
   - Agregar dashboard de estadísticas de accesibilidad
   - Implementar controles administrativos para ajustes de modo de voz
 
+**US9: Procesamiento y validación de respuestas por voz (4SP)**
+- [ ] **Crear controlador de voz**
+  - Implementar `voiceController.js` para procesamiento de respuestas de voz
+  - Crear algoritmo de validación de respuestas habladas
+  - Implementar sistema de coincidencia de respuestas con opciones
+- [ ] **Endpoints de procesamiento de voz**
+  - `POST /api/voice-responses/validate` - Validar respuesta de voz
+  - `POST /api/voice-responses/process` - Procesar respuesta de voz
+  - `GET /api/voice-responses/stats/:userId` - Estadísticas de reconocimiento
+- [ ] **Integración con WebSocket**
+  - Crear eventos WebSocket para respuestas de voz
+  - Implementar sincronización de respuestas de voz en tiempo real
+  - Asegurar compatibilidad con sistema de juego existente
+- [ ] **Sistema de logging y análisis**
+  - Registrar todas las interacciones de reconocimiento de voz
+  - Implementar métricas de precisión del reconocimiento
+  - Crear reportes de uso del reconocimiento de voz
+
 ### Responsabilidades de los Desarrolladores Frontend (4 personas)
 
 #### Tareas del Sprint 1 (7-13 de Octubre)
@@ -597,6 +756,28 @@ GET /api/admin/voice-mode-users
   - Probar rendimiento del modo de voz durante juegos multijugador
   - Asegurar que no interfiera con el tiempo del juego
   - Optimizar modo de voz para gameplay en tiempo real
+
+**US9: Reconocimiento de respuestas por voz (6SP)**
+- [ ] **Implementación de Web Speech API**
+  - Crear servicio `VoiceRecognitionService.js` con Web Speech API
+  - Implementar reconocimiento de respuestas "A", "B", "C", "D"
+  - Implementar reconocimiento de respuestas por posición ("primera opción", "segunda opción")
+  - Agregar manejo de errores y fallbacks
+- [ ] **Integración con Componente Question**
+  - Modificar `Question.jsx` para incluir botón de reconocimiento de voz
+  - Implementar feedback visual cuando el sistema está escuchando
+  - Agregar confirmación de respuesta reconocida
+  - Implementar opción de repetir respuesta si no fue reconocida
+- [ ] **Integración con GamePage**
+  - Modificar `GamePage.jsx` para manejar respuestas de voz
+  - Integrar reconocimiento de voz con el sistema de tiempo del juego
+  - Asegurar que las respuestas de voz se envíen correctamente vía WebSocket
+  - Implementar manejo de estados de reconocimiento de voz
+- [ ] **Configuración y Ajustes**
+  - Agregar configuración de reconocimiento de voz en ajustes de usuario
+  - Implementar persistencia de preferencias de reconocimiento de voz
+  - Agregar opciones de idioma y acento para reconocimiento
+  - Implementar calibración de sensibilidad de reconocimiento
 
 #### Tareas del Sprint 2 (14-21 de Octubre)
 
