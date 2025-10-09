@@ -32,12 +32,12 @@ jobs:
     name: Run Backend-v1 Workflow
     needs: detect-changes
     if: needs.detect-changes.outputs.backend_changed == 'true'
-    uses: ./backend-v1/.github/workflows/test.yml
+    uses: ErvinCaraval/PROYECTO-2/backend-v1/.github/workflows/test.yml@main
     secrets: inherit
 
   frontend:
     name: Run Frontend-v2 Workflow
     needs: detect-changes
     if: needs.detect-changes.outputs.frontend_changed == 'true'
-    uses: ./frontend-v2/.github/workflows/ci-cd.yml
+    uses: ErvinCaraval/PROYECTO-2/frontend-v2/.github/workflows/ci-cd.yml@main
     secrets: inherit
