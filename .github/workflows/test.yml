@@ -5,7 +5,7 @@ name: Backend-v1 CI/CD Pipeline
 
 on:
   workflow_call:
-    secrets: inherit
+ 
 
 permissions:
   contents: read
