@@ -1,4 +1,4 @@
-name: 🧠 Monorepo Master CI/CD
+name:  Monorepo Master CI/CD
 
 on:
   push:
