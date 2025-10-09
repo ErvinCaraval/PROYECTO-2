@@ -1,0 +1,43 @@
+name: 🧠 Monorepo Master CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend_changed: ${{ steps.filter.outputs.backend }}
+      frontend_changed: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect changes in backend-v1 or frontend-v2
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend-v1/**'
+            frontend:
+              - 'frontend-v2/**'
+
+  backend:
+    name: Run Backend-v1 Workflow
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend_changed == 'true'
+    uses: ./backend-v1/.github/workflows/test.yml
+    secrets: inherit
+
+  frontend:
+    name: Run Frontend-v2 Workflow
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend_changed == 'true'
+    uses: ./frontend-v2/.github/workflows/ci-cd.yml
+    secrets: inherit
