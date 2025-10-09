@@ -12,7 +12,7 @@
 
 ### Prompt 1
 ```
-You are a Senior DevOps Engineer and QA Automation Architect. For the backend-v1 project, design and implement a GitHub Actions CI/CD workflow that:
+You are a Senior DevOps Engineer and QA Automation Architect. .For the backend-v1 project, design and implement a GitHub Actions CI/CD workflow that:
 - Efficiently installs and caches all required dependencies (npm, node_modules, testing tools).
 - Executes only the test scripts and steps that are actually present in the project (unit, integration, coverage).
 - Automatically cleans up old artifacts and logs, retaining only the last 14 days.

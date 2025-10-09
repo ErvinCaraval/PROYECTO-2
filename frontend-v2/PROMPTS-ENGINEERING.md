@@ -2,7 +2,7 @@
 
 Compiled at (UTC): 2025-09-27T00:00:00Z
 
-Each entry captures: Role prompt, Goal, Constraints, Acceptance Criteria, Actionable Tasks, Time used (UTC), and Files affected..
+Each entry captures: Role prompt, Goal, Constraints, Acceptance Criteria, Actionable Tasks, Time used (UTC), and Files affected...
 
 ---
 
