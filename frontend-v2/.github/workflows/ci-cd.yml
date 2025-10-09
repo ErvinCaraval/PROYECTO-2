@@ -1,10 +1,8 @@
 name: CI-CD - Tests & Deploy
 
 on:
-  push:
-    branches: [ 'main' ]
-  pull_request:
-    branches: [ 'main' ]
+  workflow_call:
+    secrets: inherit
 
 concurrency:
   group: ci-cd-${{ github.ref }}
