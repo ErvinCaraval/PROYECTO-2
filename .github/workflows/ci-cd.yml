@@ -1,3 +1,6 @@
+# GitHub Actions CI/CD Workflow para frontend-v2
+# Ejecuta pruebas, builds, y despliegue para el servicio de frontend.
+
 name: Frontend-v2 - CI/CD
 
 on:
@@ -12,6 +15,11 @@ jobs:
     name: Test & Deploy Frontend-v2
     runs-on: ubuntu-latest
 
+    # Se define el directorio de trabajo por defecto para todos los comandos 'run'
+    defaults:
+      run:
+        working-directory: frontend-v2
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,47 +29,34 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          # Se especifica la ruta al package-lock.json para el caché del monorepo
+          cache-dependency-path: frontend-v2/package-lock.json
 
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('frontend-v2/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+      # El paso manual de 'actions/cache' se elimina porque es redundante.
+      # 'setup-node' con la opción 'cache' ya se encarga de esto.
 
-      
       - name: Install dependencies
         run: npm ci
-        working-directory: frontend-v2
 
-     
       - name: Lint
         run: npm run lint
-        working-directory: frontend-v2
 
-     
       - name: Run unit tests
         run: npm run test:unit
-        working-directory: frontend-v2
 
       - name: Build project
         run: npm run build
-        working-directory: frontend-v2
 
-      
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-        working-directory: frontend-v2
 
-      
       - name: Export Playwright Chromium path
         run: |
-          node -e "(async()=>{const { chromium }=require('playwright'); const p=chromium.executablePath(); if(p){console.log(p)} else {console.error('no-chrome'); process.exit(1)} })()" > chrome-path.txt
-          if [ -s chrome-path.txt ]; then echo "CHROME_PATH=$(cat chrome-path.txt)" >> $GITHUB_ENV; fi
-        working-directory: frontend-v2
+          node -e "(async()=>{const { chromium }=require('playwright'); const p=chromium.executablePath(); if(p){console.log(p)} else {console.error('no-chrome'); process.exit(1)} })()" > ../chrome-path.txt
+          if [ -s ../chrome-path.txt ]; then echo "CHROME_PATH=$(cat ../chrome-path.txt)" >> $GITHUB_ENV; fi
+        # Este comando necesita ejecutarse en la raíz para escribir correctamente en GITHUB_ENV
+        working-directory: .
 
-     
       - name: Run Lighthouse (LHCI)
         env:
           CHROME_PATH: ${{ env.CHROME_PATH }}
@@ -70,21 +65,15 @@ jobs:
           echo "Using CHROME_PATH=$CHROME_PATH"
           npx http-server ./dist -p 8080 --silent &
           npx -y @lhci/cli@0.8 autorun --collect.url=http://localhost:8080 --upload.target=temporary-public-storage || (echo "LHCI failed - printing environment" && env)
-        working-directory: frontend-v2
 
-     
       - name: Run Playwright E2E tests
         run: npm run test:e2e
-        working-directory: frontend-v2
 
       - name: Run visual tests
         run: npm run test:visual
-        working-directory: frontend-v2
 
- 
       - name: Run accessibility (a11y) tests
         run: npm run test:a11y
-        working-directory: frontend-v2
 
       - name: Upload Playwright report
         if: always()
@@ -100,7 +89,6 @@ jobs:
           name: eslint-report
           path: frontend-v2/reports/eslint.json
 
- 
       - name: Auto-push generated changes
         if: success()
         run: |
@@ -113,9 +101,7 @@ jobs:
           else
             echo "Auto-push disabled. Set secret ALLOW_AUTO_PUSH=true to enable."
           fi
-        working-directory: frontend-v2
 
-     
       - name: Deploy to Vercel
         if: success()
         run: |
@@ -125,4 +111,3 @@ jobs:
           else
             echo "VERCEL_TOKEN not set - skipping deploy"
           fi
-        working-directory: frontend-v2
