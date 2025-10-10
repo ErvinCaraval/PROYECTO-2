@@ -114,6 +114,25 @@ jobs:
                       item { id }
                     }
                   }' -f project="$PROJECT_ID" -f content="$CONTENT_ID" || echo "Fallo al añadir la issue al proyecto. Puede que ya estuviera añadida."
+                
+                  # === MOVER LA ISSUE A LA COLUMNA 'Todo' ===
+                  # Obtén el ID de la columna 'Todo' de tu proyecto y reemplaza TODO_COLUMN_ID abajo
+                  TODO_COLUMN_ID="PVT_kwHOCfyr_s4BFLg_TODO"
+                  # Busca el ID de la tarjeta creada en el proyecto
+                  CARD_ID=$(gh api graphql -f query='
+                    query($project:ID!, $content:ID!) {
+                      projectV2ItemById(projectId: $project, id: $content) {
+                        id
+                      }
+                    }' -f project="$PROJECT_ID" -f content="$CONTENT_ID" | jq -r '.data.projectV2ItemById.id')
+
+                  # Mueve la tarjeta a la columna 'Todo'
+                  gh api graphql -f query='
+                    mutation($card:ID!, $column:ID!) {
+                      moveProjectCard(input: {cardId: $card, columnId: $column}) {
+                        clientMutationId
+                      }
+                    }' -f card="$CARD_ID" -f column="$TODO_COLUMN_ID" || echo "No se pudo mover la issue a la columna 'Todo'. Revisa el ID."
             fi
           }
 
@@ -323,3 +342,4 @@ jobs:
               gh issue comment $ISSUE_NUMBER --body "Se ha creado la rama de trabajo para esta HU: \`$BRANCH_NAME\`"
             fi
           done
+
