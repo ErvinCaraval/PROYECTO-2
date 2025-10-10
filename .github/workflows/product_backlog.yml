@@ -12,6 +12,10 @@ jobs:
   setup-project-backlog:
     runs-on: ubuntu-latest
     steps:
+      # PASO CLAVE: Descarga el código del repositorio para que los comandos 'gh' tengan contexto
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: 1. Crear Milestones para los Sprints
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
