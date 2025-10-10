@@ -27,7 +27,7 @@ jobs:
       - name: Mover la HU a la columna In Progress
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-          IN_PROGRESS_COLUMN_ID: PVT_kwHOCfyr_s4BFLg_INPROGRESS
+          IN_PROGRESS_COLUMN_ID: 47fc9ee4
         run: |
           HU_NUMBER=${{ steps.extract_hu.outputs.HU_NUMBER }}
           ISSUE_ID=$(gh issue view $HU_NUMBER --json id | jq -r '.id')
