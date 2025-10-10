@@ -27,7 +27,8 @@ jobs:
       - name: Mover la HU a la columna Done si el PR fue mergeado
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-            DONE_COLUMN_ID:98236657
+          DONE_OPTION_ID: 98236657
+          STATUS_FIELD_ID: PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM
         run: |
           if [[ "${{ github.event.pull_request.merged }}" != "true" ]]; then
             echo "El PR fue cerrado pero no mergeado. No se mueve la HU a Done."
@@ -37,4 +38,4 @@ jobs:
           ISSUE_ID=$(gh issue view $HU_NUMBER --json id | jq -r '.id')
           PROJECT_ID=$(gh project list --owner "@me" --format json | jq -r '.projects[] | select(.title == "Product Backlog") | .id')
           CARD_ID=$(gh api graphql -f query='query($project:ID!, $content:ID!) { projectV2ItemById(projectId: $project, id: $content) { id } }' -f project="$PROJECT_ID" -f content="$ISSUE_ID" | jq -r '.data.projectV2ItemById.id')
-          gh api graphql -f query='mutation($card:ID!, $column:ID!) { moveProjectCard(input: {cardId: $card, columnId: $column}) { clientMutationId } }' -f card="$CARD_ID" -f column="$DONE_COLUMN_ID" || echo "No se pudo mover la HU a Done. Revisa el ID."
+          gh api graphql -f query='mutation($project:ID!, $item:ID!, $field:ID!, $option:ID!) { updateProjectV2ItemFieldValue(input: {projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}}) { projectV2Item { id } } }' -f project="$PROJECT_ID" -f item="$CARD_ID" -f field="$STATUS_FIELD_ID" -f option="$DONE_OPTION_ID" || echo "No se pudo mover la HU a Done. Revisa el ID."
