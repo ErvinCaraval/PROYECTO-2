@@ -135,7 +135,7 @@ jobs:
                         projectV2Item { id }
                       }
                     }
-                  ' -f project="$PROJECT_ID" -f item="$CARD_ID" -f field="$STATUS_FIELD_ID" -f option="$TODO_COLUMN_ID" || echo "No se pudo mover la issue a la columna 'Todo'. Revisa el ID."
+                  ' -f project="$PROJECT_ID" -f item="$CARD_ID" -f field="$STATUS_FIELD_ID" -f option=$TODO_COLUMN_ID || echo "No se pudo mover la issue a la columna 'Todo'. Revisa el ID."
             fi
           }
 
@@ -345,4 +345,3 @@ jobs:
               gh issue comment $ISSUE_NUMBER --body "Se ha creado la rama de trabajo para esta HU: \`$BRANCH_NAME\`"
             fi
           done
-
