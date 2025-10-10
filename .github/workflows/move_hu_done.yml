@@ -34,9 +34,38 @@ jobs:
             echo "El PR fue cerrado pero no mergeado. No se mueve la HU a Done."
             exit 0
           fi
+          
           HU_NUMBER=${{ steps.extract_hu.outputs.HU_NUMBER }}
+          echo "Moviendo HU #$HU_NUMBER a Done..."
+          
+          # Obtener ID de la issue
           ISSUE_ID=$(gh issue view $HU_NUMBER --json id | jq -r '.id')
+          if [ "$ISSUE_ID" = "null" ] || [ -z "$ISSUE_ID" ]; then
+            echo "Error: No se pudo encontrar la issue #$HU_NUMBER"
+            exit 1
+          fi
+          
+          # Obtener ID del proyecto
           PROJECT_ID=$(gh project list --owner "@me" --format json | jq -r '.projects[] | select(.title == "Product Backlog") | .id')
+          if [ "$PROJECT_ID" = "null" ] || [ -z "$PROJECT_ID" ]; then
+            echo "Error: No se pudo encontrar el proyecto 'Product Backlog'"
+            exit 1
+          fi
+          
+          # Obtener ID de la tarjeta en el proyecto
           CARD_ID=$(gh api graphql -f query='query($project:ID!, $content:ID!) { projectV2ItemById(projectId: $project, id: $content) { id } }' -f project="$PROJECT_ID" -f content="$ISSUE_ID" | jq -r '.data.projectV2ItemById.id')
-          gh api graphql -f query='mutation($project:ID!, $item:ID!, $field:ID!, $option:ID!) { updateProjectV2ItemFieldValue(input: {projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}}) { projectV2Item { id } } }' -f project="$PROJECT_ID" -f item="$CARD_ID" -f field="$STATUS_FIELD_ID" -f option="$DONE_OPTION_ID" || echo "No se pudo mover la HU a Done. Revisa el ID."
-          gh api graphql -f query='mutation($project:ID!, $item:ID!, $field:ID!, $option:ID!) { updateProjectV2ItemFieldValue(input: {projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}}) { projectV2Item { id } } }' -f project="$PROJECT_ID" -f item="$CARD_ID" -f field="$STATUS_FIELD_ID" -f option=$DONE_OPTION_ID || echo "No se pudo mover la HU a Done. Revisa el ID."
+          if [ "$CARD_ID" = "null" ] || [ -z "$CARD_ID" ]; then
+            echo "Error: La issue #$HU_NUMBER no está en el proyecto 'Product Backlog'"
+            exit 1
+          fi
+          
+          # Mover a Done
+          echo "Moviendo la HU a la columna Done..."
+          gh api graphql -f query='mutation($project:ID!, $item:ID!, $field:ID!, $option:ID!) { updateProjectV2ItemFieldValue(input: {projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}}) { projectV2Item { id } } }' -f project="$PROJECT_ID" -f item="$CARD_ID" -f field="$STATUS_FIELD_ID" -f option="$DONE_OPTION_ID"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ HU #$HU_NUMBER movida exitosamente a Done"
+          else
+            echo "❌ Error: No se pudo mover la HU a Done. Revisa los IDs de las columnas."
+            exit 1
+          fi
