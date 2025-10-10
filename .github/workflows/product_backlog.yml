@@ -10,10 +10,6 @@ permissions:
   # Es necesario añadir permisos para 'pull-requests: write' para que pueda crear etiquetas
   pull-requests: write
 
-# ⚠️ MODIFICACIÓN AÑADIDA: Define el número de tu proyecto para que las issues se asignen a él.
-env:
-  PROJECT_NUMBER: 1 # <-- Revisa que este sea el número correcto de tu proyecto.
-
 jobs:
   setup-project-backlog:
     runs-on: ubuntu-latest
@@ -26,11 +22,12 @@ jobs:
       - name: Crear Proyecto de GitHub si no existe
         id: project_setup # Le damos un ID a este paso para usar sus resultados
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # ⚠️ MODIFICACIÓN AÑADIDA: Usa el Token de Acceso Personal para tener permisos
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           PROJECT_NAME="Product Backlog"
-          # Busca si el proyecto ya existe
-          PROJECT_NUMBER=$(gh project list --owner "@me" --format "number,title" | grep "$PROJECT_NAME" | cut -f1)
+          # ⚠️ MODIFICACIÓN AÑADIDA: Comando corregido para buscar el proyecto
+          PROJECT_NUMBER=$(gh project list --owner "@me" --format json | jq -r ".projects[] | select(.title == \"$PROJECT_NAME\") | .number")
           
           if [ -z "$PROJECT_NUMBER" ]; then
             echo "Proyecto '$PROJECT_NAME' no encontrado. Creándolo ahora..."
@@ -47,7 +44,7 @@ jobs:
       # PASO 3: Crea las Etiquetas de Prioridad si no existen
       - name: Crear Etiquetas de Prioridad si no existen
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
         run: |
           echo "Creando etiquetas de prioridad..."
           gh label create "Prioridad: Alta" --color "D93F0B" --description "Esta tarea es crítica y bloquea otras." || echo "La etiqueta 'Prioridad: Alta' ya existe."
@@ -57,7 +54,7 @@ jobs:
       # PASO 4: Crea los Milestones (Sprints) solo si no existen
       - name: Crear Milestones si no existen
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
           GH_REPO: ${{ github.repository }}
         run: |
           # --- Sprint Backend ---
@@ -87,7 +84,7 @@ jobs:
       # PASO 5: Crea todos los Issues, los añade al proyecto y solo si no existen
       - name: Crear Issues y añadirlas al Proyecto
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
           PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
         run: |
           # La función ahora también añade la issue al proyecto.
@@ -308,13 +305,13 @@ jobs:
       # PASO 6: Crea y Vincula las Ramas para cada Issue
       - name: Crear Ramas y Vincularlas a las Issues
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
         run: |
           MAIN_BRANCH_SHA=$(git rev-parse main)
           gh issue list --state open --json number,title | jq -c '.[]' | while read issue; do
             ISSUE_NUMBER=$(echo $issue | jq -r '.number')
             ISSUE_TITLE=$(echo $issue | jq -r '.title')
-            BRANCH_TITLE=$(echo "$ISSUE_TITLE" | iconv -t ascii//TRANSLIT | sed -E 's/\[(BE|FE)\] //g' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+\|-+$//g' | tr '[:upper:]' '[:lower:]')
+            BRANCH_TITLE=$(echo "$ISSUE_TITLE" | iconv -t ascii//TRANSLIT | sed -E 's/\[(BE|FE)\] //g' | sed -E 's/[^a-zA-Z0--9]+/-/g' | sed -E 's/^-+\|-+$//g' | tr '[:upper:]' '[:lower:]')
             BRANCH_NAME="hu-${ISSUE_NUMBER}-${BRANCH_TITLE}"
 
             if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
