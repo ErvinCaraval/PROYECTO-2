@@ -15,9 +15,23 @@ jobs:
       - name: 1. Crear Milestones para los Sprints
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          gh milestone create "Sprint Backend (7-15 Octubre)" --description "Infraestructura completa. Todas las APIs y funcionalidades de backend deben estar listas." --due-date "2024-10-15"
-          gh milestone create "Sprint Frontend (16-21 Octubre)" --description "Implementación de UI/UX usando las APIs del backend ya terminadas." --due-date "2024-10-21"
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${GH_REPO}/milestones" \
+            -f title='Sprint Backend (7-15 Octubre)' \
+            -f description='Infraestructura completa. Todas las APIs y funcionalidades de backend deben estar listas.' \
+            -f due_on='2024-10-15T23:59:59Z'
+
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${GH_REPO}/milestones" \
+            -f title='Sprint Frontend (16-21 Octubre)' \
+            -f description='Implementación de UI/UX usando las APIs del backend ya terminadas.' \
+            -f due_on='2024-10-21T23:59:59Z'
       
       - name: 2. Crear Issues del Sprint Backend
         env:
