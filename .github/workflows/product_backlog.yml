@@ -117,7 +117,7 @@ jobs:
                 
                   # === MOVER LA ISSUE A LA COLUMNA 'Todo' ===
                   # Obtén el ID de la columna 'Todo' de tu proyecto y reemplaza TODO_COLUMN_ID abajo
-                  TODO_COLUMN_ID="PVT_kwHOCfyr_s4BFLg_TODO"
+                  TODO_COLUMN_ID="f75ad846"
                   # Busca el ID de la tarjeta creada en el proyecto
                   CARD_ID=$(gh api graphql -f query='
                     query($project:ID!, $content:ID!) {
