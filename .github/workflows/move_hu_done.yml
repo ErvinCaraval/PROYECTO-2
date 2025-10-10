@@ -27,7 +27,7 @@ jobs:
       - name: Mover la HU a la columna Done si el PR fue mergeado
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-          DONE_COLUMN_ID: PVT_kwHOCfyr_s4BFLg_DONE
+            DONE_COLUMN_ID:98236657
         run: |
           if [[ "${{ github.event.pull_request.merged }}" != "true" ]]; then
             echo "El PR fue cerrado pero no mergeado. No se mueve la HU a Done."
