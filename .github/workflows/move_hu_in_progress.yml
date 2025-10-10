@@ -27,10 +27,11 @@ jobs:
       - name: Mover la HU a la columna In Progress
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-          IN_PROGRESS_COLUMN_ID: 47fc9ee4
+          IN_PROGRESS_OPTION_ID: 47fc9ee4
+          STATUS_FIELD_ID: PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM
         run: |
           HU_NUMBER=${{ steps.extract_hu.outputs.HU_NUMBER }}
           ISSUE_ID=$(gh issue view $HU_NUMBER --json id | jq -r '.id')
           PROJECT_ID=$(gh project list --owner "@me" --format json | jq -r '.projects[] | select(.title == "Product Backlog") | .id')
           CARD_ID=$(gh api graphql -f query='query($project:ID!, $content:ID!) { projectV2ItemById(projectId: $project, id: $content) { id } }' -f project="$PROJECT_ID" -f content="$ISSUE_ID" | jq -r '.data.projectV2ItemById.id')
-          gh api graphql -f query='mutation($card:ID!, $column:ID!) { moveProjectCard(input: {cardId: $card, columnId: $column}) { clientMutationId } }' -f card="$CARD_ID" -f column="$IN_PROGRESS_COLUMN_ID" || echo "No se pudo mover la HU a In Progress. Revisa el ID."
+          gh api graphql -f query='mutation($project:ID!, $item:ID!, $field:ID!, $option:ID!) { updateProjectV2ItemFieldValue(input: {projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}}) { projectV2Item { id } } }' -f project="$PROJECT_ID" -f item="$CARD_ID" -f field="$STATUS_FIELD_ID" -f option="$IN_PROGRESS_OPTION_ID" || echo "No se pudo mover la HU a In Progress. Revisa el ID."
