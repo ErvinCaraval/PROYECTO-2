@@ -1,4 +1,3 @@
-
 name: 🚀 Crear Backlog y Sprints del Proyecto
 
 on:
@@ -6,10 +5,14 @@ on:
 
 # Define el token con permisos de escritura
 permissions:
-  contents: read
+  contents: write # ⚠️ Se cambió a 'write' para poder crear ramas
   issues: write
   # Es necesario añadir permisos para 'pull-requests: write' para que pueda crear etiquetas
   pull-requests: write
+
+# ⚠️ MODIFICACIÓN AÑADIDA: Define el número de tu proyecto para que las issues se asignen a él.
+env:
+  PROJECT_NUMBER: 1 # <-- Revisa que este sea el número correcto de tu proyecto.
 
 jobs:
   setup-project-backlog:
@@ -44,7 +47,7 @@ jobs:
             gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${GH_REPO}/milestones" \
               -f title="$MILESTONE_BE_TITLE" \
               -f description='Infraestructura completa. Todas las APIs y funcionalidades de backend deben estar listas.' \
-              -f due_on='2024-10-15T23:59:59Z'
+              -f due_on='2025-10-15T23:59:59Z'
           fi
 
           # --- Sprint Frontend ---
@@ -56,26 +59,41 @@ jobs:
             gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${GH_REPO}/milestones" \
               -f title="$MILESTONE_FE_TITLE" \
               -f description='Implementación de UI/UX usando las APIs del backend ya terminadas.' \
-              -f due_on='2024-10-21T23:59:59Z'
+              -f due_on='2025-10-21T23:59:59Z'
           fi
 
-      # PASO 4: Crea todos los Issues solo si no existen
-      - name: Crear Issues si no existen
+      # PASO 4: Crea todos los Issues, los añade al proyecto y solo si no existen
+      - name: Crear Issues y añadirlas al Proyecto
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Función para crear un issue solo si no existe un título idéntico
-          create_issue_if_not_exists() {
+          # La función ahora también añade la issue al proyecto.
+          create_and_add_to_project() {
             local title="$1"
             local body="$2"
             local label="$3"
             local milestone="$4"
             
-            if gh issue list --state all --search "in:title \"$title\"" --json title | grep -qF "$title"; then
-              echo "Issue '$title' ya existe. Omitiendo."
+            ISSUE_URL=$(gh issue list --state all --search "in:title \"$title\"" --json url -q ".[0].url")
+
+            if [ -n "$ISSUE_URL" ]; then
+              echo "Issue '$title' ya existe. Omitiendo creación."
             else
               echo "Creando issue '$title'..."
-              gh issue create --title "$title" --body "$body" --label "$label" --milestone "$milestone"
+              ISSUE_URL=$(gh issue create --title "$title" --body "$body" --label "$label" --milestone "$milestone")
+            fi
+
+            if [ -n "$ISSUE_URL" ]; then
+                echo "Añadiendo issue $ISSUE_URL al proyecto ${{ env.PROJECT_NUMBER }}..."
+                PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
+                CONTENT_ID=$(gh issue view $ISSUE_URL --json id | jq -r '.id')
+                
+                gh api graphql -f query='
+                  mutation($project:ID!, $content:ID!) {
+                    addProjectV2ItemById(input: {projectId: $project, contentId: $content}) {
+                      item { id }
+                    }
+                  }' -f project="$PROJECT_ID" -f content="$CONTENT_ID" || echo "Fallo al añadir la issue al proyecto. Puede que ya estuviera añadida."
             fi
           }
 
@@ -83,7 +101,7 @@ jobs:
           # ==         ISSUES SPRINT BACKEND             ==
           # ===============================================
 
-          create_issue_if_not_exists \
+          create_and_add_to_project \
             "[BE] US1: Registro de preferencia de accesibilidad" \
             "**Como** un nuevo jugador,
           **Quiero** poder indicar durante el registro si tengo dificultades visuales,
@@ -97,7 +115,7 @@ jobs:
             "Prioridad: Alta" \
             "Sprint Backend (7-15 Octubre)"
 
-          create_issue_if_not_exists \
+          create_and_add_to_project \
             "[BE] US5: Almacenamiento del historial de interacciones de voz" \
             "**Como** usuario del modo de voz,
           **Quiero** que mis interacciones de voz se almacenen en un historial,
@@ -111,7 +129,7 @@ jobs:
             "Prioridad: Media" \
             "Sprint Backend (7-15 Octubre)"
 
-          create_issue_if_not_exists \
+          create_and_add_to_project \
             "[BE] US7: Configuración administrativa de accesibilidad" \
             "**Como** administrador de la plataforma,
           **Quiero** tener un panel para configurar los ajustes de accesibilidad y monitorear su uso,
@@ -125,7 +143,7 @@ jobs:
             "Prioridad: Baja" \
             "Sprint Backend (7-15 Octubre)"
 
-          create_issue_if_not_exists \
+          create_and_add_to_project \
             "[BE] US8: Compatibilidad WebSocket con modo de voz" \
             "**Como** desarrollador del backend,
           **Quiero** asegurar que el modo de voz se integre sin problemas con el sistema de juego multijugador,
@@ -138,7 +156,7 @@ jobs:
             "Prioridad: Alta" \
             "Sprint Backend (7-15 Octubre)"
 
-          create_issue_if_not_exists \
+          create_and_add_to_project \
             "[BE] US9: Procesamiento y validación de respuestas por voz" \
             "**Como** usuario del modo de voz,
           **Quiero** que el sistema procese y valide mis respuestas habladas,
@@ -156,7 +174,7 @@ jobs:
           # ==         ISSUES SPRINT FRONTEND            ==
           # ===============================================
 
-          create_issue_if_not_exists \
+          create_and_add_to_project \
             "[FE] US2: Activación automática del modo de voz" \
             "**Como** un usuario con dificultades visuales,
           **Quiero** que el modo de voz se active automáticamente cuando inicio sesión,
@@ -170,7 +188,7 @@ jobs:
             "Prioridad: Alta" \
             "Sprint Frontend (16-21 Octubre)"
 
-          create_issue_if_not_exists \
+          create_and_add_to_project \
             "[FE] US3: Lectura de preguntas mediante Text-to-Speech (TTS)" \
             "**Como** usuario del modo de voz,
           **Quiero** que el sistema lea en voz alta las preguntas y las opciones de respuesta,
@@ -183,7 +201,7 @@ jobs:
             "Prioridad: Alta" \
             "Sprint Frontend (16-21 Octubre)"
 
-          create_issue_if_not_exists \
+          create_and_add_to_project \
             "[FE] US4: Configuración de ajustes de voz" \
             "**Como** usuario del modo de voz,
           **Quiero** poder configurar los ajustes de la voz (tipo, velocidad y volumen),
@@ -198,7 +216,7 @@ jobs:
             "Prioridad: Media" \
             "Sprint Frontend (16-21 Octubre)"
 
-          create_issue_if_not_exists \
+          create_and_add_to_project \
             "[FE] US6: Sistema de tutorial de audio" \
             "**Como** un nuevo usuario con dificultades visuales,
           **Quiero** recibir un tutorial de audio que me guíe a través de las funcionalidades,
@@ -212,7 +230,7 @@ jobs:
             "Prioridad: Media" \
             "Sprint Frontend (16-21 Octubre)"
           
-          create_issue_if_not_exists \
+          create_and_add_to_project \
             "[FE] US9: Reconocimiento de respuestas por voz" \
             "**Como** usuario del modo de voz,
           **Quiero** poder responder a las preguntas usando comandos de voz,
@@ -226,3 +244,36 @@ jobs:
           - ✅ La respuesta debe enviarse al backend para su validación." \
             "Prioridad: Alta" \
             "Sprint Frontend (16-21 Octubre)"
+
+      # ⚠️ PASO 5 AÑADIDO: Crea una rama por cada Issue que no la tenga
+      - name: Crear Ramas para Issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Obtiene el SHA de la última versión de la rama 'main'
+          MAIN_BRANCH_SHA=$(git rev-parse main)
+
+          # Itera sobre todas las issues abiertas
+          gh issue list --state open --json number,title | jq -c '.[]' | while read issue; do
+            ISSUE_NUMBER=$(echo $issue | jq -r '.number')
+            ISSUE_TITLE=$(echo $issue | jq -r '.title')
+
+            # Limpia el título para crear un nombre de rama válido
+            # Convierte a minúsculas, reemplaza espacios con guiones, elimina caracteres especiales.
+            BRANCH_TITLE=$(echo "$ISSUE_TITLE" | iconv -t ascii//TRANSLIT | sed -E 's/\[(BE|FE)\] //g' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+\|-+$//g' | tr '[:upper:]' '[:lower:]')
+            
+            # Construye el nombre final de la rama
+            BRANCH_NAME="hu-${ISSUE_NUMBER}-${BRANCH_TITLE}"
+
+            # Revisa si la rama ya existe en el repositorio remoto
+            if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
+              echo "La rama '$BRANCH_NAME' ya existe. Omitiendo."
+            else
+              echo "Creando rama '$BRANCH_NAME'..."
+              # Crea la rama en el repositorio remoto directamente desde el último commit de 'main'
+              gh api repos/${{ github.repository }}/git/refs \
+                --method POST \
+                -f ref="refs/heads/${BRANCH_NAME}" \
+                -f sha="$MAIN_BRANCH_SHA"
+            fi
+          done
