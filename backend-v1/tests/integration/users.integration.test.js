@@ -5,12 +5,21 @@ const authenticate = require('../../middleware/authenticate');
 
 const app = express();
 app.use(express.json());
-app.post('/api/users/register', usersController.register);
-app.post('/api/users/login', usersController.login);
-app.post('/api/users/recover-password', usersController.recoverPassword);
-app.put('/api/users/me/profile', authenticate, usersController.updateProfile);
-app.get('/api/users/me/stats', authenticate, usersController.getStats);
-app.get('/api/users/me/history', authenticate, usersController.getHistory);
+
+// Import rate limiters
+const { 
+  registerLimiter, 
+  passwordRecoveryLimiter, 
+  profileUpdateLimiter, 
+  generalUserLimiter 
+} = require('../../middleware/rateLimiter');
+
+app.post('/api/users/register', registerLimiter, usersController.register);
+app.post('/api/users/login', generalUserLimiter, usersController.login);
+app.post('/api/users/recover-password', passwordRecoveryLimiter, usersController.recoverPassword);
+app.put('/api/users/me/profile', profileUpdateLimiter, authenticate, usersController.updateProfile);
+app.get('/api/users/me/stats', generalUserLimiter, authenticate, usersController.getStats);
+app.get('/api/users/me/history', generalUserLimiter, authenticate, usersController.getHistory);
 
 jest.mock('../../middleware/authenticate', () => (req, res, next) => {
   req.user = { uid: 'test-uid' };
