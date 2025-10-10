@@ -1,3 +1,4 @@
+
 name: 🚀 Crear Backlog y Sprints del Proyecto
 
 on:
@@ -7,16 +8,28 @@ on:
 permissions:
   contents: read
   issues: write
+  # Es necesario añadir permisos para 'pull-requests: write' para que pueda crear etiquetas
+  pull-requests: write
 
 jobs:
   setup-project-backlog:
     runs-on: ubuntu-latest
     steps:
-      # PASO 1: Descarga el código del repositorio para que los comandos 'gh' tengan contexto
+      # PASO 1: Descarga el código del repositorio
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # PASO 2: Crea los Milestones (Sprints) solo si no existen
+      # PASO 2: Crea las Etiquetas de Prioridad si no existen
+      - name: Crear Etiquetas de Prioridad si no existen
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Creando etiquetas de prioridad..."
+          gh label create "Prioridad: Alta" --color "D93F0B" --description "Esta tarea es crítica y bloquea otras." || echo "La etiqueta 'Prioridad: Alta' ya existe."
+          gh label create "Prioridad: Media" --color "FBCA04" --description "Tarea importante pero no urgente." || echo "La etiqueta 'Prioridad: Media' ya existe."
+          gh label create "Prioridad: Baja" --color "0E8A16" --description "Tarea menor o mejora deseable." || echo "La etiqueta 'Prioridad: Baja' ya existe."
+      
+      # PASO 3: Crea los Milestones (Sprints) solo si no existen
       - name: Crear Milestones si no existen
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,7 +59,7 @@ jobs:
               -f due_on='2024-10-21T23:59:59Z'
           fi
 
-      # PASO 3: Crea todos los Issues solo si no existen
+      # PASO 4: Crea todos los Issues solo si no existen
       - name: Crear Issues si no existen
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
