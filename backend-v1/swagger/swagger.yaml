@@ -65,10 +65,15 @@ paths:
                   type: string
                   example: "Maria Garcia"
                   description: "Nombre visible del usuario en el juego."
+                visualDifficulty:
+                  type: boolean
+                  example: false
+                  description: "Indica si el usuario tiene dificultades visuales para activar funcionalidades de accesibilidad. Por defecto: false"
             example:
               email: "maria.garcia@gmail.com"
               password: "MiClaveSegura2025!"
               displayName: "Maria Garcia"
+              visualDifficulty: false
       responses:
         201:
           description: Usuario registrado correctamente.
@@ -87,10 +92,15 @@ paths:
                   displayName:
                     type: string
                     example: "Maria Garcia"
+                  visualDifficulty:
+                    type: boolean
+                    example: false
+                    description: "Preferencia de accesibilidad del usuario"
               example:
                 uid: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
                 email: "maria.garcia@gmail.com"
                 displayName: "Maria Garcia"
+                visualDifficulty: false
         400:
           description: Error en el registro (por ejemplo, email ya registrado).
           content:
@@ -103,6 +113,111 @@ paths:
                     example: "El email ya está en uso."
               example:
                 error: "El email ya está en uso."
+
+  /api/users/me/profile:
+    put:
+      tags: [Users]
+      summary: Actualizar perfil de usuario
+      description: |
+        Actualiza el perfil del usuario autenticado, incluyendo preferencias de accesibilidad.
+        **Requiere:** Token de autenticación Firebase en el header Authorization.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                  example: "Maria Garcia Actualizada"
+                  description: "Nuevo nombre visible del usuario en el juego."
+                visualDifficulty:
+                  type: boolean
+                  example: true
+                  description: "Actualizar preferencia de accesibilidad visual."
+            example:
+              displayName: "Maria Garcia Actualizada"
+              visualDifficulty: true
+      responses:
+        200:
+          description: Perfil actualizado correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uid:
+                    type: string
+                    example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+                  displayName:
+                    type: string
+                    example: "Maria Garcia Actualizada"
+                  email:
+                    type: string
+                    example: "maria.garcia@gmail.com"
+                  visualDifficulty:
+                    type: boolean
+                    example: true
+                  stats:
+                    type: object
+                    properties:
+                      gamesPlayed:
+                        type: integer
+                        example: 12
+                      wins:
+                        type: integer
+                        example: 4
+                      correctAnswers:
+                        type: integer
+                        example: 87
+              example:
+                uid: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+                displayName: "Maria Garcia Actualizada"
+                email: "maria.garcia@gmail.com"
+                visualDifficulty: true
+                stats:
+                  gamesPlayed: 12
+                  wins: 4
+                  correctAnswers: 87
+        400:
+          description: Error en la actualización (campos inválidos).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "visualDifficulty must be a boolean value"
+              example:
+                error: "visualDifficulty must be a boolean value"
+        401:
+          description: Token de autenticación requerido.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Authentication required"
+              example:
+                error: "Authentication required"
+        404:
+          description: Usuario no encontrado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "User not found"
+              example:
+                error: "User not found"
 
   /api/users/login:
     post:
@@ -201,12 +316,17 @@ paths:
                         type: integer
                         example: 87
                         description: "Total de respuestas correctas."
+                  visualDifficulty:
+                    type: boolean
+                    example: false
+                    description: "Preferencia de accesibilidad del usuario"
               example:
                 uid: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
                 stats:
                   gamesPlayed: 12
                   wins: 4
                   correctAnswers: 87
+                visualDifficulty: false
         404:
           description: Usuario no encontrado.
           content:
@@ -718,6 +838,12 @@ paths:
                     label: "Difícil"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Token JWT de Firebase Auth"
   schemas:
     Question:
       type: object
