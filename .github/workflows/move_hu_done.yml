@@ -61,7 +61,18 @@ jobs:
           
           # Mover a Done
           echo "Moviendo la HU a la columna Done..."
-          gh api graphql -f query='mutation($project:ID!, $item:ID!, $field:ID!, $option:ID!) { updateProjectV2ItemFieldValue(input: {projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}}) { projectV2Item { id } } }' -f project="$PROJECT_ID" -f item="$CARD_ID" -f field="$STATUS_FIELD_ID" -f option="$DONE_OPTION_ID"
+          gh api graphql -f query="
+            mutation {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: \"$PROJECT_ID\",
+                itemId: \"$CARD_ID\",
+                fieldId: \"$STATUS_FIELD_ID\",
+                value: {singleSelectOptionId: \"$DONE_OPTION_ID\"}
+              }) {
+                projectV2Item { id }
+              }
+            }
+          "
           
           if [ $? -eq 0 ]; then
             echo "✅ HU #$HU_NUMBER movida exitosamente a Done"
