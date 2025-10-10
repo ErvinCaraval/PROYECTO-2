@@ -107,35 +107,27 @@ jobs:
                 echo "Añadiendo issue $ISSUE_URL al proyecto ${{ env.PROJECT_NUMBER }}..."
                 PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
                 CONTENT_ID=$(gh issue view $ISSUE_URL --json id | jq -r '.id')
-                
-                gh api graphql -f query='
+
+                # Añade la issue al proyecto y obtiene el ID del item
+                ITEM_ID=$(gh api graphql -f query='
                   mutation($project:ID!, $content:ID!) {
                     addProjectV2ItemById(input: {projectId: $project, contentId: $content}) {
                       item { id }
                     }
-                  }' -f project="$PROJECT_ID" -f content="$CONTENT_ID" || echo "Fallo al añadir la issue al proyecto. Puede que ya estuviera añadida."
-                
-                  # === MOVER LA ISSUE A LA COLUMNA 'Todo' ===
-                  # Obtén el ID de la columna 'Todo' de tu proyecto y reemplaza TODO_COLUMN_ID abajo
-                  TODO_COLUMN_ID="f75ad846"
-                  STATUS_FIELD_ID="PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM"
-                  # Busca el ID de la tarjeta creada en el proyecto
-                  CARD_ID=$(gh api graphql -f query='
-                    query($project:ID!, $content:ID!) {
-                      projectV2ItemById(projectId: $project, id: $content) {
-                        id
-                      }
-                    }' -f project="$PROJECT_ID" -f content="$CONTENT_ID" | jq -r '.data.projectV2ItemById.id')
+                  }
+                ' -f project="$PROJECT_ID" -f content="$CONTENT_ID" | jq -r '.data.addProjectV2ItemById.item.id')
 
-                  # Mueve la tarjeta a la columna 'Todo'
-                  STATUS_FIELD_ID="PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM"
-                  gh api graphql -f query='
-                    mutation($project:ID!, $item:ID!, $field:ID!, $option:ID!) {
-                      updateProjectV2ItemFieldValue(input: {projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}}) {
-                        projectV2Item { id }
-                      }
+                # === MOVER LA ISSUE A LA COLUMNA 'Todo' ===
+                TODO_COLUMN_ID="f75ad846"
+                STATUS_FIELD_ID="PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM"
+                # Actualiza el campo Status del item
+                gh api graphql -f query='
+                  mutation($project:ID!, $item:ID!, $field:ID!, $option:ID!) {
+                    updateProjectV2ItemFieldValue(input: {projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}}) {
+                      projectV2Item { id }
                     }
-                  ' -f project="$PROJECT_ID" -f item="$CARD_ID" -f field="$STATUS_FIELD_ID" -f option=$TODO_COLUMN_ID || echo "No se pudo mover la issue a la columna 'Todo'. Revisa el ID."
+                  }
+                ' -f project="$PROJECT_ID" -f item="$ITEM_ID" -f field="$STATUS_FIELD_ID" -f option=$TODO_COLUMN_ID || echo "No se pudo mover la issue a la columna 'Todo'. Revisa el ID."
             fi
           }
 
