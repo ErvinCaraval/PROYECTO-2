@@ -22,7 +22,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # PASO 2: Crea las Etiquetas de Prioridad si no existen
+      # PASO 2 (MODIFICADO): Crea el proyecto si no existe y obtiene su número automáticamente
+      - name: Crear Proyecto de GitHub si no existe
+        id: project_setup # Le damos un ID a este paso para usar sus resultados
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PROJECT_NAME="Product Backlog"
+          # Busca si el proyecto ya existe
+          PROJECT_NUMBER=$(gh project list --owner "@me" --format "number,title" | grep "$PROJECT_NAME" | cut -f1)
+          
+          if [ -z "$PROJECT_NUMBER" ]; then
+            echo "Proyecto '$PROJECT_NAME' no encontrado. Creándolo ahora..."
+            # Crea el proyecto y extrae su número de la URL resultante
+            PROJECT_URL=$(gh project create --owner "@me" --title "$PROJECT_NAME")
+            PROJECT_NUMBER=$(echo "$PROJECT_URL" | rev | cut -d'/' -f1 | rev)
+            echo "Proyecto creado con el número: $PROJECT_NUMBER"
+          else
+            echo "Proyecto '$PROJECT_NAME' ya existe con el número: $PROJECT_NUMBER"
+          fi
+          # Guarda el número del proyecto para que otros pasos puedan usarlo
+          echo "PROJECT_NUMBER=$PROJECT_NUMBER" >> $GITHUB_OUTPUT
+
+      # PASO 3: Crea las Etiquetas de Prioridad si no existen
       - name: Crear Etiquetas de Prioridad si no existen
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -32,7 +54,7 @@ jobs:
           gh label create "Prioridad: Media" --color "FBCA04" --description "Tarea importante pero no urgente." || echo "La etiqueta 'Prioridad: Media' ya existe."
           gh label create "Prioridad: Baja" --color "0E8A16" --description "Tarea menor o mejora deseable." || echo "La etiqueta 'Prioridad: Baja' ya existe."
       
-      # PASO 3: Crea los Milestones (Sprints) solo si no existen
+      # PASO 4: Crea los Milestones (Sprints) solo si no existen
       - name: Crear Milestones si no existen
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,10 +84,11 @@ jobs:
               -f due_on='2025-10-21T23:59:59Z'
           fi
 
-      # PASO 4: Crea todos los Issues, los añade al proyecto y solo si no existen
+      # PASO 5: Crea todos los Issues, los añade al proyecto y solo si no existen
       - name: Crear Issues y añadirlas al Proyecto
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
         run: |
           # La función ahora también añade la issue al proyecto.
           create_and_add_to_project() {
@@ -103,177 +126,203 @@ jobs:
 
           create_and_add_to_project \
             "[BE] US1: Registro de preferencia de accesibilidad" \
-            "**Como** un nuevo jugador,
-          **Quiero** poder indicar durante el registro si tengo dificultades visuales,
-          **Para que** el juego pueda activar automáticamente las funcionalidades de accesibilidad para mí.
-
-          ---
-          ### **Criterios de Aceptación:**
-          - ✅ El formulario de registro debe incluir un checkbox o toggle con la etiqueta \"Tengo dificultades visuales\".
-          - ✅ El backend debe poder almacenar esta preferencia en el documento del usuario en Firebase (ej. \`visualDifficulty: boolean\`).
-          - ✅ El valor por defecto para esta preferencia debe ser \`false\` si el usuario no lo marca." \
-            "Prioridad: Alta" \
-            "Sprint Backend (7-15 Octubre)"
+            "**Como** un nuevo jugador, **Quiero** poder indicar durante el registro si tengo dificultades visuales, **Para que** el juego pueda activar automáticamente las funcionalidades de accesibilidad para mí.
+            
+            ---
+            ### **Puntos de Estimación:** 3
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El formulario de registro debe incluir un checkbox.
+            - ✅ El backend debe poder almacenar esta preferencia en Firebase.
+            - ✅ El valor por defecto debe ser \`false\`." \
+            "Prioridad: Alta" "Sprint Backend (7-15 Octubre)"
 
           create_and_add_to_project \
             "[BE] US5: Almacenamiento del historial de interacciones de voz" \
-            "**Como** usuario del modo de voz,
-          **Quiero** que mis interacciones de voz se almacenen en un historial,
-          **Para que** pueda revisar mi actividad y los administradores puedan analizar patrones de uso.
+            "**Como** usuario del modo de voz, **Quiero** que mis interacciones se almacenen, **Para que** pueda revisar mi actividad.
 
-          ---
-          ### **Criterios de Aceptación:**
-          - ✅ El backend debe registrar cada interacción de voz exitosa en una nueva colección de Firebase (ej. \`voiceInteractions\`).
-          - ✅ Cada registro debe incluir el \`userId\`, \`questionId\`, la respuesta dada, el timestamp y la duración.
-          - ✅ Se debe crear un endpoint API seguro (\`GET /api/voice-interactions/:userId\`) para que los usuarios puedan recuperar su propio historial." \
-            "Prioridad: Media" \
-            "Sprint Backend (7-15 Octubre)"
+            ---
+            ### **Puntos de Estimación:** 6
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El backend debe registrar cada interacción.
+            - ✅ Cada registro debe incluir \`userId\`, \`questionId\`, etc.
+            - ✅ Se debe crear un endpoint seguro para recuperar el historial." \
+            "Prioridad: Media" "Sprint Backend (7-15 Octubre)"
 
           create_and_add_to_project \
             "[BE] US7: Configuración administrativa de accesibilidad" \
-            "**Como** administrador de la plataforma,
-          **Quiero** tener un panel para configurar los ajustes de accesibilidad y monitorear su uso,
-          **Para que** pueda gestionar la funcionalidad y entender su adopción.
+            "**Como** administrador, **Quiero** tener un panel para configurar la accesibilidad, **Para que** pueda gestionar la funcionalidad.
 
-          ---
-          ### **Criterios de Aceptación:**
-          - ✅ El panel de administración debe tener una nueva sección para \"Ajustes de Accesibilidad\".
-          - ✅ Los administradores deben poder habilitar o deshabilitar globalmente el modo de voz.
-          - ✅ El backend debe proporcionar un endpoint que devuelva estadísticas agregadas." \
-            "Prioridad: Baja" \
-            "Sprint Backend (7-15 Octubre)"
+            ---
+            ### **Puntos de Estimación:** 4
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El panel debe tener una sección de Accesibilidad.
+            - ✅ Los admins deben poder habilitar/deshabilitar el modo de voz.
+            - ✅ El backend debe proveer un endpoint de estadísticas." \
+            "Prioridad: Baja" "Sprint Backend (7-15 Octubre)"
 
           create_and_add_to_project \
-            "[BE] US8: Compatibilidad WebSocket con modo de voz" \
-            "**Como** desarrollador del backend,
-          **Quiero** asegurar que el modo de voz se integre sin problemas con el sistema de juego multijugador,
-          **Para que** la funcionalidad de accesibilidad no interrumpa ni degrade la experiencia de juego en tiempo real.
+            "[BE] US8: Integración del modo de voz con el juego" \
+            "**Como** desarrollador, **Quiero** asegurar que el modo de voz se integre con WebSocket, **Para que** la experiencia de juego no se degrade.
 
-          ---
-          ### **Criterios de Aceptación:**
-          - ✅ El servidor de WebSocket debe ser capaz de recibir y procesar eventos relacionados con el modo de voz (ej. \`voiceResponse\`).
-          - ✅ Las pruebas de estrés deben confirmar que el rendimiento del servidor WebSocket no se degrada." \
-            "Prioridad: Alta" \
-            "Sprint Backend (7-15 Octubre)"
+            ---
+            ### **Puntos de Estimación:** 6
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El servidor de WebSocket debe procesar eventos de voz.
+            - ✅ Las pruebas de estrés no deben mostrar degradación." \
+            "Prioridad: Alta" "Sprint Backend (7-15 Octubre)"
 
           create_and_add_to_project \
             "[BE] US9: Procesamiento y validación de respuestas por voz" \
-            "**Como** usuario del modo de voz,
-          **Quiero** que el sistema procese y valide mis respuestas habladas,
-          **Para que** pueda participar en el juego usando solo mi voz.
+            "**Como** usuario de voz, **Quiero** que el sistema valide mis respuestas habladas, **Para que** pueda participar usando mi voz.
 
-          ---
-          ### **Criterios de Aceptación:**
-          - ✅ Se debe crear un nuevo endpoint en el backend (\`POST /api/voice-responses/validate\`).
-          - ✅ El backend debe implementar una lógica para validar la respuesta contra la respuesta correcta.
-          - ✅ La interacción debe registrarse en el historial de interacciones de voz." \
-            "Prioridad: Alta" \
-            "Sprint Backend (7-15 Octubre)"
+            ---
+            ### **Puntos de Estimación:** 4
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Crear un endpoint \`POST /api/voice-responses/validate\`.
+            - ✅ El backend debe implementar la lógica de validación.
+            - ✅ La interacción debe registrarse en el historial." \
+            "Prioridad: Alta" "Sprint Backend (7-15 Octubre)"
 
           # ===============================================
           # ==         ISSUES SPRINT FRONTEND            ==
           # ===============================================
 
           create_and_add_to_project \
+            "[FE] US1: Integración frontend de preferencia de accesibilidad" \
+            "**Como** un nuevo jugador, **Quiero** ver y usar la opción de accesibilidad en el formulario de registro, **Para que** mi preferencia quede guardada desde el inicio.
+
+            ---
+            ### **Puntos de Estimación:** 2
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El componente de UI de registro incluye el checkbox de accesibilidad.
+            - ✅ Al enviar el formulario, el valor del checkbox se envía a la API del backend." \
+            "Prioridad: Alta" "Sprint Frontend (16-21 Octubre)"
+
+          create_and_add_to_project \
             "[FE] US2: Activación automática del modo de voz" \
-            "**Como** un usuario con dificultades visuales,
-          **Quiero** que el modo de voz se active automáticamente cuando inicio sesión,
-          **Para que** no tenga que buscar y activar la opción manualmente.
-          
-          ---
-          ### **Criterios de Aceptación:**
-          - ✅ Al iniciar sesión, el frontend debe verificar la preferencia \`visualDifficulty\` del usuario.
-          - ✅ Si es \`true\`, el modo de voz debe activarse automáticamente.
-          - ✅ El usuario debe poder deshabilitar manualmente el modo de voz si lo desea." \
-            "Prioridad: Alta" \
-            "Sprint Frontend (16-21 Octubre)"
+            "**Como** un usuario con dificultades visuales, **Quiero** que el modo de voz se active automáticamente, **Para que** no tenga que buscarlo manualmente.
+
+            ---
+            ### **Puntos de Estimación:** 5
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Al iniciar sesión, el frontend debe verificar la preferencia.
+            - ✅ Si es \`true\`, el modo de voz se activa.
+            - ✅ El usuario puede deshabilitarlo manualmente." \
+            "Prioridad: Alta" "Sprint Frontend (16-21 Octubre)"
 
           create_and_add_to_project \
             "[FE] US3: Lectura de preguntas mediante Text-to-Speech (TTS)" \
-            "**Como** usuario del modo de voz,
-          **Quiero** que el sistema lea en voz alta las preguntas y las opciones de respuesta,
-          **Para que** pueda entender el contenido del juego sin necesidad de verlo.
+            "**Como** usuario de voz, **Quiero** que el sistema lea las preguntas y opciones, **Para que** pueda entender el contenido sin verlo.
 
-          ---
-          ### **Criterios de Aceptación:**
-          - ✅ Cuando se muestra una nueva pregunta, el texto y las opciones deben ser leídos automáticamente usando la Web Speech API.
-          - ✅ El usuario debe poder pausar y reanudar la lectura de audio." \
-            "Prioridad: Alta" \
-            "Sprint Frontend (16-21 Octubre)"
+            ---
+            ### **Puntos de Estimación:** 8
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El texto y opciones deben leerse con la Web Speech API.
+            - ✅ El usuario puede pausar y reanudar la lectura." \
+            "Prioridad: Alta" "Sprint Frontend (16-21 Octubre)"
 
           create_and_add_to_project \
             "[FE] US4: Configuración de ajustes de voz" \
-            "**Como** usuario del modo de voz,
-          **Quiero** poder configurar los ajustes de la voz (tipo, velocidad y volumen),
-          **Para que** pueda personalizar la experiencia de audio a mi gusto.
+            "**Como** usuario de voz, **Quiero** poder configurar la voz, **Para que** pueda personalizar la experiencia.
 
-          ---
-          ### **Criterios de Aceptación:**
-          - ✅ Debe haber un panel de ajustes de accesibilidad.
-          - ✅ El usuario debe poder elegir entre las voces disponibles en su navegador.
-          - ✅ El usuario debe poder ajustar la velocidad y el volumen de la voz.
-          - ✅ Los ajustes deben guardarse en el \`localStorage\`." \
-            "Prioridad: Media" \
-            "Sprint Frontend (16-21 Octubre)"
+            ---
+            ### **Puntos de Estimación:** 5
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Debe haber un panel de ajustes.
+            - ✅ El usuario puede cambiar voz, velocidad y volumen.
+            - ✅ Los ajustes deben guardarse en \`localStorage\`." \
+            "Prioridad: Media" "Sprint Frontend (16-21 Octubre)"
+
+          create_and_add_to_project \
+            "[FE] US5: Integración frontend del historial de voz" \
+            "**Como** usuario de voz, **Quiero** ver mi historial de interacciones, **Para que** pueda consultar mi actividad pasada.
+
+            ---
+            ### **Puntos de Estimación:** 3
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Crear una nueva vista/componente para mostrar el historial.
+            - ✅ Consumir el endpoint \`GET /api/voice-interactions/:userId\` del backend.
+            - ✅ Mostrar los datos de forma clara en la UI." \
+            "Prioridad: Media" "Sprint Frontend (16-21 Octubre)"
 
           create_and_add_to_project \
             "[FE] US6: Sistema de tutorial de audio" \
-            "**Como** un nuevo usuario con dificultades visuales,
-          **Quiero** recibir un tutorial de audio que me guíe a través de las funcionalidades,
-          **Para que** pueda aprender a jugar sin asistencia visual.
+            "**Como** nuevo usuario con dificultades visuales, **Quiero** recibir un tutorial de audio, **Para que** pueda aprender a jugar sin asistencia visual.
 
-          ---
-          ### **Criterios de Aceptación:**
-          - ✅ El tutorial de audio debe ofrecerse automáticamente a los nuevos usuarios con la opción activada.
-          - ✅ El tutorial debe cubrir cómo navegar, cómo se leen las preguntas y cómo responder por voz.
-          - ✅ El usuario debe poder omitir el tutorial." \
-            "Prioridad: Media" \
-            "Sprint Frontend (16-21 Octubre)"
-          
+            ---
+            ### **Puntos de Estimación:** 7
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El tutorial se ofrece automáticamente a nuevos usuarios.
+            - ✅ Cubre navegación, lectura y cómo responder.
+            - ✅ El usuario puede omitir el tutorial." \
+            "Prioridad: Media" "Sprint Frontend (16-21 Octubre)"
+
           create_and_add_to_project \
-            "[FE] US9: Reconocimiento de respuestas por voz" \
-            "**Como** usuario del modo de voz,
-          **Quiero** poder responder a las preguntas usando comandos de voz,
-          **Para que** pueda participar plenamente en el juego sin usar el mouse o el teclado.
+            "[FE] US7: Panel administrativo frontend" \
+            "**Como** administrador, **Quiero** ver y usar los controles de accesibilidad en el panel, **Para que** pueda gestionar la funcionalidad en la plataforma.
 
-          ---
-          ### **Criterios de Aceptación:**
-          - ✅ El sistema debe usar la Web Speech API para escuchar y transcribir los comandos de voz.
-          - ✅ Debe reconocer respuestas clave como \"A\", \"B\", \"C\", \"D\", \"Primera opción\", etc.
-          - ✅ Debe haber una retroalimentación visual y auditiva para confirmar que la respuesta fue recibida.
-          - ✅ La respuesta debe enviarse al backend para su validación." \
-            "Prioridad: Alta" \
-            "Sprint Frontend (16-21 Octubre)"
+            ---
+            ### **Puntos de Estimación:** 2
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ La UI del panel de administración debe tener la nueva sección de accesibilidad.
+            - ✅ Los controles deben consumir las APIs del backend para ver estadísticas y cambiar ajustes." \
+            "Prioridad: Baja" "Sprint Frontend (16-21 Octubre)"
 
-      # ⚠️ PASO 5 AÑADIDO: Crea una rama por cada Issue que no la tenga
-      - name: Crear Ramas para Issues
+          create_and_add_to_project \
+            "[FE] US8: Integración frontend del modo de voz" \
+            "**Como** usuario de voz, **Quiero** que el modo de voz funcione correctamente durante una partida en tiempo real, **Para que** mi experiencia de juego sea fluida.
+
+            ---
+            ### **Puntos de Estimación:** 3
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El estado del modo de voz (activado/desactivado) debe gestionarse correctamente con los eventos de WebSocket.
+            - ✅ No debe haber conflictos entre la lectura de TTS y los eventos del juego." \
+            "Prioridad: Alta" "Sprint Frontend (16-21 Octubre)"
+
+          create_and_add_to_project \
+            "[FE] US9: Reconocimiento de voz con Web Speech API" \
+            "**Como** usuario de voz, **Quiero** responder a las preguntas con mi voz, **Para que** pueda participar sin usar el mouse.
+
+            ---
+            ### **Puntos de Estimación:** 6
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Usar Web Speech API para escuchar y transcribir.
+            - ✅ Debe reconocer respuestas clave (\"A\", \"B\", \"C\", etc.).
+            - ✅ La respuesta se envía al backend para validación." \
+            "Prioridad: Alta" "Sprint Frontend (16-21 Octubre)"
+      
+      # PASO 6: Crea y Vincula las Ramas para cada Issue
+      - name: Crear Ramas y Vincularlas a las Issues
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Obtiene el SHA de la última versión de la rama 'main'
           MAIN_BRANCH_SHA=$(git rev-parse main)
-
-          # Itera sobre todas las issues abiertas
           gh issue list --state open --json number,title | jq -c '.[]' | while read issue; do
             ISSUE_NUMBER=$(echo $issue | jq -r '.number')
             ISSUE_TITLE=$(echo $issue | jq -r '.title')
-
-            # Limpia el título para crear un nombre de rama válido
-            # Convierte a minúsculas, reemplaza espacios con guiones, elimina caracteres especiales.
             BRANCH_TITLE=$(echo "$ISSUE_TITLE" | iconv -t ascii//TRANSLIT | sed -E 's/\[(BE|FE)\] //g' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+\|-+$//g' | tr '[:upper:]' '[:lower:]')
-            
-            # Construye el nombre final de la rama
             BRANCH_NAME="hu-${ISSUE_NUMBER}-${BRANCH_TITLE}"
 
-            # Revisa si la rama ya existe en el repositorio remoto
             if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
-              echo "La rama '$BRANCH_NAME' ya existe. Omitiendo."
+              echo "La rama '$BRANCH_NAME' ya existe."
             else
               echo "Creando rama '$BRANCH_NAME'..."
-              # Crea la rama en el repositorio remoto directamente desde el último commit de 'main'
-              gh api repos/${{ github.repository }}/git/refs \
-                --method POST \
-                -f ref="refs/heads/${BRANCH_NAME}" \
-                -f sha="$MAIN_BRANCH_SHA"
+              gh api repos/${{ github.repository }}/git/refs --method POST -f ref="refs/heads/${BRANCH_NAME}" -f sha="$MAIN_BRANCH_SHA"
+              # Comenta en la issue para vincular la rama
+              gh issue comment $ISSUE_NUMBER --body "Se ha creado la rama de trabajo para esta HU: \`$BRANCH_NAME\`"
             fi
           done
