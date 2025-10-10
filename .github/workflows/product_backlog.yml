@@ -325,7 +325,7 @@ jobs:
           gh issue list --state open --json number,title | jq -c '.[]' | while read issue; do
             ISSUE_NUMBER=$(echo $issue | jq -r '.number')
             ISSUE_TITLE=$(echo $issue | jq -r '.title')
-            BRANCH_TITLE=$(echo "$ISSUE_TITLE" | iconv -t ascii//TRANSLIT | sed -E 's/\[(BE|FE)\] //g' | sed -E 's/[^a-zA-Z0--9]+/-/g' | sed -E 's/^-+\|-+$//g' | tr '[:upper:]' '[:lower:]')
+            BRANCH_TITLE=$(echo "$ISSUE_TITLE" | iconv -t ascii//TRANSLIT | sed -E 's/\[(BE|FE)\] //g' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+\|-+$//g' | tr '[:upper:]' '[:lower:]')
             BRANCH_NAME="hu-${ISSUE_NUMBER}-${BRANCH_TITLE}"
 
             if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
