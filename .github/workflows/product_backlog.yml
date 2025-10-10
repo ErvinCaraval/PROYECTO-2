@@ -120,14 +120,22 @@ jobs:
                 # === MOVER LA ISSUE A LA COLUMNA 'Todo' ===
                 TODO_COLUMN_ID="f75ad846"
                 STATUS_FIELD_ID="PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM"
-                # Actualiza el campo Status del item
-                gh api graphql -f query='
-                  mutation($project:ID!, $item:ID!, $field:ID!, $option:ID!) {
-                    updateProjectV2ItemFieldValue(input: {projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}}) {
+                # Actualiza el campo Status del item usando una query más simple
+                echo "Moviendo issue a Todo con IDs: PROJECT=$PROJECT_ID, ITEM=$ITEM_ID, FIELD=$STATUS_FIELD_ID, OPTION=$TODO_COLUMN_ID"
+                
+                # Usar una query GraphQL más simple sin variables complejas
+                gh api graphql -f query="
+                  mutation {
+                    updateProjectV2ItemFieldValue(input: {
+                      projectId: \"$PROJECT_ID\",
+                      itemId: \"$ITEM_ID\",
+                      fieldId: \"$STATUS_FIELD_ID\",
+                      value: {singleSelectOptionId: \"$TODO_COLUMN_ID\"}
+                    }) {
                       projectV2Item { id }
                     }
                   }
-                ' -f project="$PROJECT_ID" -f item="$ITEM_ID" -f field="$STATUS_FIELD_ID" -f option="$TODO_COLUMN_ID" || echo "No se pudo mover la issue a la columna 'Todo'. Revisa el ID."
+                " || echo "No se pudo mover la issue a la columna 'Todo'. Revisa el ID."
             fi
           }
 
