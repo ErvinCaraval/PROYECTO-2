@@ -1,0 +1,181 @@
+name: 🚀 Crear Backlog y Sprints del Proyecto
+
+on:
+  workflow_dispatch: # Permite ejecutar este workflow manualmente desde la pestaña Actions
+
+# Define el token con permisos de escritura para crear issues y milestones
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  setup-project-backlog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Crear Milestones para los Sprints
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh milestone create "Sprint Backend (7-15 Octubre)" --description "Infraestructura completa. Todas las APIs y funcionalidades de backend deben estar listas." --due-date "2024-10-15"
+          gh milestone create "Sprint Frontend (16-21 Octubre)" --description "Implementación de UI/UX usando las APIs del backend ya terminadas." --due-date "2024-10-21"
+      
+      - name: 2. Crear Issues del Sprint Backend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # US1: Registro de preferencia de accesibilidad (Backend)
+          gh issue create \
+            --title "[BE] US1: Registro de preferencia de accesibilidad" \
+            --body "**Como** un nuevo jugador,
+          **Quiero** poder indicar durante el registro si tengo dificultades visuales,
+          **Para que** el juego pueda activar automáticamente las funcionalidades de accesibilidad para mí.
+
+          ---
+          ### **Criterios de Aceptación:**
+          - ✅ El formulario de registro debe incluir un checkbox o toggle con la etiqueta \"Tengo dificultades visuales\".
+          - ✅ El backend debe poder almacenar esta preferencia en el documento del usuario en Firebase (ej. \`visualDifficulty: boolean\`).
+          - ✅ El valor por defecto para esta preferencia debe ser \`false\` si el usuario no lo marca." \
+            --label "Prioridad: Alta" \
+            --milestone "Sprint Backend (7-15 Octubre)"
+
+          # US5: Almacenamiento del historial de interacciones de voz (Backend)
+          gh issue create \
+            --title "[BE] US5: Almacenamiento del historial de interacciones de voz" \
+            --body "**Como** usuario del modo de voz,
+          **Quiero** que mis interacciones de voz se almacenen en un historial,
+          **Para que** pueda revisar mi actividad y los administradores puedan analizar patrones de uso.
+
+          ---
+          ### **Criterios de Aceptación:**
+          - ✅ El backend debe registrar cada interacción de voz exitosa en una nueva colección de Firebase (ej. \`voiceInteractions\`).
+          - ✅ Cada registro debe incluir el \`userId\`, \`questionId\`, la respuesta dada, el timestamp y la duración.
+          - ✅ Se debe crear un endpoint API seguro (\`GET /api/voice-interactions/:userId\`) para que los usuarios puedan recuperar su propio historial.
+          - ✅ Los datos deben almacenarse de forma segura y cumplir con las políticas de privacidad." \
+            --label "Prioridad: Media" \
+            --milestone "Sprint Backend (7-15 Octubre)"
+            
+          # US7: Configuración administrativa de accesibilidad (Backend)
+          gh issue create \
+            --title "[BE] US7: Configuración administrativa de accesibilidad" \
+            --body "**Como** administrador de la plataforma,
+          **Quiero** tener un panel para configurar los ajustes de accesibilidad y monitorear su uso,
+          **Para que** pueda gestionar la funcionalidad y entender su adopción.
+
+          ---
+          ### **Criterios de Aceptación:**
+          - ✅ El panel de administración debe tener una nueva sección para \"Ajustes de Accesibilidad\".
+          - ✅ Los administradores deben poder habilitar o deshabilitar globalmente el modo de voz.
+          - ✅ El backend debe proporcionar un endpoint que devuelva estadísticas agregadas (ej. número de usuarios con el modo activado, interacciones de voz por día)." \
+            --label "Prioridad: Baja" \
+            --milestone "Sprint Backend (7-15 Octubre)"
+
+          # US8: Integración del modo de voz con el juego (Backend)
+          gh issue create \
+            --title "[BE] US8: Compatibilidad WebSocket con modo de voz" \
+            --body "**Como** desarrollador del backend,
+          **Quiero** asegurar que el modo de voz se integre sin problemas con el sistema de juego multijugador,
+          **Para que** la funcionalidad de accesibilidad no interrumpa ni degrade la experiencia de juego en tiempo real.
+
+          ---
+          ### **Criterios de Aceptación:**
+          - ✅ El servidor de WebSocket debe ser capaz de recibir y procesar eventos relacionados con el modo de voz (ej. \`voiceResponse\`).
+          - ✅ Las pruebas de estrés deben confirmar que el rendimiento del servidor WebSocket no se degrada más de un 5% al manejar eventos de voz." \
+            --label "Prioridad: Alta" \
+            --milestone "Sprint Backend (7-15 Octubre)"
+
+          # US9: Procesamiento y validación de respuestas por voz (Backend)
+          gh issue create \
+            --title "[BE] US9: Procesamiento y validación de respuestas por voz" \
+            --body "**Como** usuario del modo de voz,
+          **Quiero** que el sistema procese y valide mis respuestas habladas,
+          **Para que** pueda participar en el juego usando solo mi voz.
+
+          ---
+          ### **Criterios de Aceptación:**
+          - ✅ Se debe crear un nuevo endpoint en el backend (\`POST /api/voice-responses/validate\`) que reciba la transcripción de la respuesta de voz.
+          - ✅ El backend debe implementar una lógica para validar la respuesta (ej. \"A\", \"B\", \"Primera opción\") contra la respuesta correcta de la pregunta actual.
+          - ✅ La interacción debe registrarse en el historial de interacciones de voz (\`voiceInteractions\`)." \
+            --label "Prioridad: Alta" \
+            --milestone "Sprint Backend (7-15 Octubre)"
+
+      - name: 3. Crear Issues del Sprint Frontend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # US2: Activación automática del modo de voz
+          gh issue create \
+            --title "[FE] US2: Activación automática del modo de voz" \
+            --body "**Como** un usuario con dificultades visuales,
+          **Quiero** que el modo de voz se active automáticamente cuando inicio sesión,
+          **Para que** no tenga que buscar y activar la opción manualmente.
+          
+          ---
+          ### **Criterios de Aceptación:**
+          - ✅ Al iniciar sesión, el frontend debe verificar la preferencia \`visualDifficulty\` del usuario.
+          - ✅ Si es \`true\`, el modo de voz debe activarse automáticamente en toda la aplicación.
+          - ✅ El estado del modo de voz debe persistir mientras el usuario navega por el sitio.
+          - ✅ El usuario debe poder deshabilitar manualmente el modo de voz si lo desea." \
+            --label "Prioridad: Alta" \
+            --milestone "Sprint Frontend (16-21 Octubre)"
+
+          # US3: Lectura de preguntas mediante Text-to-Speech
+          gh issue create \
+            --title "[FE] US3: Lectura de preguntas mediante Text-to-Speech (TTS)" \
+            --body "**Como** usuario del modo de voz,
+          **Quiero** que el sistema lea en voz alta las preguntas y las opciones de respuesta,
+          **Para que** pueda entender el contenido del juego sin necesidad de verlo.
+
+          ---
+          ### **Criterios de Aceptación:**
+          - ✅ Cuando se muestra una nueva pregunta, el texto de la pregunta y cada una de las opciones deben ser leídos automáticamente usando la Web Speech API.
+          - ✅ El usuario debe poder pausar y reanudar la lectura de audio.
+          - ✅ La lectura debe ser clara y a una velocidad comprensible." \
+            --label "Prioridad: Alta" \
+            --milestone "Sprint Frontend (16-21 Octubre)"
+
+          # US4: Configuración de ajustes de voz
+          gh issue create \
+            --title "[FE] US4: Configuración de ajustes de voz" \
+            --body "**Como** usuario del modo de voz,
+          **Quiero** poder configurar los ajustes de la voz (tipo, velocidad y volumen),
+          **Para que** pueda personalizar la experiencia de audio a mi gusto.
+
+          ---
+          ### **Criterios de Aceptación:**
+          - ✅ Debe haber un panel de ajustes de accesibilidad accesible para el usuario.
+          - ✅ El usuario debe poder elegir entre las voces disponibles en su navegador.
+          - ✅ El usuario debe poder ajustar la velocidad de la voz (ej. de 0.5x a 2x).
+          - ✅ Los ajustes seleccionados deben guardarse en el \`localStorage\` del navegador para persistir entre sesiones." \
+            --label "Prioridad: Media" \
+            --milestone "Sprint Frontend (16-21 Octubre)"
+
+          # US6: Sistema de tutorial de audio
+          gh issue create \
+            --title "[FE] US6: Sistema de tutorial de audio" \
+            --body "**Como** un nuevo usuario con dificultades visuales,
+          **Quiero** recibir un tutorial de audio que me guíe a través de las funcionalidades clave del juego,
+          **Para que** pueda aprender a jugar sin asistencia visual.
+
+          ---
+          ### **Criterios de Aceptación:**
+          - ✅ El tutorial de audio debe ofrecerse automáticamente a los usuarios que se registran con la opción de dificultad visual activada.
+          - ✅ El tutorial debe cubrir cómo navegar, cómo se leen las preguntas y cómo responder por voz.
+          - ✅ El usuario debe poder omitir el tutorial o volver a escucharlo más tarde desde el panel de ajustes." \
+            --label "Prioridad: Media" \
+            --milestone "Sprint Frontend (16-21 Octubre)"
+          
+          # US9: Reconocimiento de respuestas por voz (Frontend)
+          gh issue create \
+            --title "[FE] US9: Reconocimiento de respuestas por voz" \
+            --body "**Como** usuario del modo de voz,
+          **Quiero** poder responder a las preguntas usando comandos de voz,
+          **Para que** pueda participar plenamente en el juego sin usar el mouse o el teclado.
+
+          ---
+          ### **Criterios de Aceptación:**
+          - ✅ El sistema debe usar la Web Speech API para escuchar y transcribir los comandos de voz del usuario.
+          - ✅ El sistema debe ser capaz de reconocer respuestas clave como \"A\", \"B\", \"C\", \"D\", \"Primera opción\", \"Segunda opción\", etc.
+          - ✅ Debe haber una retroalimentación visual y auditiva para confirmar que la respuesta de voz fue recibida.
+          - ✅ La transcripción de la respuesta debe enviarse al endpoint del backend para su validación." \
+            --label "Prioridad: Alta" \
+            --milestone "Sprint Frontend (16-21 Octubre)"
