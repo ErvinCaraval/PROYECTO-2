@@ -38,6 +38,222 @@ tags:
     description: Generación de preguntas con inteligencia artificial.
 
 paths:
+
+  /api/voice-interactions:
+    post:
+      tags: [VoiceInteractions]
+      summary: Registrar una nueva interacción de voz
+      description: |
+        Registra una interacción de voz (lectura o respuesta) del usuario.
+        **Campos preparados para integración futura con AssemblyAI (STT).**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, questionId, action, duration, timestamp, metadata]
+              properties:
+                userId:
+                  type: string
+                  example: "abc123"
+                questionId:
+                  type: string
+                  example: "q789"
+                action:
+                  type: string
+                  enum: [question_read, voice_answer]
+                  example: "voice_answer"
+                duration:
+                  type: number
+                  example: 3.2
+                timestamp:
+                  type: string
+                  format: date-time
+                  example: "2025-10-10T12:34:56.789Z"
+                voiceText:
+                  type: string
+                  nullable: true
+                  example: null
+                confidence:
+                  type: number
+                  nullable: true
+                  example: null
+                metadata:
+                  type: object
+                  example: { "audioBase64": "..." }
+            example:
+              userId: "abc123"
+              questionId: "q789"
+              action: "voice_answer"
+              duration: 3.2
+              timestamp: "2025-10-10T12:34:56.789Z"
+              voiceText: null
+              confidence: null
+              metadata:
+                audioBase64: "..."
+      responses:
+        201:
+          description: Interacción registrada correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Voice interaction registered successfully."
+        400:
+          description: Error en los datos enviados.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Missing required fields."
+        500:
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error."
+
+  /api/voice-interactions/{userId}:
+    get:
+      tags: [VoiceInteractions]
+      summary: Obtener historial de interacciones de voz de un usuario
+      description: Devuelve el historial completo de interacciones de voz para el usuario indicado.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Historial de interacciones de voz.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    userId:
+                      type: string
+                    questionId:
+                      type: string
+                    action:
+                      type: string
+                    duration:
+                      type: number
+                    timestamp:
+                      type: string
+                    voiceText:
+                      type: string
+                      nullable: true
+                    confidence:
+                      type: number
+                      nullable: true
+                    metadata:
+                      type: object
+              example:
+                - id: "docId1"
+                  userId: "abc123"
+                  questionId: "q789"
+                  action: "voice_answer"
+                  duration: 3.2
+                  timestamp: "2025-10-10T12:34:56.789Z"
+                  voiceText: null
+                  confidence: null
+                  metadata:
+                    audioBase64: "..."
+        500:
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error."
+
+    delete:
+      tags: [VoiceInteractions]
+      summary: Eliminar historial de interacciones de voz de un usuario
+      description: Elimina todas las interacciones de voz del usuario indicado.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Historial eliminado correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Deleted 3 interactions."
+        500:
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error."
+
+  /api/voice-interactions/stats/{userId}:
+    get:
+      tags: [VoiceInteractions]
+      summary: Obtener estadísticas básicas de interacciones de voz
+      description: Devuelve estadísticas básicas (total, duración promedio) de las interacciones de voz del usuario.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Estadísticas de interacciones de voz.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 5
+                  averageDuration:
+                    type: number
+                    example: 2.8
+        500:
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error."
   /api/users/register:
     post:
       tags: [Users]
