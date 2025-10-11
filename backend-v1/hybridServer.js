@@ -545,6 +545,153 @@ io.on('connection', (socket) => {
       socket.emit('error', { error: error.message });
     }
   });
+
+  // [HU8] Submit Audio Answer - Nueva funcionalidad para respuestas de audio con AssemblyAI
+  socket.on('submitAudioAnswer', async ({ gameId, uid, audioUrl, questionOptions }) => {
+    try {
+      const gameRef = db.collection('games').doc(gameId);
+      const gameDoc = await gameRef.get();
+      if (!gameDoc.exists) {
+        socket.emit('error', { error: 'Game not found' });
+        return;
+      }
+      const game = gameDoc.data();
+      const currentQ = game.questions[game.currentQuestion];
+      if (!currentQ) {
+        socket.emit('error', { error: 'No current question' });
+        return;
+      }
+
+      // Procesar audio con AssemblyAI
+      const assemblyAI = require('./services/assemblyAIService');
+      const result = await assemblyAI.processVoiceAnswer(audioUrl, questionOptions || currentQ.options);
+      
+      if (!result.success) {
+        socket.emit('audioAnswerError', { 
+          error: result.error,
+          suggestions: result.suggestions
+        });
+        return;
+      }
+
+      if (!result.validation.isValid) {
+        socket.emit('audioAnswerError', { 
+          error: 'No se pudo reconocer la respuesta de audio',
+          suggestions: result.suggestions
+        });
+        return;
+      }
+
+      // Registrar interacción de voz
+      await db.collection('voiceInteractions').add({
+        userId: uid,
+        questionId: currentQ.id || `q_${game.currentQuestion}`,
+        gameId: gameId,
+        action: 'voice_answer_assemblyai',
+        voiceText: result.text,
+        confidence: result.confidence,
+        timestamp: new Date(),
+        metadata: {
+          matchedOption: result.validation.matchedOption,
+          isValid: result.validation.isValid,
+          questionOptions: questionOptions || currentQ.options,
+          assemblyAIUsed: true,
+          audioUrl: audioUrl
+        }
+      });
+
+      // Procesar la respuesta como una respuesta normal
+      if (!socket.data.answers) socket.data.answers = {};
+      const responseTime = Date.now();
+      socket.data.answers[game.currentQuestion] = { 
+        answerIndex: result.validation.answerIndex, 
+        answerValue: result.validation.matchedOption, 
+        responseTime,
+        isAudioAnswer: true,
+        confidence: result.confidence,
+        assemblyAIUsed: true
+      };
+      socket.data.uid = uid;
+
+      // Notificar a todos los jugadores que se recibió una respuesta de audio
+      io.to(gameId).emit('audioAnswerReceived', {
+        uid,
+        confidence: result.confidence,
+        matchedOption: result.validation.matchedOption,
+        text: result.text,
+        assemblyAIUsed: true
+      });
+
+      // Continuar con el flujo normal de procesamiento de respuestas
+      const sockets = await io.in(gameId).fetchSockets();
+      const answers = {};
+      sockets.forEach(s => {
+        if (s.data.answers && s.data.answers[game.currentQuestion] !== undefined) {
+          answers[s.data.uid] = s.data.answers[game.currentQuestion];
+        }
+      });
+
+      // Solo avanzar si todos respondieron
+      if (Object.keys(answers).length === game.players.length) {
+        const correctValue = Array.isArray(currentQ.options) && typeof currentQ.correctAnswerIndex === 'number'
+          ? currentQ.options[currentQ.correctAnswerIndex]
+          : undefined;
+        
+        const questionStartTime = game.questionStartTimes && game.questionStartTimes[game.currentQuestion] 
+          ? game.questionStartTimes[game.currentQuestion] 
+          : Date.now();
+        
+        const updatedPlayers = game.players.map(player => {
+          const ansObj = answers[player.uid];
+          let score = player.score;
+          let responseTimes = player.responseTimes || [];
+          
+          if (ansObj && ansObj.responseTime) {
+            const responseTimeMs = ansObj.responseTime - questionStartTime;
+            responseTimes.push(responseTimeMs);
+          }
+          
+          if (ansObj) {
+            if (
+              typeof ansObj.answerValue !== 'undefined' &&
+              typeof correctValue !== 'undefined' &&
+              ansObj.answerValue === correctValue
+            ) {
+              score += 1;
+            } else if (
+              typeof ansObj.answerIndex === 'number' &&
+              typeof currentQ.correctAnswerIndex === 'number' &&
+              ansObj.answerIndex === currentQ.correctAnswerIndex
+            ) {
+              score += 1;
+            }
+          }
+          return { ...player, score, responseTimes };
+        });
+        
+        await gameRef.update({ players: updatedPlayers });
+        io.to(gameId).emit('answerResult', {
+          correctAnswerIndex: currentQ.correctAnswerIndex,
+          explanation: currentQ.explanation,
+          players: updatedPlayers
+        });
+        
+        const nextIndex = game.currentQuestion + 1;
+        setTimeout(async () => {
+          if (nextIndex < game.questions.length) {
+            await gameRef.update({ currentQuestion: nextIndex });
+            sendQuestion(io, gameId, nextIndex);
+          } else {
+            await gameRef.update({ status: 'finished' });
+            io.to(gameId).emit('gameFinished', { players: updatedPlayers });
+            // ... resto del código de finalización del juego
+          }
+        }, 3000);
+      }
+    } catch (error) {
+      socket.emit('error', { error: error.message });
+    }
+  });
 });
 
 async function sendQuestion(io, gameId, questionIndex) {

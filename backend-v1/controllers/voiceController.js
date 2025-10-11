@@ -1,4 +1,5 @@
 const { db } = require('../firebase');
+const assemblyAI = require('../services/assemblyAIService');
 
 // [HU8] Validar respuesta de voz contra opciones de pregunta
 exports.validateVoiceResponse = async (req, res) => {
@@ -282,5 +283,80 @@ function generateSuggestions(questionOptions) {
   
   return suggestions;
 }
+
+// [HU8] Procesar audio con AssemblyAI
+exports.processAudioWithAssemblyAI = async (req, res) => {
+  const { userId, questionId, audioUrl, questionOptions, gameId } = req.body;
+  
+  try {
+    // Validaciones básicas
+    if (!userId || !questionId || !audioUrl) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: userId, questionId, audioUrl' 
+      });
+    }
+
+    if (!questionOptions || !Array.isArray(questionOptions)) {
+      return res.status(400).json({ 
+        error: 'questionOptions must be an array' 
+      });
+    }
+
+    // Procesar audio con AssemblyAI
+    const result = await assemblyAI.processVoiceAnswer(audioUrl, questionOptions);
+    
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error,
+        suggestions: result.suggestions
+      });
+    }
+
+    // Registrar interacción de voz
+    await db.collection('voiceInteractions').add({
+      userId,
+      questionId,
+      gameId: gameId || null,
+      action: 'voice_answer_assemblyai',
+      voiceText: result.text,
+      confidence: result.confidence,
+      timestamp: new Date(),
+      metadata: {
+        matchedOption: result.validation.matchedOption,
+        isValid: result.validation.isValid,
+        questionOptions: questionOptions,
+        assemblyAIUsed: true,
+        audioUrl: audioUrl
+      }
+    });
+    
+    res.json({ 
+      success: result.validation.isValid,
+      text: result.text,
+      confidence: result.confidence,
+      matchedOption: result.validation.matchedOption,
+      answerIndex: result.validation.answerIndex,
+      suggestions: result.suggestions
+    });
+  } catch (error) {
+    console.error('Error processing audio with AssemblyAI:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// [HU8] Verificar estado de AssemblyAI
+exports.checkAssemblyAIStatus = async (req, res) => {
+  try {
+    const status = await assemblyAI.checkAPIStatus();
+    res.json(status);
+  } catch (error) {
+    console.error('Error checking AssemblyAI status:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+};
 
 module.exports = exports;
