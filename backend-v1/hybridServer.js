@@ -30,6 +30,10 @@ app.use('/api/games', require('./routes/games'));
 app.use('/api/questions', require('./routes/questions'));
 app.use('/api/ai', require('./routes/ai'));
 
+app.use('/api/voice-interactions', require('./routes/voiceInteractions'));
+
+app.use('/api/admin', require('./routes/adminAccessibility'));
+
 io.on('connection', (socket) => {
   // Listener para enviar la primera pregunta al socket que lo solicita
   socket.on('requestQuestion', async ({ gameId }) => {
@@ -375,4 +379,6 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
 
 });
+
+module.exports = { app };
 
