@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for controllers/gamesController.js</title>
+    <title>Code coverage report for middleware/rateLimiter.js</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../prettify.css" />
     <link rel="stylesheet" href="../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../index.html">All files</a> / <a href="index.html">controllers</a> gamesController.js</h1>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">middleware</a> rateLimiter.js</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">13.04% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>3/23</span>
+                <span class='fraction'>6/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/11</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/3</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">13.63% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>3/22</span>
+                <span class='fraction'>6/6</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -105,91 +105,127 @@
 <a name='L40'></a><a href='#L40'>40</a>
 <a name='L41'></a><a href='#L41'>41</a>
 <a name='L42'></a><a href='#L42'>42</a>
-<a name='L43'></a><a href='#L43'>43</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const { db } = require('../firebase');
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const rateLimit = require('express-rate-limit');
 &nbsp;
-// List all public games with 'waiting' statu
-exports.listPublicGames = <span class="fstat-no" title="function not covered" >as</span>ync (req, res) =&gt; {
-<span class="cstat-no" title="statement not covered" >  try {</span>
-    const snapshot = <span class="cstat-no" title="statement not covered" >await db.collection('games')</span>
-      .where('isPublic', '==', true)
-      .where('status', '==', 'waiting')
-      .get();
-    const games = <span class="cstat-no" title="statement not covered" >snapshot.docs.map(<span class="fstat-no" title="function not covered" >do</span>c =&gt; (<span class="cstat-no" title="statement not covered" >{ id: doc.id, ...doc.data() })</span>);</span>
-<span class="cstat-no" title="statement not covered" >    res.json(games);</span>
-  } catch (error) {
-<span class="cstat-no" title="statement not covered" >    res.status(400).json({ error: error.message });</span>
-  }
+// Rate limiter para registro de usuarios
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // máximo 5 intentos de registro por IP cada 15 minutos
+  message: {
+    error: 'Demasiados intentos de registro. Intenta de nuevo en 15 minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false, // Contar todos los requests
+});
+&nbsp;
+// Rate limiter para recuperación de contraseña
+const passwordRecoveryLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 3, // máximo 3 intentos de recuperación por IP cada 15 minutos
+  message: {
+    error: 'Demasiados intentos de recuperación de contraseña. Intenta de nuevo en 15 minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false, // Contar todos los requests
+});
+&nbsp;
+// Rate limiter para actualización de perfil
+const profileUpdateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutos
+  max: 10, // máximo 10 actualizaciones por IP cada 5 minutos
+  message: {
+    error: 'Demasiadas actualizaciones de perfil. Intenta de nuevo en 5 minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+&nbsp;
+// Rate limiter general para endpoints de usuarios
+const generalUserLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // máximo 100 requests por IP cada 15 minutos
+  message: {
+    error: 'Demasiadas peticiones. Intenta de nuevo en 15 minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+&nbsp;
+module.exports = {
+  registerLimiter,
+  passwordRecoveryLimiter,
+  profileUpdateLimiter,
+  generalUserLimiter
 };
-&nbsp;
-// Delete a public game by its creator
-exports.deletePublicGame = <span class="fstat-no" title="function not covered" >as</span>ync (req, res) =&gt; {
-  const { gameId } = <span class="cstat-no" title="statement not covered" >req.params;</span>
-  // Firebase token decoded: req.user.uid
-  const userId = <span class="cstat-no" title="statement not covered" >req.user &amp;&amp; (req.user.uid || req.user.id);</span>
-&nbsp;
-<span class="cstat-no" title="statement not covered" >  try {</span>
-    const gameRef = <span class="cstat-no" title="statement not covered" >db.collection('games').doc(gameId);</span>
-    const gameDoc = <span class="cstat-no" title="statement not covered" >await gameRef.get();</span>
-&nbsp;
-<span class="cstat-no" title="statement not covered" >    if (!gameDoc.exists) {</span>
-<span class="cstat-no" title="statement not covered" >      return res.status(404).json({ error: 'Game not found' });</span>
-    }
-&nbsp;
-    const gameData = <span class="cstat-no" title="statement not covered" >gameDoc.data();</span>
-    // El campo puede ser hostId o createdBy según cómo se creó la partida
-    const creatorId = <span class="cstat-no" title="statement not covered" >gameData.createdBy || gameData.hostId;</span>
-<span class="cstat-no" title="statement not covered" >    if (!creatorId || creatorId !== userId) {</span>
-<span class="cstat-no" title="statement not covered" >      return res.status(403).json({ error: 'You are not authorized to delete this game' });</span>
-    }
-&nbsp;
-<span class="cstat-no" title="statement not covered" >    await gameRef.delete();</span>
-<span class="cstat-no" title="statement not covered" >    res.json({ message: 'Game deleted successfully' });</span>
-  } catch (error) {
-<span class="cstat-no" title="statement not covered" >    res.status(500).json({ error: error.message });</span>
-  }
-};</pre></td></tr></table></pre>
+&nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
