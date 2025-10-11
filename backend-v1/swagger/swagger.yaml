@@ -36,6 +36,12 @@ tags:
     description: Gestión y consulta de preguntas de trivia.
   - name: AI
     description: Generación de preguntas con inteligencia artificial.
+  - name: VoiceInteractions
+    description: Gestión de interacciones de voz y modo de accesibilidad.
+  - name: VoiceResponses
+    description: Procesamiento y validación de respuestas por voz.
+  - name: AdminAccessibility
+    description: Controles administrativos para funcionalidades de accesibilidad.
 
 paths:
 
@@ -1114,3 +1120,358 @@ components:
           type: integer
           description: "Timestamp de creación en milisegundos. Ejemplo real: 1758172800000 (18 septiembre 2025)"
           example: 1758172800000
+
+  # ===========================================
+  # ENDPOINTS DE VOZ Y ACCESIBILIDAD (HU8)
+  # ===========================================
+
+  /api/voice-responses/validate:
+    post:
+      tags: [VoiceResponses]
+      summary: Validar respuesta de voz
+      description: |
+        Valida una respuesta de voz contra las opciones de una pregunta.
+        Utiliza algoritmos de coincidencia inteligente para reconocer respuestas habladas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, questionId, voiceResponse, questionOptions]
+              properties:
+                userId:
+                  type: string
+                  description: "ID del usuario que respondió"
+                  example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+                questionId:
+                  type: string
+                  description: "ID de la pregunta"
+                  example: "q123456"
+                voiceResponse:
+                  type: string
+                  description: "Texto reconocido de la respuesta de voz"
+                  example: "primera opción"
+                questionOptions:
+                  type: array
+                  items:
+                    type: string
+                  description: "Opciones de respuesta de la pregunta"
+                  example: ["Madrid", "Barcelona", "Valencia", "Sevilla"]
+                gameId:
+                  type: string
+                  description: "ID del juego (opcional)"
+                  example: "123456"
+      responses:
+        '200':
+          description: "Respuesta validada exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    description: "Si la respuesta es válida"
+                    example: true
+                  matchedOption:
+                    type: string
+                    description: "Opción que coincidió con la respuesta"
+                    example: "Madrid"
+                  confidence:
+                    type: number
+                    description: "Nivel de confianza (0.0 - 1.0)"
+                    example: 0.9
+                  answerIndex:
+                    type: integer
+                    description: "Índice de la opción seleccionada"
+                    example: 0
+        '400':
+          description: "Error en la validación"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Missing required fields: userId, questionId, voiceResponse"
+
+  /api/voice-responses/process:
+    post:
+      tags: [VoiceResponses]
+      summary: Procesar respuesta de voz
+      description: |
+        Procesa una respuesta de voz y la convierte al formato de juego.
+        Incluye validación y registro de la interacción.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, questionId, voiceResponse, questionOptions]
+              properties:
+                userId:
+                  type: string
+                  description: "ID del usuario"
+                  example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+                questionId:
+                  type: string
+                  description: "ID de la pregunta"
+                  example: "q123456"
+                voiceResponse:
+                  type: string
+                  description: "Texto de la respuesta de voz"
+                  example: "A"
+                questionOptions:
+                  type: array
+                  items:
+                    type: string
+                  description: "Opciones de la pregunta"
+                  example: ["Opción A", "Opción B", "Opción C", "Opción D"]
+                gameId:
+                  type: string
+                  description: "ID del juego"
+                  example: "123456"
+      responses:
+        '200':
+          description: "Respuesta procesada exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  answerIndex:
+                    type: integer
+                    description: "Índice de la respuesta"
+                    example: 0
+                  answerValue:
+                    type: string
+                    description: "Valor de la respuesta"
+                    example: "Opción A"
+                  confidence:
+                    type: number
+                    description: "Confianza del reconocimiento"
+                    example: 0.9
+        '400':
+          description: "Error en el procesamiento"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "No se pudo reconocer la respuesta de voz"
+                  suggestions:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Diga 'A' para Opción A...", "Diga 'primera opción'"]
+
+  /api/voice-responses/stats/{userId}:
+    get:
+      tags: [VoiceResponses]
+      summary: Obtener estadísticas de reconocimiento de voz
+      description: |
+        Obtiene estadísticas detalladas del reconocimiento de voz para un usuario.
+        Incluye precisión, confianza promedio y historial reciente.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+      responses:
+        '200':
+          description: "Estadísticas obtenidas exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalAttempts:
+                    type: integer
+                    description: "Total de intentos de reconocimiento"
+                    example: 25
+                  successfulRecognitions:
+                    type: integer
+                    description: "Reconocimientos exitosos"
+                    example: 22
+                  accuracy:
+                    type: number
+                    description: "Precisión en porcentaje"
+                    example: 88.0
+                  averageConfidence:
+                    type: number
+                    description: "Confianza promedio"
+                    example: 0.85
+                  recentInteractions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "vi123456"
+                        questionId:
+                          type: string
+                          example: "q123456"
+                        voiceText:
+                          type: string
+                          example: "primera opción"
+                        confidence:
+                          type: number
+                          example: 0.9
+                        isValid:
+                          type: boolean
+                          example: true
+                        timestamp:
+                          type: string
+                          format: date-time
+                          example: "2024-10-15T10:30:00Z"
+        '400':
+          description: "Error en la solicitud"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "userId is required"
+
+  # ===========================================
+  # EVENTOS WEBSOCKET PARA MODO DE VOZ (HU8)
+  # ===========================================
+
+components:
+  schemas:
+    VoiceAnswerEvent:
+      type: object
+      description: "Evento WebSocket para respuesta de voz"
+      properties:
+        gameId:
+          type: string
+          description: "ID del juego"
+          example: "123456"
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        voiceResponse:
+          type: string
+          description: "Respuesta de voz"
+          example: "primera opción"
+        questionOptions:
+          type: array
+          items:
+            type: string
+          description: "Opciones de la pregunta"
+          example: ["Opción A", "Opción B", "Opción C", "Opción D"]
+
+    VoiceModeToggleEvent:
+      type: object
+      description: "Evento WebSocket para activar/desactivar modo de voz"
+      properties:
+        gameId:
+          type: string
+          description: "ID del juego"
+          example: "123456"
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        voiceModeEnabled:
+          type: boolean
+          description: "Estado del modo de voz"
+          example: true
+
+    VoiceAnswerReceivedEvent:
+      type: object
+      description: "Evento WebSocket cuando se recibe una respuesta de voz"
+      properties:
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        confidence:
+          type: number
+          description: "Confianza del reconocimiento"
+          example: 0.9
+        matchedOption:
+          type: string
+          description: "Opción reconocida"
+          example: "Opción A"
+
+    VoiceModeChangedEvent:
+      type: object
+      description: "Evento WebSocket cuando cambia el modo de voz de un jugador"
+      properties:
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        voiceModeEnabled:
+          type: boolean
+          description: "Nuevo estado del modo de voz"
+          example: true
+        players:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: string
+                example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+              displayName:
+                type: string
+                example: "Usuario Test"
+              voiceModeEnabled:
+                type: boolean
+                example: true
+          description: "Lista actualizada de jugadores con sus estados de modo de voz"
+
+    VoiceModeStatusEvent:
+      type: object
+      description: "Evento WebSocket con el estado del modo de voz de todos los jugadores"
+      properties:
+        players:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: string
+                example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+              displayName:
+                type: string
+                example: "Usuario Test"
+              voiceModeEnabled:
+                type: boolean
+                example: true
+          description: "Lista de jugadores con sus estados de modo de voz"
+
+  # ===========================================
+  # DOCUMENTACIÓN DE EVENTOS WEBSOCKET
+  # ===========================================
+
+  # Eventos de entrada (cliente -> servidor):
+  # - submitVoiceAnswer: Enviar respuesta de voz
+  # - toggleVoiceMode: Activar/desactivar modo de voz
+  # - getVoiceModeStatus: Obtener estado del modo de voz
+
+  # Eventos de salida (servidor -> cliente):
+  # - voiceAnswerReceived: Respuesta de voz recibida
+  # - voiceAnswerError: Error en respuesta de voz
+  # - voiceModeChanged: Modo de voz cambiado
+  # - voiceModeStatus: Estado del modo de voz
