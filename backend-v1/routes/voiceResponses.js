@@ -13,4 +13,10 @@ router.post('/process', generalUserLimiter, voiceController.processVoiceResponse
 // [HU8] Obtener estadísticas de reconocimiento de voz
 router.get('/stats/:userId', generalUserLimiter, voiceController.getVoiceRecognitionStats);
 
+// [HU8] Procesar audio con AssemblyAI
+router.post('/process-audio', generalUserLimiter, voiceController.processAudioWithAssemblyAI);
+
+// [HU8] Verificar estado de AssemblyAI
+router.get('/assemblyai/status', generalUserLimiter, voiceController.checkAssemblyAIStatus);
+
 module.exports = router;
