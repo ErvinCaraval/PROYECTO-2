@@ -3,9 +3,10 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../firebase');
 const authenticate = require('../middleware/authenticate');
+const { generalUserLimiter } = require('../middleware/rateLimiter'); 
 
 // [HU7] Obtener configuración de accesibilidad del usuario autenticado
-router.get('/accessibility', authenticate, async (req, res) => {
+router.get('/accessibility', authenticate, generalUserLimiter,async (req, res) => {
   try {
     const uid = req.user?.uid;
     if (!uid) return res.status(401).json({ error: 'No autenticado' });
@@ -24,7 +25,7 @@ router.get('/accessibility', authenticate, async (req, res) => {
 });
 
 // [HU7] Actualizar configuración de accesibilidad del usuario autenticado
-router.put('/accessibility', authenticate, async (req, res) => {
+router.put('/accessibility', authenticate, generalUserLimiter,async (req, res) => {
   try {
     const uid = req.user?.uid;
     if (!uid) return res.status(401).json({ error: 'No autenticado' });
@@ -47,7 +48,7 @@ router.put('/accessibility', authenticate, async (req, res) => {
 });
 
 // [HU7] Estadísticas de accesibilidad del usuario autenticado
-router.get('/accessibility/stats', authenticate, async (req, res) => {
+router.get('/accessibility/stats', authenticate, generalUserLimiter,async (req, res) => {
   try {
     const uid = req.user?.uid;
     if (!uid) return res.status(401).json({ error: 'No autenticado' });
