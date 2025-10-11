@@ -340,6 +340,211 @@ io.on('connection', (socket) => {
       socket.emit('error', { error: error.message });
     }
   });
+
+  // [HU8] Submit Voice Answer - Nueva funcionalidad para respuestas de voz
+  socket.on('submitVoiceAnswer', async ({ gameId, uid, voiceResponse, questionOptions }) => {
+    try {
+      const gameRef = db.collection('games').doc(gameId);
+      const gameDoc = await gameRef.get();
+      if (!gameDoc.exists) {
+        socket.emit('error', { error: 'Game not found' });
+        return;
+      }
+      const game = gameDoc.data();
+      const currentQ = game.questions[game.currentQuestion];
+      if (!currentQ) {
+        socket.emit('error', { error: 'No current question' });
+        return;
+      }
+
+      // Validar respuesta de voz usando el controlador
+      const voiceController = require('./controllers/voiceController');
+      const validation = matchVoiceResponse(voiceResponse, questionOptions || currentQ.options);
+      
+      if (!validation.isValid) {
+        socket.emit('voiceAnswerError', { 
+          error: 'No se pudo reconocer la respuesta de voz',
+          suggestions: generateSuggestions(questionOptions || currentQ.options)
+        });
+        return;
+      }
+
+      // Registrar interacción de voz
+      await db.collection('voiceInteractions').add({
+        userId: uid,
+        questionId: currentQ.id || `q_${game.currentQuestion}`,
+        gameId: gameId,
+        action: 'voice_answer',
+        voiceText: voiceResponse,
+        confidence: validation.confidence,
+        timestamp: new Date(),
+        metadata: {
+          matchedOption: validation.matchedOption,
+          isValid: validation.isValid,
+          questionOptions: questionOptions || currentQ.options
+        }
+      });
+
+      // Procesar la respuesta como una respuesta normal
+      if (!socket.data.answers) socket.data.answers = {};
+      const responseTime = Date.now();
+      socket.data.answers[game.currentQuestion] = { 
+        answerIndex: validation.answerIndex, 
+        answerValue: validation.matchedOption, 
+        responseTime,
+        isVoiceAnswer: true,
+        confidence: validation.confidence
+      };
+      socket.data.uid = uid;
+
+      // Notificar a todos los jugadores que se recibió una respuesta de voz
+      io.to(gameId).emit('voiceAnswerReceived', {
+        uid,
+        confidence: validation.confidence,
+        matchedOption: validation.matchedOption
+      });
+
+      // Continuar con el flujo normal de procesamiento de respuestas
+      const sockets = await io.in(gameId).fetchSockets();
+      const answers = {};
+      sockets.forEach(s => {
+        if (s.data.answers && s.data.answers[game.currentQuestion] !== undefined) {
+          answers[s.data.uid] = s.data.answers[game.currentQuestion];
+        }
+      });
+
+      // Solo avanzar si todos respondieron
+      if (Object.keys(answers).length === game.players.length) {
+        const correctValue = Array.isArray(currentQ.options) && typeof currentQ.correctAnswerIndex === 'number'
+          ? currentQ.options[currentQ.correctAnswerIndex]
+          : undefined;
+        
+        const questionStartTime = game.questionStartTimes && game.questionStartTimes[game.currentQuestion] 
+          ? game.questionStartTimes[game.currentQuestion] 
+          : Date.now();
+        
+        const updatedPlayers = game.players.map(player => {
+          const ansObj = answers[player.uid];
+          let score = player.score;
+          let responseTimes = player.responseTimes || [];
+          
+          if (ansObj && ansObj.responseTime) {
+            const responseTimeMs = ansObj.responseTime - questionStartTime;
+            responseTimes.push(responseTimeMs);
+          }
+          
+          if (ansObj) {
+            if (
+              typeof ansObj.answerValue !== 'undefined' &&
+              typeof correctValue !== 'undefined' &&
+              ansObj.answerValue === correctValue
+            ) {
+              score += 1;
+            } else if (
+              typeof ansObj.answerIndex === 'number' &&
+              typeof currentQ.correctAnswerIndex === 'number' &&
+              ansObj.answerIndex === currentQ.correctAnswerIndex
+            ) {
+              score += 1;
+            }
+          }
+          return { ...player, score, responseTimes };
+        });
+        
+        await gameRef.update({ players: updatedPlayers });
+        io.to(gameId).emit('answerResult', {
+          correctAnswerIndex: currentQ.correctAnswerIndex,
+          explanation: currentQ.explanation,
+          players: updatedPlayers
+        });
+        
+        const nextIndex = game.currentQuestion + 1;
+        setTimeout(async () => {
+          if (nextIndex < game.questions.length) {
+            await gameRef.update({ currentQuestion: nextIndex });
+            sendQuestion(io, gameId, nextIndex);
+          } else {
+            await gameRef.update({ status: 'finished' });
+            io.to(gameId).emit('gameFinished', { players: updatedPlayers });
+            // ... resto del código de finalización del juego
+          }
+        }, 3000);
+      }
+    } catch (error) {
+      socket.emit('error', { error: error.message });
+    }
+  });
+
+  // [HU8] Toggle Voice Mode - Activar/desactivar modo de voz
+  socket.on('toggleVoiceMode', async ({ gameId, uid, voiceModeEnabled }) => {
+    try {
+      const gameRef = db.collection('games').doc(gameId);
+      const gameDoc = await gameRef.get();
+      if (!gameDoc.exists) {
+        socket.emit('error', { error: 'Game not found' });
+        return;
+      }
+
+      // Actualizar el estado del modo de voz del jugador
+      const game = gameDoc.data();
+      const updatedPlayers = game.players.map(player => {
+        if (player.uid === uid) {
+          return { ...player, voiceModeEnabled: voiceModeEnabled };
+        }
+        return player;
+      });
+
+      await gameRef.update({ players: updatedPlayers });
+
+      // Notificar a todos los jugadores sobre el cambio de modo de voz
+      io.to(gameId).emit('voiceModeChanged', {
+        uid,
+        voiceModeEnabled,
+        players: updatedPlayers
+      });
+
+      // Registrar la interacción de voz
+      await db.collection('voiceInteractions').add({
+        userId: uid,
+        questionId: null,
+        gameId: gameId,
+        action: 'voice_mode_toggle',
+        voiceText: null,
+        confidence: null,
+        timestamp: new Date(),
+        metadata: {
+          voiceModeEnabled,
+          gameId
+        }
+      });
+
+    } catch (error) {
+      socket.emit('error', { error: error.message });
+    }
+  });
+
+  // [HU8] Voice Mode Status - Obtener estado del modo de voz de todos los jugadores
+  socket.on('getVoiceModeStatus', async ({ gameId }) => {
+    try {
+      const gameRef = db.collection('games').doc(gameId);
+      const gameDoc = await gameRef.get();
+      if (!gameDoc.exists) {
+        socket.emit('error', { error: 'Game not found' });
+        return;
+      }
+
+      const game = gameDoc.data();
+      const voiceModeStatus = game.players.map(player => ({
+        uid: player.uid,
+        displayName: player.displayName,
+        voiceModeEnabled: player.voiceModeEnabled || false
+      }));
+
+      socket.emit('voiceModeStatus', { players: voiceModeStatus });
+    } catch (error) {
+      socket.emit('error', { error: error.message });
+    }
+  });
 });
 
 async function sendQuestion(io, gameId, questionIndex) {
@@ -376,9 +581,150 @@ async function sendQuestion(io, gameId, questionIndex) {
   }
 }
 
+// [HU8] Funciones auxiliares para el modo de voz
+function matchVoiceResponse(voiceResponse, questionOptions) {
+  const response = voiceResponse.toLowerCase().trim();
+  const options = questionOptions.map((opt, index) => ({
+    text: opt.toLowerCase().trim(),
+    original: opt,
+    index
+  }));
+
+  // 1. Coincidencia exacta
+  const exactMatch = options.find(opt => opt.text === response);
+  if (exactMatch) {
+    return {
+      isValid: true,
+      matchedOption: exactMatch.original,
+      answerIndex: exactMatch.index,
+      confidence: 1.0
+    };
+  }
+
+  // 2. Coincidencia por letra (A, B, C, D)
+  const letterMatch = matchByLetter(response, options);
+  if (letterMatch.isValid) {
+    return letterMatch;
+  }
+
+  // 3. Coincidencia por posición (primera, segunda, etc.)
+  const positionMatch = matchByPosition(response, options);
+  if (positionMatch.isValid) {
+    return positionMatch;
+  }
+
+  // 4. Coincidencia parcial por palabras clave
+  const partialMatch = matchByKeywords(response, options);
+  if (partialMatch.isValid) {
+    return partialMatch;
+  }
+
+  // 5. No se encontró coincidencia
+  return {
+    isValid: false,
+    matchedOption: null,
+    answerIndex: null,
+    confidence: 0.0
+  };
+}
+
+// Coincidencia por letra (A, B, C, D)
+function matchByLetter(response, options) {
+  const letterPatterns = {
+    'a': 0, 'primera': 0, 'uno': 0, '1': 0,
+    'b': 1, 'segunda': 1, 'dos': 1, '2': 1,
+    'c': 2, 'tercera': 2, 'tres': 2, '3': 2,
+    'd': 3, 'cuarta': 3, 'cuatro': 3, '4': 3
+  };
+
+  for (const [pattern, index] of Object.entries(letterPatterns)) {
+    if (response.includes(pattern) && index < options.length) {
+      return {
+        isValid: true,
+        matchedOption: options[index].original,
+        answerIndex: index,
+        confidence: 0.9
+      };
+    }
+  }
+
+  return { isValid: false };
+}
+
+// Coincidencia por posición (primera opción, segunda opción, etc.)
+function matchByPosition(response, options) {
+  const positionWords = [
+    'primera', 'segunda', 'tercera', 'cuarta',
+    'quinta', 'sexta', 'séptima', 'octava'
+  ];
+
+  for (let i = 0; i < positionWords.length && i < options.length; i++) {
+    if (response.includes(positionWords[i])) {
+      return {
+        isValid: true,
+        matchedOption: options[i].original,
+        answerIndex: i,
+        confidence: 0.8
+      };
+    }
+  }
+
+  return { isValid: false };
+}
+
+// Coincidencia parcial por palabras clave
+function matchByKeywords(response, options) {
+  let bestMatch = { isValid: false, confidence: 0 };
+  
+  options.forEach((option, index) => {
+    const words = option.text.split(' ');
+    let matchCount = 0;
+    
+    words.forEach(word => {
+      if (word.length > 3 && response.includes(word)) {
+        matchCount++;
+      }
+    });
+    
+    const confidence = matchCount / words.length;
+    if (confidence > 0.3 && confidence > bestMatch.confidence) {
+      bestMatch = {
+        isValid: true,
+        matchedOption: option.original,
+        answerIndex: index,
+        confidence: Math.min(confidence, 0.7)
+      };
+    }
+  });
+
+  return bestMatch;
+}
+
+// Generar sugerencias para respuestas no reconocidas
+function generateSuggestions(questionOptions) {
+  const suggestions = [];
+  
+  // Sugerencias por letra
+  questionOptions.forEach((option, index) => {
+    const letter = String.fromCharCode(65 + index); // A, B, C, D
+    suggestions.push(`Diga "${letter}" para ${option.substring(0, 30)}...`);
+  });
+  
+  // Sugerencias por posición
+  const positionWords = ['primera', 'segunda', 'tercera', 'cuarta'];
+  questionOptions.forEach((option, index) => {
+    if (index < positionWords.length) {
+      suggestions.push(`Diga "${positionWords[index]} opción"`);
+    }
+  });
+  
+  return suggestions;
+}
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-
+  console.log(`🚀 Servidor híbrido ejecutándose en puerto ${PORT}`);
+  console.log(`📚 Documentación API disponible en http://localhost:${PORT}/api-docs`);
 });
 
 module.exports = { app };
