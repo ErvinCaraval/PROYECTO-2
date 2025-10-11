@@ -31,6 +31,7 @@ app.use('/api/questions', require('./routes/questions'));
 app.use('/api/ai', require('./routes/ai'));
 
 app.use('/api/voice-interactions', require('./routes/voiceInteractions'));
+app.use('/api/voice-responses', require('./routes/voiceResponses'));
 
 app.use('/api/admin', require('./routes/adminAccessibility'));
 
