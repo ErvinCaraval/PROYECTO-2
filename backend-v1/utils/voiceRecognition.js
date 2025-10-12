@@ -94,28 +94,28 @@ function matchByPosition(response, options) {
 // Coincidencia parcial por palabras clave
 function matchByKeywords(response, options) {
   let bestMatch = { isValid: false, confidence: 0 };
-  
+
   options.forEach((option, index) => {
     const words = option.text.split(' ').filter(word => word.length > 3);
     let matchCount = 0;
-    
+
     words.forEach(word => {
       if (response.includes(word)) {
         matchCount++;
       }
     });
-    
+
     // Requerir al menos 2 palabras coincidentes para opciones largas
     const minMatches = words.length > 3 ? 2 : 1;
     const confidence = matchCount / words.length;
-    
-    // Solo aceptar si hay al menos 2 palabras coincidentes Y confianza > 0.7
+
+    // Solo aceptar si hay al menos las coincidencias mínimas y confianza > 0.7
     if (matchCount >= minMatches && confidence > 0.7 && confidence > bestMatch.confidence) {
       bestMatch = {
         isValid: true,
         matchedOption: option.original,
         answerIndex: index,
-        confidence: Math.min(confidence, 0.7)
+        confidence: Math.min(confidence, 0.9)
       };
     }
   });
@@ -126,13 +126,13 @@ function matchByKeywords(response, options) {
 // Generar sugerencias para respuestas no reconocidas
 function generateSuggestions(questionOptions) {
   const suggestions = [];
-  
+
   // Sugerencias por letra
   questionOptions.forEach((option, index) => {
     const letter = String.fromCharCode(65 + index); // A, B, C, D
-    suggestions.push(`Diga "${letter}" para ${option.substring(0, 30)}...`);
+    suggestions.push(`Diga "${letter}" para "${option.substring(0, 30)}..."`);
   });
-  
+
   // Sugerencias por posición
   const positionWords = ['primera', 'segunda', 'tercera', 'cuarta'];
   questionOptions.forEach((option, index) => {
@@ -140,7 +140,7 @@ function generateSuggestions(questionOptions) {
       suggestions.push(`Diga "${positionWords[index]} opción"`);
     }
   });
-  
+
   return suggestions;
 }
 

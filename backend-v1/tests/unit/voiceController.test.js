@@ -46,6 +46,16 @@ describe('Voice Controller Tests', () => {
     });
 
     it('should reject invalid voice response', async () => {
+<<<<<<< HEAD
+      const mockData = {
+        userId: 'test-user-123',
+        questionId: 'q123',
+        voiceResponse: 'completamente invalido sin sentido',
+        questionOptions: ['Madrid', 'Barcelona', 'Valencia', 'Sevilla']
+      };
+
+=======
+>>>>>>> 440ee7f3ab1b8218b8a2ee8b2d5c4279b7c7d4f0
       const response = await request(app)
         .post('/api/voice-responses/validate')
         .send({
@@ -169,7 +179,12 @@ describe('Voice Recognition Algorithm Tests', () => {
     });
 
     it('should handle invalid responses', () => {
+<<<<<<< HEAD
+      const options = ['Opción A', 'Opción B', 'Opción C'];
+      const result = matchVoiceResponse('completamente invalido sin sentido', options);
+=======
       const result = matchVoiceResponse('qwerty asdfgh zxcvbn', options);
+>>>>>>> 440ee7f3ab1b8218b8a2ee8b2d5c4279b7c7d4f0
       
       expect(result.isValid).toBe(false);
       expect(result.matchedOption).toBeNull();
