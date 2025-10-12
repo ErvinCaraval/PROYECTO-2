@@ -1,29 +1,86 @@
 const request = require('supertest');
 
 // Mock de Firebase antes de importar el servidor
+const mockVoiceInteractions = [
+  {
+    id: 'interaction1',
+    userId: 'test-user-123',
+    questionId: 'q123',
+    voiceText: 'primera opción',
+    confidence: 0.9,
+    action: 'voice_answer',
+    metadata: { isValid: true },
+    timestamp: new Date()
+  },
+  {
+    id: 'interaction2',
+    userId: 'test-user-123',
+    questionId: 'q124',
+    voiceText: 'segunda opción',
+    confidence: 0.8,
+    action: 'voice_answer',
+    metadata: { isValid: true },
+    timestamp: new Date()
+  }
+];
+
 jest.mock('../../firebase', () => ({
   db: {
-    collection: jest.fn(() => {
-      const mockQuery = {
+    collection: jest.fn((collectionName) => {
+      if (collectionName === 'voiceInteractions') {
+        return {
+          where: jest.fn().mockImplementation((field, operator, value) => {
+            let filteredInteractions = mockVoiceInteractions;
+            
+            if (field === 'userId' && operator === '==') {
+              filteredInteractions = filteredInteractions.filter(interaction => 
+                interaction.userId === value
+              );
+            } else if (field === 'action' && operator === '==') {
+              filteredInteractions = filteredInteractions.filter(interaction => 
+                interaction.action === value
+              );
+            }
+            
+            return {
+              where: jest.fn().mockImplementation((field2, operator2, value2) => {
+                if (field2 === 'action' && operator2 === '==') {
+                  filteredInteractions = filteredInteractions.filter(interaction => 
+                    interaction.action === value2
+                  );
+                }
+                
+                return {
+                  get: jest.fn().mockResolvedValue({
+                    forEach: jest.fn((callback) => {
+                      filteredInteractions.forEach(interaction => callback({
+                        id: interaction.id,
+                        data: () => interaction
+                      }));
+                    })
+                  })
+                };
+              }),
+              get: jest.fn().mockResolvedValue({
+                forEach: jest.fn((callback) => {
+                  filteredInteractions.forEach(interaction => callback({
+                    id: interaction.id,
+                    data: () => interaction
+                  }));
+                })
+              })
+            };
+          }),
+          add: jest.fn().mockResolvedValue({ id: 'mock-id' })
+        };
+      }
+      return {
         where: jest.fn().mockReturnThis(),
         get: jest.fn().mockResolvedValue({
-          forEach: jest.fn((callback) => {
-            // Simulate some mock data
-            callback({
-              id: 'interaction1',
-              data: () => ({
-                questionId: 'q123',
-                voiceText: 'primera opción',
-                confidence: 0.9,
-                metadata: { isValid: true },
-                timestamp: new Date()
-              })
-            });
-          })
-        })
+          forEach: jest.fn()
+        }),
+        add: jest.fn().mockResolvedValue({ id: 'mock-id' })
       };
-      mockQuery.add = jest.fn().mockResolvedValue({ id: 'mock-id' });
-      return mockQuery;
     })
   }
 }));

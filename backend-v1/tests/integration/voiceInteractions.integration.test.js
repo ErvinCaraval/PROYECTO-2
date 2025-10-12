@@ -10,15 +10,57 @@ jest.mock('../../firebase', () => ({
       const collection = {
         add: jest.fn().mockImplementation((data) => {
           const id = `mock-id-${++mockDocId}`;
-          mockDocs.push({ id, ...data });
+          const doc = { id, ...data };
+          mockDocs.push(doc);
           return Promise.resolve({ id });
         }),
-        where: jest.fn().mockReturnThis(),
+        where: jest.fn().mockImplementation((field, operator, value) => {
+          // Filter docs based on the where clause
+          const filteredDocs = mockDocs.filter(doc => {
+            if (field === 'userId' && operator === '==') {
+              return doc.userId === value;
+            }
+            return true;
+          });
+          
+          return {
+            where: jest.fn().mockReturnThis(),
+            get: jest.fn().mockResolvedValue({
+              forEach: jest.fn((callback) => {
+                filteredDocs.forEach(doc => callback({
+                  id: doc.id,
+                  data: () => doc
+                }));
+              }),
+              docs: filteredDocs.map(doc => ({
+                id: doc.id,
+                data: () => doc
+              }))
+            }),
+            batch: jest.fn(() => ({
+              delete: jest.fn().mockImplementation((docRef) => {
+                // Remove the document from mockDocs
+                const docId = docRef.id;
+                const index = mockDocs.findIndex(doc => doc.id === docId);
+                if (index > -1) {
+                  mockDocs.splice(index, 1);
+                }
+              }),
+              commit: jest.fn().mockResolvedValue()
+            }))
+          };
+        }),
         get: jest.fn().mockResolvedValue({
           forEach: jest.fn((callback) => {
-            mockDocs.forEach(doc => callback(doc));
+            mockDocs.forEach(doc => callback({
+              id: doc.id,
+              data: () => doc
+            }));
           }),
-          docs: mockDocs
+          docs: mockDocs.map(doc => ({
+            id: doc.id,
+            data: () => doc
+          }))
         }),
         batch: jest.fn(() => ({
           delete: jest.fn(),
@@ -50,6 +92,28 @@ jest.mock('../../services/assemblyAIService', () => ({
   generateSuggestions: jest.fn().mockReturnValue(['Diga "A" para Opción A...'])
 }));
 
+// Mock the server to avoid port conflicts
+jest.mock('../../hybridServer', () => {
+  const express = require('express');
+  const app = express();
+  
+  // Configure body parser with higher limit for testing
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+  
+  // Import routes
+  const voiceInteractionsRouter = require('../../routes/voiceInteractions');
+  app.use('/api/voice-interactions', voiceInteractionsRouter);
+  
+  // Add error handling middleware
+  app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    res.status(500).json({ error: err.message });
+  });
+  
+  return { app };
+});
+
 const { app } = require('../../hybridServer');
 const { db } = require('../../firebase');
 
@@ -59,10 +123,14 @@ describe('HU5: Voice Interactions API', () => {
   let createdId = null;
 
   beforeEach(() => {
-    // Clear mock data before each test
+    // Don't clear mock data between tests to maintain state
+    jest.clearAllMocks();
+  });
+
+  beforeAll(() => {
+    // Clear mock data only once at the beginning
     mockDocs.length = 0;
     mockDocId = 0;
-    jest.clearAllMocks();
   });
 
   afterAll(async () => {
@@ -108,22 +176,79 @@ describe('HU5: Voice Interactions API', () => {
     });
 
   it('debe recuperar el historial de voz del usuario', async () => {
+    // First register both interactions
+    await request(app)
+      .post('/api/voice-interactions')
+      .send({
+        userId: testUserId,
+        questionId: testQuestionId,
+        action: 'voice_answer',
+        duration: 2.5,
+        timestamp: new Date().toISOString(),
+        voiceText: 'primera opción',
+        confidence: 0.95,
+        metadata: { audioBase64: 'testaudio' }
+      });
+    
+    await request(app)
+      .post('/api/voice-interactions')
+      .send({
+        userId: testUserId,
+        questionId: testQuestionId,
+        action: 'question_read',
+        duration: 1.2,
+        timestamp: new Date().toISOString(),
+        voiceText: '¿Cuál es la capital de Francia?',
+        confidence: 0.99,
+        metadata: { audioBase64: 'testaudio2' }
+      });
+    
     const res = await request(app)
       .get(`/api/voice-interactions/${testUserId}`);
+    
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThanOrEqual(2);
     expect(res.body[0]).toHaveProperty('userId', testUserId);
-      expect(res.body.some(i => i.action === 'voice_answer')).toBe(true);
-      expect(res.body.some(i => i.action === 'question_read')).toBe(true);
+    expect(res.body.some(i => i.action === 'voice_answer')).toBe(true);
+    expect(res.body.some(i => i.action === 'question_read')).toBe(true);
   });
 
   it('debe devolver estadísticas básicas', async () => {
+    // First register some interactions
+    await request(app)
+      .post('/api/voice-interactions')
+      .send({
+        userId: testUserId,
+        questionId: testQuestionId,
+        action: 'voice_answer',
+        duration: 2.5,
+        timestamp: new Date().toISOString(),
+        voiceText: 'primera opción',
+        confidence: 0.95,
+        metadata: { audioBase64: 'testaudio' }
+      });
+    
+    await request(app)
+      .post('/api/voice-interactions')
+      .send({
+        userId: testUserId,
+        questionId: testQuestionId,
+        action: 'question_read',
+        duration: 1.2,
+        timestamp: new Date().toISOString(),
+        voiceText: '¿Cuál es la capital de Francia?',
+        confidence: 0.99,
+        metadata: { audioBase64: 'testaudio2' }
+      });
+    
     const res = await request(app)
       .get(`/api/voice-interactions/stats/${testUserId}`);
+    
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('total');
     expect(res.body).toHaveProperty('averageDuration');
-      expect(res.body.total).toBeGreaterThanOrEqual(2);
+    expect(res.body.total).toBeGreaterThanOrEqual(2);
   });
 
   it('debe eliminar el historial de voz del usuario', async () => {
@@ -317,6 +442,8 @@ describe('HU8: AssemblyAI Integration', () => {
       .send({
         audioBase64: 'x'.repeat(2e6 + 1)
       });
+
+    console.log('HU8 Response:', res.status, res.body);
 
     expect(res.status).toBe(413);
     expect(res.body).toHaveProperty('error');

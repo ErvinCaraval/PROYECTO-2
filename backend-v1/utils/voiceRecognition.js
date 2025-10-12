@@ -109,8 +109,8 @@ function matchByKeywords(response, options) {
     const minMatches = words.length > 3 ? 2 : 1;
     const confidence = matchCount / words.length;
     
-    // Solo aceptar si hay al menos 2 palabras coincidentes Y confianza > 0.5
-    if (matchCount >= minMatches && confidence > 0.5 && confidence > bestMatch.confidence) {
+    // Solo aceptar si hay al menos 2 palabras coincidentes Y confianza > 0.7
+    if (matchCount >= minMatches && confidence > 0.7 && confidence > bestMatch.confidence) {
       bestMatch = {
         isValid: true,
         matchedOption: option.original,
