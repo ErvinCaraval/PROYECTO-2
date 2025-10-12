@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../firebase');
 const assemblyAI = require('../services/assemblyAIService');
+const { generalUserLimiter } = require('../middleware/rateLimiter');
 
 const COLLECTION = 'voiceInteractions';
 
 // [HU5] Registrar interacción de voz
-router.post('/', async (req, res) => {
+router.post('/', generalUserLimiter, async (req, res) => {
   try {
     const { userId, questionId, action, duration, timestamp, voiceText, confidence, metadata } = req.body;
     // Validaciones adicionales
@@ -83,7 +84,7 @@ router.post('/', async (req, res) => {
 });
 
 // [HU5] Recuperar historial de voz por usuario
-router.get('/:userId', async (req, res) => {
+router.get('/:userId', generalUserLimiter, async (req, res) => {
   try {
     const { userId } = req.params;
       if (!userId || typeof userId !== 'string') {
@@ -101,7 +102,7 @@ router.get('/:userId', async (req, res) => {
 });
 
 // [HU5] Endpoint para eliminar historial de voz
-router.delete('/:userId', async (req, res) => {
+router.delete('/:userId', generalUserLimiter, async (req, res) => {
   try {
     const { userId } = req.params;
       if (!userId || typeof userId !== 'string') {
@@ -125,7 +126,7 @@ router.delete('/:userId', async (req, res) => {
 });
 
 // [HU5] Endpoint de estadísticas básicas
-router.get('/stats/:userId', async (req, res) => {
+router.get('/stats/:userId', generalUserLimiter, async (req, res) => {
   try {
     const { userId } = req.params;
       if (!userId || typeof userId !== 'string') {
@@ -149,7 +150,7 @@ router.get('/stats/:userId', async (req, res) => {
 });
 
 // [HU8] Procesar audio directamente con AssemblyAI
-router.post('/process-audio', async (req, res) => {
+router.post('/process-audio', generalUserLimiter, async (req, res) => {
   try {
     const { audioBase64, questionOptions } = req.body;
     
@@ -203,7 +204,7 @@ router.post('/process-audio', async (req, res) => {
 });
 
 // [HU8] Verificar estado de AssemblyAI
-router.get('/assemblyai/status', async (req, res) => {
+router.get('/assemblyai/status', generalUserLimiter, async (req, res) => {
   try {
     const status = await assemblyAI.checkAPIStatus();
     res.json(status);
