@@ -10,7 +10,7 @@
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
     "test:voice": "jest --testNamePattern='voice'",
-    "test:all": "npm run test:unit && npm run test:integration",
+    "test:all": "./scripts/quick-test.sh",
     "validate": "./scripts/validate-without-firebase.sh",
     "validate:full": "./scripts/regression-test.sh",
     "test:complete": "npm run test:unit && npm run validate && echo '🎉 ALL TESTS AND VALIDATIONS PASSED!'",
@@ -26,7 +26,6 @@
     "check:all": "npm run check:syntax && npm run check:deps && npm run check:files && npm run check:routes",
     "verify": "npm run test:unit && npm run check:all && npm run validate && echo '🚀 VERIFICATION COMPLETE - CODE IS STABLE!'",
     "test:everything": "./scripts/quick-test.sh",
-    "test:all": "./scripts/quick-test.sh",
     "test:quick": "./scripts/quick-test.sh"
   },
   "keywords": [
@@ -55,6 +54,7 @@
     "eslint": "^8.53.0",
     "jest": "^29.7.0",
     "nodemon": "^3.0.1",
+    "socket.io-client": "^4.8.1",
     "supertest": "^6.3.3"
   },
   "jest": {
