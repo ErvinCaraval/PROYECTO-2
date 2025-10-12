@@ -310,3 +310,4 @@ router.get('/accessibility-report', authenticate, generalUserLimiter, async (req
 });
 
 module.exports = router;
+// Rate limiting applied to all routes
