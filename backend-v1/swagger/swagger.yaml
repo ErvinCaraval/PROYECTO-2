@@ -51,7 +51,8 @@ paths:
       summary: Registrar una nueva interacción de voz
       description: |
         Registra una interacción de voz (lectura o respuesta) del usuario.
-        **Campos preparados para integración futura con AssemblyAI (STT).**
+        **Integración completa con AssemblyAI para Speech-to-Text (STT).**
+        Si se proporciona audioBase64 en metadata, se procesará automáticamente con AssemblyAI.
       requestBody:
         required: true
         content:
@@ -260,6 +261,150 @@ paths:
                   error:
                     type: string
                     example: "Internal server error."
+
+  /api/voice-interactions/process-audio:
+    post:
+      tags: [VoiceInteractions]
+      summary: Procesar audio directamente con AssemblyAI
+      description: |
+        Procesa un archivo de audio en base64 usando AssemblyAI para obtener transcripción y validación.
+        **Integración completa con AssemblyAI para Speech-to-Text (STT).**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audioBase64]
+              properties:
+                audioBase64:
+                  type: string
+                  description: Audio en formato base64 (máximo 2MB)
+                  example: "UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBz2J0fPZgjMGHm7A7+OZURE="
+                questionOptions:
+                  type: array
+                  items:
+                    type: string
+                  description: Opciones de la pregunta para validación (opcional)
+                  example: ["Opción A", "Opción B", "Opción C", "Opción D"]
+      responses:
+        200:
+          description: Audio procesado exitosamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  text:
+                    type: string
+                    example: "primera opción"
+                  confidence:
+                    type: number
+                    example: 0.95
+                  duration:
+                    type: number
+                    example: 2.5
+                  language:
+                    type: string
+                    example: "es"
+                  validation:
+                    type: object
+                    properties:
+                      isValid:
+                        type: boolean
+                        example: true
+                      matchedOption:
+                        type: string
+                        example: "Opción A"
+                      answerIndex:
+                        type: integer
+                        example: 0
+                      confidence:
+                        type: number
+                        example: 0.9
+                  suggestions:
+                    type: array
+                    items:
+                      type: string
+                    example: []
+        400:
+          description: Datos de entrada inválidos.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid or missing audioBase64."
+        413:
+          description: Audio demasiado grande.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Audio demasiado grande."
+        500:
+          description: Error en el procesamiento de audio.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Transcription failed"
+                  details:
+                    type: string
+                    example: "API rate limit exceeded"
+                  suggestions:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Diga 'A' para Opción A...", "Diga 'primera opción'"]
+
+  /api/voice-interactions/assemblyai/status:
+    get:
+      tags: [VoiceInteractions]
+      summary: Verificar estado de AssemblyAI
+      description: Verifica el estado y disponibilidad del servicio AssemblyAI.
+      responses:
+        200:
+          description: Estado de AssemblyAI obtenido exitosamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  status:
+                    type: string
+                    example: "API is working"
+                  data:
+                    type: object
+                    description: Datos adicionales del estado de la API
+        500:
+          description: Error al verificar el estado de AssemblyAI.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "API key invalid"
+
   /api/users/register:
     post:
       tags: [Users]
@@ -1121,6 +1266,114 @@ components:
           description: "Timestamp de creación en milisegundos. Ejemplo real: 1758172800000 (18 septiembre 2025)"
           example: 1758172800000
 
+    # ===========================================
+    # SCHEMAS DE VOZ Y ACCESIBILIDAD (HU8)
+    # ===========================================
+    VoiceAnswerEvent:
+      type: object
+      description: "Evento WebSocket para respuesta de voz"
+      properties:
+        gameId:
+          type: string
+          description: "ID del juego"
+          example: "123456"
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        voiceResponse:
+          type: string
+          description: "Respuesta de voz"
+          example: "primera opción"
+        questionOptions:
+          type: array
+          items:
+            type: string
+          description: "Opciones de la pregunta"
+          example: ["Opción A", "Opción B", "Opción C", "Opción D"]
+
+    VoiceModeToggleEvent:
+      type: object
+      description: "Evento WebSocket para activar/desactivar modo de voz"
+      properties:
+        gameId:
+          type: string
+          description: "ID del juego"
+          example: "123456"
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        voiceModeEnabled:
+          type: boolean
+          description: "Estado del modo de voz"
+          example: true
+
+    VoiceAnswerReceivedEvent:
+      type: object
+      description: "Evento WebSocket cuando se recibe una respuesta de voz"
+      properties:
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        confidence:
+          type: number
+          description: "Confianza del reconocimiento"
+          example: 0.9
+        matchedOption:
+          type: string
+          description: "Opción reconocida"
+          example: "Opción A"
+
+    VoiceModeChangedEvent:
+      type: object
+      description: "Evento WebSocket cuando cambia el modo de voz de un jugador"
+      properties:
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        voiceModeEnabled:
+          type: boolean
+          description: "Nuevo estado del modo de voz"
+          example: true
+        players:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: string
+                example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+              displayName:
+                type: string
+                example: "Usuario Test"
+              voiceModeEnabled:
+                type: boolean
+                example: true
+          description: "Lista actualizada de jugadores con sus estados de modo de voz"
+
+    VoiceModeStatusEvent:
+      type: object
+      description: "Evento WebSocket con el estado del modo de voz de todos los jugadores"
+      properties:
+        players:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: string
+                example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+              displayName:
+                type: string
+                example: "Usuario Test"
+              voiceModeEnabled:
+                type: boolean
+                example: true
+          description: "Lista de jugadores con sus estados de modo de voz"
+
   # ===========================================
   # ENDPOINTS DE VOZ Y ACCESIBILIDAD (HU8)
   # ===========================================
@@ -1349,117 +1602,6 @@ components:
                   error:
                     type: string
                     example: "userId is required"
-
-  # ===========================================
-  # EVENTOS WEBSOCKET PARA MODO DE VOZ (HU8)
-  # ===========================================
-
-components:
-  schemas:
-    VoiceAnswerEvent:
-      type: object
-      description: "Evento WebSocket para respuesta de voz"
-      properties:
-        gameId:
-          type: string
-          description: "ID del juego"
-          example: "123456"
-        uid:
-          type: string
-          description: "ID del usuario"
-          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-        voiceResponse:
-          type: string
-          description: "Respuesta de voz"
-          example: "primera opción"
-        questionOptions:
-          type: array
-          items:
-            type: string
-          description: "Opciones de la pregunta"
-          example: ["Opción A", "Opción B", "Opción C", "Opción D"]
-
-    VoiceModeToggleEvent:
-      type: object
-      description: "Evento WebSocket para activar/desactivar modo de voz"
-      properties:
-        gameId:
-          type: string
-          description: "ID del juego"
-          example: "123456"
-        uid:
-          type: string
-          description: "ID del usuario"
-          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-        voiceModeEnabled:
-          type: boolean
-          description: "Estado del modo de voz"
-          example: true
-
-    VoiceAnswerReceivedEvent:
-      type: object
-      description: "Evento WebSocket cuando se recibe una respuesta de voz"
-      properties:
-        uid:
-          type: string
-          description: "ID del usuario"
-          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-        confidence:
-          type: number
-          description: "Confianza del reconocimiento"
-          example: 0.9
-        matchedOption:
-          type: string
-          description: "Opción reconocida"
-          example: "Opción A"
-
-    VoiceModeChangedEvent:
-      type: object
-      description: "Evento WebSocket cuando cambia el modo de voz de un jugador"
-      properties:
-        uid:
-          type: string
-          description: "ID del usuario"
-          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-        voiceModeEnabled:
-          type: boolean
-          description: "Nuevo estado del modo de voz"
-          example: true
-        players:
-          type: array
-          items:
-            type: object
-            properties:
-              uid:
-                type: string
-                example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-              displayName:
-                type: string
-                example: "Usuario Test"
-              voiceModeEnabled:
-                type: boolean
-                example: true
-          description: "Lista actualizada de jugadores con sus estados de modo de voz"
-
-    VoiceModeStatusEvent:
-      type: object
-      description: "Evento WebSocket con el estado del modo de voz de todos los jugadores"
-      properties:
-        players:
-          type: array
-          items:
-            type: object
-            properties:
-              uid:
-                type: string
-                example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-              displayName:
-                type: string
-                example: "Usuario Test"
-              voiceModeEnabled:
-                type: boolean
-                example: true
-          description: "Lista de jugadores con sus estados de modo de voz"
 
   # ===========================================
   # DOCUMENTACIÓN DE EVENTOS WEBSOCKET
