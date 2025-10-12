@@ -5,7 +5,7 @@ const { db } = require('../firebase');
 const authenticate = require('../middleware/authenticate');
 const { generalUserLimiter } = require('../middleware/rateLimiter'); 
 
-// [HU7] Obtener configuración de accesibilidad del usuario autenticado
+// [HU7] Obtener configuración de accesibilidad del usuario autenticad
 router.get('/accessibility', authenticate, generalUserLimiter, async (req, res) => {
   try {
     const uid = req.user?.uid;
