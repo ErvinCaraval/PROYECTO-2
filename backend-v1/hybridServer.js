@@ -36,6 +36,7 @@ app.use('/api/voice-responses', require('./routes/voiceResponses'));
 app.use('/api/assemblyai', require('./routes/assemblyAI'));
 
 
+
 io.on('connection', (socket) => {
   // Listener para enviar la primera pregunta al socket que lo solicita
   socket.on('requestQuestion', async ({ gameId }) => {
