@@ -48,7 +48,7 @@ jobs:
         run: npm run test:integration
 
       - name: Run coverage tests
-        run: npm run:coverage
+        run: npm run coverage
 
       - name: Dependency Security Audit
         if: github.event_name == 'pull_request'
