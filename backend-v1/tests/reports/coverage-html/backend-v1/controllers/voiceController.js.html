@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for backend-v1/services/aiQuestionGenerator.js</title>
+    <title>Code coverage report for backend-v1/controllers/voiceController.js</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">backend-v1/services</a> aiQuestionGenerator.js</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">backend-v1/controllers</a> voiceController.js</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">70.11% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>61/61</span>
+                <span class='fraction'>61/87</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">93.22% </span>
+                <span class="strong">61.33% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>55/59</span>
+                <span class='fraction'>46/75</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">80% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>9/9</span>
+                <span class='fraction'>4/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">70.58% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>60/60</span>
+                <span class='fraction'>60/85</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line medium'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -277,156 +277,81 @@
 <a name='L212'></a><a href='#L212'>212</a>
 <a name='L213'></a><a href='#L213'>213</a>
 <a name='L214'></a><a href='#L214'>214</a>
-<a name='L215'></a><a href='#L215'>215</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">33x</span>
-<span class="cline-any cline-yes">33x</span>
-<span class="cline-any cline-yes">33x</span>
-<span class="cline-any cline-yes">33x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">33x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">33x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">3x</span>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a>
+<a name='L228'></a><a href='#L228'>228</a>
+<a name='L229'></a><a href='#L229'>229</a>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a>
+<a name='L239'></a><a href='#L239'>239</a>
+<a name='L240'></a><a href='#L240'>240</a>
+<a name='L241'></a><a href='#L241'>241</a>
+<a name='L242'></a><a href='#L242'>242</a>
+<a name='L243'></a><a href='#L243'>243</a>
+<a name='L244'></a><a href='#L244'>244</a>
+<a name='L245'></a><a href='#L245'>245</a>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a>
+<a name='L250'></a><a href='#L250'>250</a>
+<a name='L251'></a><a href='#L251'>251</a>
+<a name='L252'></a><a href='#L252'>252</a>
+<a name='L253'></a><a href='#L253'>253</a>
+<a name='L254'></a><a href='#L254'>254</a>
+<a name='L255'></a><a href='#L255'>255</a>
+<a name='L256'></a><a href='#L256'>256</a>
+<a name='L257'></a><a href='#L257'>257</a>
+<a name='L258'></a><a href='#L258'>258</a>
+<a name='L259'></a><a href='#L259'>259</a>
+<a name='L260'></a><a href='#L260'>260</a>
+<a name='L261'></a><a href='#L261'>261</a>
+<a name='L262'></a><a href='#L262'>262</a>
+<a name='L263'></a><a href='#L263'>263</a>
+<a name='L264'></a><a href='#L264'>264</a>
+<a name='L265'></a><a href='#L265'>265</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -434,54 +359,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -491,221 +368,494 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const axios = require('axios');
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span></td><td class="text"><pre class="prettyprint lang-js">const { db } = require('../firebase');
 &nbsp;
-class AIQuestionGenerator {
-  constructor() {
-    this.groqApiKey = process.env.GROQ_API_KEY || '';
-    this.openAiApiKey = process.env.OPENAI_API_KEY || '';
-    this.groqURL = 'https://api.groq.com/openai/v1/chat/completions';
-    this.openAiURL = 'https://api.openai.com/v1/chat/completions';
-    // Model por defecto en Groq (rápido y gratuito con cuota)
-    this.groqModel = process.env.GROQ_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
-    // Respaldo OpenAI si existiese
-    this.openAiModel = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
-  }
-&nbsp;
-  // Extrae JSON de respuestas que puedan venir con ``` o texto adicional
-  extractJson(content) {
-    if (!content) return null;
-    // Elimina fences tipo ```json ... ```
-    let cleaned = content.trim()
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/```\s*$/i, '')
-      .trim();
-    // Si aún no es JSON puro, intenta localizar el primer objeto
-    if (!(cleaned.startsWith('{') &amp;&amp; cleaned.endsWith('}'))) {
-      const start = cleaned.indexOf('{');
-      const end = cleaned.lastIndexOf('}');
-      if (start !== -1 &amp;&amp; end !== -1 &amp;&amp; end &gt; start) {
-        cleaned = cleaned.slice(start, end + 1);
-      }
+// [HU8] Validar respuesta de voz
+exports.validateVoiceResponse = async (req, res) =&gt; {
+  try {
+    const { userId, questionId, voiceResponse, questionOptions } = req.body;
+    
+    // Validaciones básicas
+    if (!userId || !questionId || !voiceResponse || !questionOptions) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: userId, questionId, voiceResponse, questionOptions' 
+      });
     }
-    try {
-      return JSON.parse(cleaned);
-    } catch (e) {
-      return null;
+&nbsp;
+    if (!Array.isArray(questionOptions) || questionOptions.length === 0) {
+      return res.status(400).json({ 
+        error: 'questionOptions must be a non-empty array' 
+      });
     }
+&nbsp;
+    // Procesar respuesta de voz
+    const validation = matchVoiceResponse(voiceResponse, questionOptions);
+    
+    // Registrar interacción de voz
+    await db.collection('voiceInteractions').add({
+      userId,
+      questionId,
+      action: 'voice_answer',
+      voiceText: voiceResponse,
+      confidence: validation.confidence,
+      timestamp: new Date(),
+      duration: 0, // Se puede calcular si es necesario
+      metadata: {
+        matchedOption: validation.matchedOption,
+        answerIndex: validation.answerIndex,
+        isValid: validation.isValid
+      }
+    });
+    
+    res.json({ 
+      valid: validation.isValid, 
+      matchedOption: validation.matchedOption,
+      answerIndex: validation.answerIndex,
+      confidence: validation.confidence
+    });
+  } catch (error) {
+<span class="cstat-no" title="statement not covered" >    console.error('Error validating voice response:', error);</span>
+<span class="cstat-no" title="statement not covered" >    res.status(500).json({ error: error.message });</span>
   }
+};
 &nbsp;
-  // Generar preguntas usando IA (Groq por defecto)
-  async generateQuestions(topic, difficulty = 'medium', count = 5) {
-    try {
-      const prompt = this.buildPrompt(topic, difficulty, count);
-      let questions = [];
-&nbsp;
-      if (!this.groqApiKey &amp;&amp; !this.openAiApiKey) {
-        throw new Error('No se encontró ninguna API key de IA. Por favor configura GROQ_API_KEY o OPENAI_API_KEY en tu archivo .env.');
-      }
-&nbsp;
-      // Preferir Groq si hay API key
-      if (this.groqApiKey) {
-        try {
-          const response = await axios.post(this.groqURL, {
-            model: this.groqModel,
-            messages: [
-              { role: 'system', content: 'Eres un experto en crear preguntas de trivia educativas y entretenidas. Responde siempre en formato JSON válido.' },
-              { role: 'user', content: prompt }
-            ],
-            max_tokens: 2000,
-            temperature: 0.7
-          }, {
-            headers: {
-              'Authorization': `Bearer ${this.groqApiKey}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          const content = response.data.choices?.[0]?.message?.content || <span class="branch-1 cbranch-no" title="branch not covered" >'';</span>
-          const parsed = this.extractJson(content);
-          if (parsed &amp;&amp; parsed.questions) {
-            questions = parsed.questions;
-          }
-        } catch (err) {
-          throw new Error('Error al conectar con la API de Groq: ' + (err.response?.data?.error?.message || err.message));
-        }
-      } else <span class="missing-if-branch" title="else path not taken" >E</span>if (this.openAiApiKey) {
-        // Respaldo: OpenAI si está disponible
-        try {
-          const response = await axios.post(this.openAiURL, {
-            model: this.openAiModel,
-            messages: [
-              { role: 'system', content: 'Eres un experto en crear preguntas de trivia educativas y entretenidas. Responde siempre en formato JSON válido.' },
-              { role: 'user', content: prompt }
-            ],
-            max_tokens: 2000,
-            temperature: 0.7
-          }, {
-            headers: {
-              'Authorization': `Bearer ${this.openAiApiKey}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          const content = response.data.choices?.[0]?.message?.content || <span class="branch-1 cbranch-no" title="branch not covered" >'';</span>
-          const parsed = this.extractJson(content);
-          <span class="missing-if-branch" title="else path not taken" >E</span>if (parsed &amp;&amp; parsed.questions) {
-            questions = parsed.questions;
-          }
-        } catch (err) {
-          throw new Error('Error al conectar con la API de OpenAI: ' + (err.response?.data?.error?.message || err.message));
-        }
-      }
-&nbsp;
-      if (!questions || questions.length === 0) {
-        throw new Error('La IA no devolvió preguntas válidas. Verifica tu API key y conexión.');
-      }
-&nbsp;
-      // Filtrar preguntas repetidas (por texto)
-      const uniqueQuestions = [];
-      const seen = new Set();
-      for (const q of questions) {
-        const key = q.text &amp;&amp; q.text.trim().toLowerCase();
-        if (key &amp;&amp; !seen.has(key)) {
-          seen.add(key);
-          uniqueQuestions.push(q);
-        }
-      }
-&nbsp;
-      if (uniqueQuestions.length &lt; count) {
-        throw new Error('La IA no generó suficientes preguntas únicas.');
-      }
-&nbsp;
-      return { questions: uniqueQuestions.slice(0, count) };
-    } catch (error) {
-      throw error;
+// [HU8] Procesar respuesta de voz
+exports.processVoiceResponse = async (req, res) =&gt; {
+  try {
+    const { userId, questionId, voiceResponse, questionOptions } = req.body;
+    
+    // Validaciones básicas
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!userId || !questionId || !voiceResponse || !questionOptions) {
+<span class="cstat-no" title="statement not covered" >      return res.status(400).json({ </span>
+        error: 'Missing required fields: userId, questionId, voiceResponse, questionOptions' 
+      });
     }
-  }
 &nbsp;
-  // Generar preguntas usando una API gratuita alternativa
-  async generateQuestionsFree(topic, difficulty = 'medium', count = 5) {
-    try {
-      throw new Error('No se pueden generar preguntas locales.');
-    } catch (error) {
-  // ...log eliminado...
-        throw new Error('No se pueden generar preguntas con IA.');
+    // Procesar respuesta de voz
+    const validation = matchVoiceResponse(voiceResponse, questionOptions);
+    
+    // Registrar interacción de voz
+    await db.collection('voiceInteractions').add({
+      userId,
+      questionId,
+      action: 'voice_answer',
+      voiceText: voiceResponse,
+      confidence: validation.confidence,
+      timestamp: new Date(),
+      duration: 0,
+      metadata: {
+        matchedOption: validation.matchedOption,
+        answerIndex: validation.answerIndex,
+        isValid: validation.isValid,
+        processedAt: new Date()
+      }
+    });
+    
+    res.json({ 
+      success: true,
+      result: validation
+    });
+  } catch (error) {
+<span class="cstat-no" title="statement not covered" >    console.error('Error processing voice response:', error);</span>
+<span class="cstat-no" title="statement not covered" >    res.status(500).json({ error: error.message });</span>
+  }
+};
+&nbsp;
+// [HU8] Obtener estadísticas de reconocimiento de voz
+exports.getVoiceRecognitionStats = async (req, res) =&gt; {
+  try {
+    const { userId } = req.params;
+    
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!userId) {
+<span class="cstat-no" title="statement not covered" >      return res.status(400).json({ error: 'userId is required' });</span>
     }
-  }
 &nbsp;
- 
-  // Llenar template con datos dinámicos
-  fillTemplate(template, topic, difficulty) {
+    // Obtener todas las interacciones de voz del usuario
+    const snapshot = await db.collection('voiceInteractions')
+      .where('userId', '==', userId)
+      .where('action', '==', 'voice_answer')
+      .get();
+&nbsp;
+    let totalAttempts = 0;
+    let successfulRecognitions = 0;
+    let totalConfidence = 0;
+    let averageConfidence = 0;
+&nbsp;
+    snapshot.forEach(<span class="fstat-no" title="function not covered" >do</span>c =&gt; {
+      const data = <span class="cstat-no" title="statement not covered" >doc.data();</span>
+<span class="cstat-no" title="statement not covered" >      totalAttempts++;</span>
+      
+<span class="cstat-no" title="statement not covered" >      if (data.metadata &amp;&amp; data.metadata.isValid) {</span>
+<span class="cstat-no" title="statement not covered" >        successfulRecognitions++;</span>
+      }
+      
+<span class="cstat-no" title="statement not covered" >      if (data.confidence &amp;&amp; typeof data.confidence === 'number') {</span>
+<span class="cstat-no" title="statement not covered" >        totalConfidence += data.confidence;</span>
+      }
+    });
+&nbsp;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (totalAttempts &gt; 0) {
+<span class="cstat-no" title="statement not covered" >      averageConfidence = totalConfidence / totalAttempts;</span>
+    }
+&nbsp;
+    res.json({
+      totalAttempts,
+      successfulRecognitions,
+      successRate: totalAttempts &gt; 0 ? <span class="branch-0 cbranch-no" title="branch not covered" >(successfulRecognitions / totalAttempts) * 100 </span>: 0,
+      averageConfidence: Math.round(averageConfidence * 100) / 100
+    });
+  } catch (error) {
+<span class="cstat-no" title="statement not covered" >    console.error('Error getting voice recognition stats:', error);</span>
+<span class="cstat-no" title="statement not covered" >    res.status(500).json({ error: error.message });</span>
+  }
+};
+&nbsp;
+// [HU8] Algoritmo de coincidencia de respuestas de voz
+function matchVoiceResponse(voiceText, options) {
+  if (!voiceText || typeof voiceText !== 'string' || !Array.isArray(options)) {
     return {
-      ...template,
-      id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      category: topic,
-      difficulty: difficulty,
-      source: 'AI Generated'
+      isValid: false,
+      matchedOption: null,
+      answerIndex: null,
+      confidence: 0.0
     };
   }
 &nbsp;
-  // Construir prompt para OpenAI
-  buildPrompt(topic, difficulty, count) {
-    return `Genera ${count} preguntas de trivia sobre el tema "${topic}" con dificultad ${difficulty}.
-&nbsp;
-Formato requerido (JSON válido):
-{
-  "questions": [
-    {
-      "id": "unique_id",
-      "text": "Pregunta aquí",
-      "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
-      "correctAnswerIndex": 0,
-      "category": "${topic}",
-      "difficulty": "${difficulty}",
-      "explanation": "Explicación de la respuesta correcta"
+  const normalizedVoice = voiceText.toLowerCase().trim();
+  
+  // Buscar coincidencias directas con las opciones
+  for (let i = 0; i &lt; options.length; i++) {
+    const option = options[i];
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!option || typeof option !== 'string') <span class="cstat-no" title="statement not covered" >continue;</span>
+    
+    const normalizedOption = option.toLowerCase().trim();
+    
+    // Coincidencia exacta
+    if (normalizedVoice === normalizedOption) {
+      return {
+        isValid: true,
+        matchedOption: option,
+        answerIndex: i,
+        confidence: 1.0
+      };
     }
-  ]
+    
+    // Coincidencia parcial (contiene la opción)
+    if (normalizedVoice.includes(normalizedOption) || normalizedOption.includes(normalizedVoice)) {
+      return {
+        isValid: true,
+        matchedOption: option,
+        answerIndex: i,
+        confidence: 0.8
+      };
+    }
+  }
+  
+  // Buscar coincidencias por letras (A, B, C, D)
+  const letterMatch = normalizedVoice.match(/\b([a-d])\b/);
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (letterMatch) {
+    const letter = <span class="cstat-no" title="statement not covered" >letterMatch[1];</span>
+    const index = <span class="cstat-no" title="statement not covered" >letter.charCodeAt(0) - 'a'.charCodeAt(0);</span>
+    
+<span class="cstat-no" title="statement not covered" >    if (index &gt;= 0 &amp;&amp; index &lt; options.length) {</span>
+<span class="cstat-no" title="statement not covered" >      return {</span>
+        isValid: true,
+        matchedOption: options[index],
+        answerIndex: index,
+        confidence: 0.9
+      };
+    }
+  }
+  
+  // Buscar coincidencias por posición (primera, segunda, etc.)
+  const positionMatch = normalizedVoice.match(/\b(primera|segunda|tercera|cuarta|primero|segundo|tercero|cuarto|uno|dos|tres|cuatro)\b/);
+  if (positionMatch) {
+    const position = positionMatch[1];
+    let index = -1;
+    
+    switch (position) {
+      case 'primera':
+      case 'primero':
+      case 'uno':
+        index = 0;
+        break;
+<span class="branch-3 cbranch-no" title="branch not covered" >      case 'segunda':</span>
+<span class="branch-4 cbranch-no" title="branch not covered" >      case 'segundo':</span>
+<span class="branch-5 cbranch-no" title="branch not covered" >      case 'dos':</span>
+<span class="cstat-no" title="statement not covered" >        index = 1;</span>
+<span class="cstat-no" title="statement not covered" >        break;</span>
+<span class="branch-6 cbranch-no" title="branch not covered" >      case 'tercera':</span>
+<span class="branch-7 cbranch-no" title="branch not covered" >      case 'tercero':</span>
+<span class="branch-8 cbranch-no" title="branch not covered" >      case 'tres':</span>
+<span class="cstat-no" title="statement not covered" >        index = 2;</span>
+<span class="cstat-no" title="statement not covered" >        break;</span>
+<span class="branch-9 cbranch-no" title="branch not covered" >      case 'cuarta':</span>
+<span class="branch-10 cbranch-no" title="branch not covered" >      case 'cuarto':</span>
+<span class="branch-11 cbranch-no" title="branch not covered" >      case 'cuatro':</span>
+<span class="cstat-no" title="statement not covered" >        index = 3;</span>
+<span class="cstat-no" title="statement not covered" >        break;</span>
+    }
+    
+    <span class="missing-if-branch" title="else path not taken" >E</span>if (index &gt;= 0 &amp;&amp; index &lt; options.length) {
+      return {
+        isValid: true,
+        matchedOption: options[index],
+        answerIndex: index,
+        confidence: 0.85
+      };
+    }
+  }
+  
+  // Buscar coincidencias por números (1, 2, 3, 4)
+  const numberMatch = normalizedVoice.match(/\b([1-4])\b/);
+  if (numberMatch) {
+    const number = parseInt(numberMatch[1]);
+    const index = number - 1;
+    
+    <span class="missing-if-branch" title="else path not taken" >E</span>if (index &gt;= 0 &amp;&amp; index &lt; options.length) {
+      return {
+        isValid: true,
+        matchedOption: options[index],
+        answerIndex: index,
+        confidence: 0.9
+      };
+    }
+  }
+  
+  // No se encontró coincidencia
+  return {
+    isValid: false,
+    matchedOption: null,
+    answerIndex: null,
+    confidence: 0.0
+  };
 }
 &nbsp;
-Requisitos:
-- Preguntas interesantes y educativas
-- 4 opciones de respuesta
-- Explicación clara de la respuesta correcta
-- Dificultad apropiada para el nivel ${difficulty}
-- Tema: ${topic}
-&nbsp;
-Responde solo con el JSON, sin texto adicional.`;
-  }
-&nbsp;
-  // Preguntas de respaldo si falla la IA
-  getFallbackQuestions(topic, difficulty, count) {
-    throw new Error('No se pueden generar preguntas de respaldo.');
-  }
-&nbsp;
-  // Obtener temas disponibles
-  getAvailableTopics() {
-    return [
-      'Ciencia',
-      'Historia',
-      'Geografía',
-      'Tecnología',
-      'Deportes',
-      'Arte',
-      'Literatura',
-      'Matemáticas',
-      'Biología',
-      'Química',
-      'Física',
-      'Astronomía',
-      'Música',
-      'Cine',
-      'Videojuegos'
-    ];
-  }
-&nbsp;
-  // Obtener niveles de dificultad
-  getDifficultyLevels() {
-    return [
-      { value: 'easy', label: 'Fácil' },
-      { value: 'medium', label: 'Medio' },
-      { value: 'hard', label: 'Difícil' }
-    ];
-  }
-}
-&nbsp;
-module.exports = AIQuestionGenerator;
-&nbsp;
-&nbsp;</pre></td></tr></table></pre>
+// Exportar función para pruebas
+module.exports.matchVoiceResponse = matchVoiceResponse;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
