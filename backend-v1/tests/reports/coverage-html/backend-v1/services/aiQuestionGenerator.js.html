@@ -23,30 +23,54 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
+<<<<<<< HEAD
                 <span class="strong">13.11% </span>
                 <span class="quiet">Statements</span>
                 <span class='fraction'>8/61</span>
+=======
+                <span class="strong">3.27% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>2/61</span>
+>>>>>>> cursor/revisar-readme-y-verificar-funcionalidades-2a5e
             </div>
         
             
             <div class='fl pad1y space-right2'>
+<<<<<<< HEAD
                 <span class="strong">13.55% </span>
                 <span class="quiet">Branches</span>
                 <span class='fraction'>8/59</span>
+=======
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/59</span>
+>>>>>>> cursor/revisar-readme-y-verificar-funcionalidades-2a5e
             </div>
         
             
             <div class='fl pad1y space-right2'>
+<<<<<<< HEAD
                 <span class="strong">11.11% </span>
                 <span class="quiet">Functions</span>
                 <span class='fraction'>1/9</span>
+=======
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/9</span>
+>>>>>>> cursor/revisar-readme-y-verificar-funcionalidades-2a5e
             </div>
         
             
             <div class='fl pad1y space-right2'>
+<<<<<<< HEAD
                 <span class="strong">13.33% </span>
                 <span class="quiet">Lines</span>
                 <span class='fraction'>8/60</span>
+=======
+                <span class="strong">3.33% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>2/60</span>
+>>>>>>> cursor/revisar-readme-y-verificar-funcionalidades-2a5e
             </div>
         
             
@@ -277,6 +301,7 @@
 <a name='L212'></a><a href='#L212'>212</a>
 <a name='L213'></a><a href='#L213'>213</a>
 <a name='L214'></a><a href='#L214'>214</a>
+<<<<<<< HEAD
 <a name='L215'></a><a href='#L215'>215</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -289,6 +314,20 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+=======
+<a name='L215'></a><a href='#L215'>215</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+>>>>>>> cursor/revisar-readme-y-verificar-funcionalidades-2a5e
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -489,20 +528,24 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<<<<<<< HEAD
 <span class="cline-any cline-yes">1x</span>
+=======
+<span class="cline-any cline-yes">2x</span>
+>>>>>>> cursor/revisar-readme-y-verificar-funcionalidades-2a5e
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const axios = require('axios');
 &nbsp;
 class AIQuestionGenerator {
-  constructor() {
-    this.groqApiKey = process.env.GROQ_API_KEY || '';
-    this.openAiApiKey = process.env.OPENAI_API_KEY || '';
-    this.groqURL = 'https://api.groq.com/openai/v1/chat/completions';
-    this.openAiURL = 'https://api.openai.com/v1/chat/completions';
+<span class="fstat-no" title="function not covered" >  co</span>nstructor() {
+<span class="cstat-no" title="statement not covered" >    this.groqApiKey = process.env.GROQ_API_KEY || '';</span>
+<span class="cstat-no" title="statement not covered" >    this.openAiApiKey = process.env.OPENAI_API_KEY || '';</span>
+<span class="cstat-no" title="statement not covered" >    this.groqURL = 'https://api.groq.com/openai/v1/chat/completions';</span>
+<span class="cstat-no" title="statement not covered" >    this.openAiURL = 'https://api.openai.com/v1/chat/completions';</span>
     // Model por defecto en Groq (rápido y gratuito con cuota)
-    this.groqModel = process.env.GROQ_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+<span class="cstat-no" title="statement not covered" >    this.groqModel = process.env.GROQ_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';</span>
     // Respaldo OpenAI si existiese
-    this.openAiModel = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
+<span class="cstat-no" title="statement not covered" >    this.openAiModel = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';</span>
   }
 &nbsp;
   // Extrae JSON de respuestas que puedan venir con ``` o texto adicional
@@ -712,7 +755,11 @@ module.exports = AIQuestionGenerator;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+<<<<<<< HEAD
                 at 2025-10-12T02:01:12.581Z
+=======
+                at 2025-10-12T03:38:56.423Z
+>>>>>>> cursor/revisar-readme-y-verificar-funcionalidades-2a5e
             </div>
         <script src="../../prettify.js"></script>
         <script>
