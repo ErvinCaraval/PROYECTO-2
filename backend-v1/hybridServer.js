@@ -32,6 +32,10 @@ app.use('/api/ai', require('./routes/ai'));
 
 app.use('/api/voice-interactions', require('./routes/voiceInteractions'));
 app.use('/api/voice-responses', require('./routes/voiceResponses'));
+<<<<<<< HEAD
+=======
+app.use('/api/assemblyai', require('./routes/assemblyAI'));
+>>>>>>> cursor/revisar-readme-y-verificar-funcionalidades-2a5e
 
 app.use('/api/admin', require('./routes/adminAccessibility'));
 
