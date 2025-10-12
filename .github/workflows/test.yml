@@ -11,7 +11,7 @@ permissions:
   security-events: write
 
 jobs:
-  test-and-deploy: # El nombre del job se simplifica, ya que no hay matriz
+  test-and-deploy: # El nombre dejob se simplifica, ya que no hay matriz
     name: Test & Deploy Backend-v1
     runs-on: ubuntu-latest
 
