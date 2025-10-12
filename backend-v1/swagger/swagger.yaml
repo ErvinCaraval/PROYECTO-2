@@ -1,4 +1,6 @@
 
+
+
 openapi: 3.0.0
 info:
   title: BrainBlitz API - Documentación Detallada
@@ -1354,7 +1356,7 @@ components:
   # EVENTOS WEBSOCKET PARA MODO DE VOZ (HU8)
   # ===========================================
 
-components:
+  # --- contenido fusionado del segundo bloque components ---
   schemas:
     VoiceAnswerEvent:
       type: object
@@ -1475,3 +1477,4 @@ components:
   # - voiceAnswerError: Error en respuesta de voz
   # - voiceModeChanged: Modo de voz cambiado
   # - voiceModeStatus: Estado del modo de voz
+  
