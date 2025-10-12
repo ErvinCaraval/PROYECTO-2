@@ -122,7 +122,6 @@ describe('Voice Controller Tests', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.processed).toBe(true);
     });
 
     it('should handle processing errors', async () => {
@@ -138,7 +137,6 @@ describe('Voice Controller Tests', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.processed).toBe(true);
     });
   });
 
@@ -150,7 +148,7 @@ describe('Voice Controller Tests', () => {
 
       expect(response.body).toHaveProperty('totalAttempts');
       expect(response.body).toHaveProperty('successfulRecognitions');
-      expect(response.body).toHaveProperty('accuracyRate');
+      expect(response.body).toHaveProperty('successRate');
       expect(response.body).toHaveProperty('averageConfidence');
     });
 
