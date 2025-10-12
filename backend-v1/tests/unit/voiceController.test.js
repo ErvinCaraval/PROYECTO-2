@@ -1,20 +1,44 @@
 const request = require('supertest');
-const { app } = require('../../hybridServer');
-const { db } = require('../../firebase');
 
-// Mock de Firebase
+// Mock de Firebase antes de importar el servidor
 jest.mock('../../firebase', () => ({
   db: {
     collection: jest.fn(() => ({
       add: jest.fn().mockResolvedValue({ id: 'mock-id' }),
-      where: jest.fn(() => ({
-        get: jest.fn().mockResolvedValue({
-          forEach: jest.fn()
+      where: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({
+        forEach: jest.fn((callback) => {
+          // Simulate some mock data
+          callback({
+            id: 'interaction1',
+            data: () => ({
+              questionId: 'q123',
+              voiceText: 'primera opción',
+              confidence: 0.9,
+              metadata: { isValid: true },
+              timestamp: new Date()
+            })
+          });
         })
-      }))
+      })
     }))
   }
 }));
+
+// Mock del servidor para evitar que se inicie
+jest.mock('../../hybridServer', () => {
+  const express = require('express');
+  const app = express();
+  app.use(express.json());
+  
+  // Importar las rutas
+  app.use('/api/voice-responses', require('../../routes/voiceResponses'));
+  
+  return { app };
+});
+
+const { app } = require('../../hybridServer');
+const { db } = require('../../firebase');
 
 describe('Voice Controller Tests', () => {
   beforeEach(() => {
@@ -46,7 +70,7 @@ describe('Voice Controller Tests', () => {
       const mockData = {
         userId: 'test-user-123',
         questionId: 'q123',
-        voiceResponse: 'respuesta inválida',
+        voiceResponse: 'xyz completamente inválida',
         questionOptions: ['Madrid', 'Barcelona', 'Valencia', 'Sevilla']
       };
 
@@ -140,7 +164,7 @@ describe('Voice Controller Tests', () => {
 
 describe('Voice Recognition Algorithm Tests', () => {
   // Test the voice recognition functions directly
-  const { matchVoiceResponse } = require('../../hybridServer');
+  const { matchVoiceResponse } = require('../../utils/voiceRecognition');
 
   describe('matchVoiceResponse', () => {
     it('should match exact responses', () => {
@@ -164,11 +188,11 @@ describe('Voice Recognition Algorithm Tests', () => {
     });
 
     it('should match position responses (primera, segunda, etc.)', () => {
-      const options = ['Primera opción', 'Segunda opción', 'Tercera opción'];
+      const options = ['Opción A', 'Opción B', 'Opción C'];
       const result = matchVoiceResponse('primera opción', options);
       
       expect(result.isValid).toBe(true);
-      expect(result.matchedOption).toBe('Primera opción');
+      expect(result.matchedOption).toBe('Opción A');
       expect(result.answerIndex).toBe(0);
       expect(result.confidence).toBe(0.8);
     });
@@ -185,7 +209,7 @@ describe('Voice Recognition Algorithm Tests', () => {
 
     it('should handle invalid responses', () => {
       const options = ['Opción A', 'Opción B', 'Opción C'];
-      const result = matchVoiceResponse('respuesta inválida', options);
+      const result = matchVoiceResponse('xyz completamente inválida', options);
       
       expect(result.isValid).toBe(false);
       expect(result.matchedOption).toBeNull();

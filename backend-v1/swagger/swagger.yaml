@@ -1,6 +1,4 @@
 
-
-
 openapi: 3.0.0
 info:
   title: BrainBlitz API - Documentación Detallada
@@ -1123,6 +1121,114 @@ components:
           description: "Timestamp de creación en milisegundos. Ejemplo real: 1758172800000 (18 septiembre 2025)"
           example: 1758172800000
 
+    # ===========================================
+    # SCHEMAS DE VOZ Y ACCESIBILIDAD (HU8)
+    # ===========================================
+    VoiceAnswerEvent:
+      type: object
+      description: "Evento WebSocket para respuesta de voz"
+      properties:
+        gameId:
+          type: string
+          description: "ID del juego"
+          example: "123456"
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        voiceResponse:
+          type: string
+          description: "Respuesta de voz"
+          example: "primera opción"
+        questionOptions:
+          type: array
+          items:
+            type: string
+          description: "Opciones de la pregunta"
+          example: ["Opción A", "Opción B", "Opción C", "Opción D"]
+
+    VoiceModeToggleEvent:
+      type: object
+      description: "Evento WebSocket para activar/desactivar modo de voz"
+      properties:
+        gameId:
+          type: string
+          description: "ID del juego"
+          example: "123456"
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        voiceModeEnabled:
+          type: boolean
+          description: "Estado del modo de voz"
+          example: true
+
+    VoiceAnswerReceivedEvent:
+      type: object
+      description: "Evento WebSocket cuando se recibe una respuesta de voz"
+      properties:
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        confidence:
+          type: number
+          description: "Confianza del reconocimiento"
+          example: 0.9
+        matchedOption:
+          type: string
+          description: "Opción reconocida"
+          example: "Opción A"
+
+    VoiceModeChangedEvent:
+      type: object
+      description: "Evento WebSocket cuando cambia el modo de voz de un jugador"
+      properties:
+        uid:
+          type: string
+          description: "ID del usuario"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        voiceModeEnabled:
+          type: boolean
+          description: "Nuevo estado del modo de voz"
+          example: true
+        players:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: string
+                example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+              displayName:
+                type: string
+                example: "Usuario Test"
+              voiceModeEnabled:
+                type: boolean
+                example: true
+          description: "Lista actualizada de jugadores con sus estados de modo de voz"
+
+    VoiceModeStatusEvent:
+      type: object
+      description: "Evento WebSocket con el estado del modo de voz de todos los jugadores"
+      properties:
+        players:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: string
+                example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+              displayName:
+                type: string
+                example: "Usuario Test"
+              voiceModeEnabled:
+                type: boolean
+                example: true
+          description: "Lista de jugadores con sus estados de modo de voz"
+
   # ===========================================
   # ENDPOINTS DE VOZ Y ACCESIBILIDAD (HU8)
   # ===========================================
@@ -1353,117 +1459,6 @@ components:
                     example: "userId is required"
 
   # ===========================================
-  # EVENTOS WEBSOCKET PARA MODO DE VOZ (HU8)
-  # ===========================================
-
-  # --- contenido fusionado del segundo bloque components ---
-  schemas:
-    VoiceAnswerEvent:
-      type: object
-      description: "Evento WebSocket para respuesta de voz"
-      properties:
-        gameId:
-          type: string
-          description: "ID del juego"
-          example: "123456"
-        uid:
-          type: string
-          description: "ID del usuario"
-          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-        voiceResponse:
-          type: string
-          description: "Respuesta de voz"
-          example: "primera opción"
-        questionOptions:
-          type: array
-          items:
-            type: string
-          description: "Opciones de la pregunta"
-          example: ["Opción A", "Opción B", "Opción C", "Opción D"]
-
-    VoiceModeToggleEvent:
-      type: object
-      description: "Evento WebSocket para activar/desactivar modo de voz"
-      properties:
-        gameId:
-          type: string
-          description: "ID del juego"
-          example: "123456"
-        uid:
-          type: string
-          description: "ID del usuario"
-          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-        voiceModeEnabled:
-          type: boolean
-          description: "Estado del modo de voz"
-          example: true
-
-    VoiceAnswerReceivedEvent:
-      type: object
-      description: "Evento WebSocket cuando se recibe una respuesta de voz"
-      properties:
-        uid:
-          type: string
-          description: "ID del usuario"
-          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-        confidence:
-          type: number
-          description: "Confianza del reconocimiento"
-          example: 0.9
-        matchedOption:
-          type: string
-          description: "Opción reconocida"
-          example: "Opción A"
-
-    VoiceModeChangedEvent:
-      type: object
-      description: "Evento WebSocket cuando cambia el modo de voz de un jugador"
-      properties:
-        uid:
-          type: string
-          description: "ID del usuario"
-          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-        voiceModeEnabled:
-          type: boolean
-          description: "Nuevo estado del modo de voz"
-          example: true
-        players:
-          type: array
-          items:
-            type: object
-            properties:
-              uid:
-                type: string
-                example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-              displayName:
-                type: string
-                example: "Usuario Test"
-              voiceModeEnabled:
-                type: boolean
-                example: true
-          description: "Lista actualizada de jugadores con sus estados de modo de voz"
-
-    VoiceModeStatusEvent:
-      type: object
-      description: "Evento WebSocket con el estado del modo de voz de todos los jugadores"
-      properties:
-        players:
-          type: array
-          items:
-            type: object
-            properties:
-              uid:
-                type: string
-                example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
-              displayName:
-                type: string
-                example: "Usuario Test"
-              voiceModeEnabled:
-                type: boolean
-                example: true
-          description: "Lista de jugadores con sus estados de modo de voz"
-
-  # ===========================================
   # DOCUMENTACIÓN DE EVENTOS WEBSOCKET
   # ===========================================
 
@@ -1477,4 +1472,3 @@ components:
   # - voiceAnswerError: Error en respuesta de voz
   # - voiceModeChanged: Modo de voz cambiado
   # - voiceModeStatus: Estado del modo de voz
-  
