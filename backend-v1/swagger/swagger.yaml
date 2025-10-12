@@ -51,7 +51,8 @@ paths:
       summary: Registrar una nueva interacción de voz
       description: |
         Registra una interacción de voz (lectura o respuesta) del usuario.
-        **Campos preparados para integración futura con AssemblyAI (STT).**
+        **Integración completa con AssemblyAI para Speech-to-Text (STT).**
+        Si se proporciona audioBase64 en metadata, se procesará automáticamente con AssemblyAI.
       requestBody:
         required: true
         content:
@@ -260,6 +261,150 @@ paths:
                   error:
                     type: string
                     example: "Internal server error."
+
+  /api/voice-interactions/process-audio:
+    post:
+      tags: [VoiceInteractions]
+      summary: Procesar audio directamente con AssemblyAI
+      description: |
+        Procesa un archivo de audio en base64 usando AssemblyAI para obtener transcripción y validación.
+        **Integración completa con AssemblyAI para Speech-to-Text (STT).**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audioBase64]
+              properties:
+                audioBase64:
+                  type: string
+                  description: Audio en formato base64 (máximo 2MB)
+                  example: "UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBz2J0fPZgjMGHm7A7+OZURE="
+                questionOptions:
+                  type: array
+                  items:
+                    type: string
+                  description: Opciones de la pregunta para validación (opcional)
+                  example: ["Opción A", "Opción B", "Opción C", "Opción D"]
+      responses:
+        200:
+          description: Audio procesado exitosamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  text:
+                    type: string
+                    example: "primera opción"
+                  confidence:
+                    type: number
+                    example: 0.95
+                  duration:
+                    type: number
+                    example: 2.5
+                  language:
+                    type: string
+                    example: "es"
+                  validation:
+                    type: object
+                    properties:
+                      isValid:
+                        type: boolean
+                        example: true
+                      matchedOption:
+                        type: string
+                        example: "Opción A"
+                      answerIndex:
+                        type: integer
+                        example: 0
+                      confidence:
+                        type: number
+                        example: 0.9
+                  suggestions:
+                    type: array
+                    items:
+                      type: string
+                    example: []
+        400:
+          description: Datos de entrada inválidos.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid or missing audioBase64."
+        413:
+          description: Audio demasiado grande.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Audio demasiado grande."
+        500:
+          description: Error en el procesamiento de audio.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Transcription failed"
+                  details:
+                    type: string
+                    example: "API rate limit exceeded"
+                  suggestions:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Diga 'A' para Opción A...", "Diga 'primera opción'"]
+
+  /api/voice-interactions/assemblyai/status:
+    get:
+      tags: [VoiceInteractions]
+      summary: Verificar estado de AssemblyAI
+      description: Verifica el estado y disponibilidad del servicio AssemblyAI.
+      responses:
+        200:
+          description: Estado de AssemblyAI obtenido exitosamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  status:
+                    type: string
+                    example: "API is working"
+                  data:
+                    type: object
+                    description: Datos adicionales del estado de la API
+        500:
+          description: Error al verificar el estado de AssemblyAI.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "API key invalid"
+
   /api/users/register:
     post:
       tags: [Users]
