@@ -24,9 +24,9 @@ jobs:
       working-directory: ./backend-v1
       run: npm install
     
-    - name: Run Unit Tests
+    - name: Run Unit Tests with Coverage
       working-directory: ./backend-v1
-      run: npm run test:unit -- --coverage --coverageReporters=json --coverageReporters=html
+      run: npm run coverage
     
     - name: Run Voice Tests
       working-directory: ./backend-v1
@@ -104,6 +104,17 @@ jobs:
       with:
         name: coverage-reports
         path: backend-v1/coverage/
+    
+    - name: Generate Coverage Summary
+      working-directory: ./backend-v1
+      run: |
+        if [ -f "coverage/coverage-final.json" ]; then
+          echo "✅ Coverage report generated successfully"
+          echo "Coverage file size: $(du -h coverage/coverage-final.json | cut -f1)"
+        else
+          echo "❌ Coverage report not found"
+          exit 1
+        fi
     
     - name: Test Summary
       run: |
