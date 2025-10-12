@@ -96,17 +96,21 @@ function matchByKeywords(response, options) {
   let bestMatch = { isValid: false, confidence: 0 };
   
   options.forEach((option, index) => {
-    const words = option.text.split(' ');
+    const words = option.text.split(' ').filter(word => word.length > 3);
     let matchCount = 0;
     
     words.forEach(word => {
-      if (word.length > 3 && response.includes(word)) {
+      if (response.includes(word)) {
         matchCount++;
       }
     });
     
+    // Requerir al menos 2 palabras coincidentes para opciones largas
+    const minMatches = words.length > 3 ? 2 : 1;
     const confidence = matchCount / words.length;
-    if (confidence > 0.3 && confidence > bestMatch.confidence) {
+    
+    // Solo aceptar si hay al menos 2 palabras coincidentes Y confianza > 0.5
+    if (matchCount >= minMatches && confidence > 0.5 && confidence > bestMatch.confidence) {
       bestMatch = {
         isValid: true,
         matchedOption: option.original,
