@@ -1,5 +1,6 @@
 const { db } = require('../firebase');
 const assemblyAI = require('../services/assemblyAIService');
+const { matchVoiceResponse, generateSuggestions } = require('../utils/voiceRecognition');
 
 // [HU8] Validar respuesta de voz contra opciones de pregunta
 exports.validateVoiceResponse = async (req, res) => {
@@ -55,26 +56,52 @@ exports.processVoiceResponse = async (req, res) => {
   const { userId, questionId, voiceResponse, questionOptions, gameId } = req.body;
   
   try {
-    const validation = await this.validateVoiceResponse(req, res);
+    // Validaciones básicas
+    if (!userId || !questionId || !voiceResponse) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: userId, questionId, voiceResponse' 
+      });
+    }
+
+    if (!questionOptions || !Array.isArray(questionOptions)) {
+      return res.status(400).json({ 
+        error: 'questionOptions must be an array' 
+      });
+    }
+
+    // Algoritmo de validación de respuestas de voz
+    const validation = matchVoiceResponse(voiceResponse, questionOptions);
     
-    if (validation.status === 200) {
-      const responseData = validation.data;
-      
-      // Si la respuesta es válida, devolver el índice de la opción
-      if (responseData.valid) {
-        res.json({
-          success: true,
-          answerIndex: responseData.answerIndex,
-          answerValue: responseData.matchedOption,
-          confidence: responseData.confidence
-        });
-      } else {
-        res.status(400).json({
-          success: false,
-          error: 'No se pudo reconocer la respuesta de voz',
-          suggestions: generateSuggestions(questionOptions)
-        });
+    // Registrar interacción de voz
+    await db.collection('voiceInteractions').add({
+      userId,
+      questionId,
+      gameId: gameId || null,
+      action: 'voice_answer',
+      voiceText: voiceResponse,
+      confidence: validation.confidence,
+      timestamp: new Date(),
+      metadata: {
+        matchedOption: validation.matchedOption,
+        isValid: validation.isValid,
+        questionOptions: questionOptions
       }
+    });
+    
+    // Si la respuesta es válida, devolver el índice de la opción
+    if (validation.isValid) {
+      res.json({
+        success: true,
+        answerIndex: validation.answerIndex,
+        answerValue: validation.matchedOption,
+        confidence: validation.confidence
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: 'No se pudo reconocer la respuesta de voz',
+        suggestions: generateSuggestions(questionOptions)
+      });
     }
   } catch (error) {
     console.error('Error processing voice response:', error);
@@ -144,145 +171,6 @@ exports.getVoiceRecognitionStats = async (req, res) => {
   }
 };
 
-// Función auxiliar para hacer coincidir respuestas de voz con opciones
-function matchVoiceResponse(voiceResponse, questionOptions) {
-  const response = voiceResponse.toLowerCase().trim();
-  const options = questionOptions.map((opt, index) => ({
-    text: opt.toLowerCase().trim(),
-    original: opt,
-    index
-  }));
-
-  // 1. Coincidencia exacta
-  const exactMatch = options.find(opt => opt.text === response);
-  if (exactMatch) {
-    return {
-      isValid: true,
-      matchedOption: exactMatch.original,
-      answerIndex: exactMatch.index,
-      confidence: 1.0
-    };
-  }
-
-  // 2. Coincidencia por letra (A, B, C, D)
-  const letterMatch = matchByLetter(response, options);
-  if (letterMatch.isValid) {
-    return letterMatch;
-  }
-
-  // 3. Coincidencia por posición (primera, segunda, etc.)
-  const positionMatch = matchByPosition(response, options);
-  if (positionMatch.isValid) {
-    return positionMatch;
-  }
-
-  // 4. Coincidencia parcial por palabras clave
-  const partialMatch = matchByKeywords(response, options);
-  if (partialMatch.isValid) {
-    return partialMatch;
-  }
-
-  // 5. No se encontró coincidencia
-  return {
-    isValid: false,
-    matchedOption: null,
-    answerIndex: null,
-    confidence: 0.0
-  };
-}
-
-// Coincidencia por letra (A, B, C, D)
-function matchByLetter(response, options) {
-  const letterPatterns = {
-    'a': 0, 'primera': 0, 'uno': 0, '1': 0,
-    'b': 1, 'segunda': 1, 'dos': 1, '2': 1,
-    'c': 2, 'tercera': 2, 'tres': 2, '3': 2,
-    'd': 3, 'cuarta': 3, 'cuatro': 3, '4': 3
-  };
-
-  for (const [pattern, index] of Object.entries(letterPatterns)) {
-    if (response.includes(pattern) && index < options.length) {
-      return {
-        isValid: true,
-        matchedOption: options[index].original,
-        answerIndex: index,
-        confidence: 0.9
-      };
-    }
-  }
-
-  return { isValid: false };
-}
-
-// Coincidencia por posición (primera opción, segunda opción, etc.)
-function matchByPosition(response, options) {
-  const positionWords = [
-    'primera', 'segunda', 'tercera', 'cuarta',
-    'quinta', 'sexta', 'séptima', 'octava'
-  ];
-
-  for (let i = 0; i < positionWords.length && i < options.length; i++) {
-    if (response.includes(positionWords[i])) {
-      return {
-        isValid: true,
-        matchedOption: options[i].original,
-        answerIndex: i,
-        confidence: 0.8
-      };
-    }
-  }
-
-  return { isValid: false };
-}
-
-// Coincidencia parcial por palabras clave
-function matchByKeywords(response, options) {
-  let bestMatch = { isValid: false, confidence: 0 };
-  
-  options.forEach((option, index) => {
-    const words = option.text.split(' ');
-    let matchCount = 0;
-    
-    words.forEach(word => {
-      if (word.length > 3 && response.includes(word)) {
-        matchCount++;
-      }
-    });
-    
-    const confidence = matchCount / words.length;
-    if (confidence > 0.3 && confidence > bestMatch.confidence) {
-      bestMatch = {
-        isValid: true,
-        matchedOption: option.original,
-        answerIndex: index,
-        confidence: Math.min(confidence, 0.7)
-      };
-    }
-  });
-
-  return bestMatch;
-}
-
-// Generar sugerencias para respuestas no reconocidas
-function generateSuggestions(questionOptions) {
-  const suggestions = [];
-  
-  // Sugerencias por letra
-  questionOptions.forEach((option, index) => {
-    const letter = String.fromCharCode(65 + index); // A, B, C, D
-    suggestions.push(`Diga "${letter}" para ${option.substring(0, 30)}...`);
-  });
-  
-  // Sugerencias por posición
-  const positionWords = ['primera', 'segunda', 'tercera', 'cuarta'];
-  questionOptions.forEach((option, index) => {
-    if (index < positionWords.length) {
-      suggestions.push(`Diga "${positionWords[index]} opción"`);
-    }
-  });
-  
-  return suggestions;
-}
 
 // [HU8] Procesar audio con AssemblyAI
 exports.processAudioWithAssemblyAI = async (req, res) => {
