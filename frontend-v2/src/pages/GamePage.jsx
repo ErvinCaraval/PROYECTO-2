@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import { useVoice } from '../VoiceContext';
 import { getSocket } from '../services/socket';
 import Question from '../components/Question';
 import Timer from '../components/Timer';
@@ -12,10 +13,14 @@ export default function GamePage() {
   const [questionTimeout, setQuestionTimeout] = useState(false);
   const { gameId } = useParams();
   const { user } = useAuth();
+  const { isVoiceModeEnabled, speak, voiceInteractionsService } = useVoice();
   const [question, setQuestion] = useState(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [selected, setSelected] = useState(null);
+  // Referencia reactiva para selected
+  const selectedRef = useRef(selected);
+  useEffect(() => { selectedRef.current = selected; }, [selected]);
   const [players, setPlayers] = useState([]);
   const [showResult, setShowResult] = useState(false);
   const [result, setResult] = useState(null);
@@ -50,36 +55,100 @@ export default function GamePage() {
     function onConnect() {
       console.log('[GamePage] Socket conectado:', socket.id);
     }
-    function onNewQuestion({ question, index }) {
+    function onNewQuestion({ question, index, timeout }) {
       console.log('[GamePage] Evento newQuestion recibido:', question);
-        // Asegurarse de que las opciones no se barajen ni modifiquen
-        // y que el índice de la respuesta correcta corresponda al array recibido
-        if (!Array.isArray(question.options)) {
-          question.options = [];
-        }
-        setQuestion({
-          ...question,
-          options: [...question.options], // Copia directa, sin barajar
+      // Asegurarse de que las opciones no se barajen ni modifiquen
+      // y que el índice de la respuesta correcta corresponda al array recibido
+      if (!Array.isArray(question.options)) {
+        question.options = [];
+      }
+      setQuestion({
+        ...question,
+        options: [...question.options], // Copia directa, sin barajar
+      });
+      setQuestionIndex(index);
+      setSelected(null);
+      setShowResult(false);
+      // Usar el timeout recibido del backend, o fallback según modo de voz
+      const questionTimeout = typeof timeout === 'number' ? timeout : (isVoiceModeEnabled ? 120 : 10);
+      setTimeLeft(questionTimeout);
+      setTimerKey(prev => prev + 1);
+
+      // Voice mode integration - announce new question
+      if (isVoiceModeEnabled && user) {
+        speak(`Pregunta ${index + 1} de ${totalQuestions}. ${question.text}`, {
+          action: 'new_question',
+          questionId: question.id || `question_${index}`,
+          metadata: {
+            questionIndex: index,
+            totalQuestions,
+            gameId
+          }
         });
-        setQuestionIndex(index);
-        setSelected(null);
-        setShowResult(false);
-        setTimeLeft(10);
-        setTimerKey(prev => prev + 1);
+      }
     }
     function onAnswerResult({ correctAnswerIndex, explanation, players }) {
       console.log('[GamePage] Evento answerResult recibido:', { correctAnswerIndex, explanation, players });
       setShowResult(true);
       setResult({ correctAnswerIndex, explanation });
       setPlayers(players);
+      // Voice mode integration - announce result
+      if (isVoiceModeEnabled && user) {
+        // Usar el valor más reciente de selected
+        const userSelected = selectedRef.current;
+        const isCorrect = userSelected === correctAnswerIndex;
+        const resultMessage = isCorrect 
+          ? '¡Respuesta correcta!' 
+          : `Respuesta incorrecta. La respuesta correcta era: ${question?.options[correctAnswerIndex]}`;
+        speak(resultMessage, {
+          action: 'answer_result',
+          questionId: question?.id || `question_${questionIndex}`,
+          metadata: {
+            isCorrect,
+            selectedIndex: userSelected,
+            correctIndex: correctAnswerIndex,
+            explanation
+          }
+        });
+      }
     }
     function onGameFinished({ players }) {
       console.log('[GamePage] Evento gameFinished recibido:', players);
+      
+      // Voice mode integration - announce game finished
+      if (isVoiceModeEnabled && user) {
+        const userPlayer = players.find(p => p.uid === user.uid);
+        const position = players.findIndex(p => p.uid === user.uid) + 1;
+        const totalPlayers = players.length;
+        
+        speak(`¡Juego terminado! Obtuviste el puesto ${position} de ${totalPlayers} jugadores.`, {
+          action: 'game_finished',
+          questionId: 'game',
+          metadata: {
+            position,
+            totalPlayers,
+            score: userPlayer?.score || 0
+          }
+        });
+      }
+      
       navigate(`/summary/${gameId}`, { state: { players } });
     }
     function onGameStarted({ questionsCount }) {
       console.log('[GamePage] Evento gameStarted recibido:', questionsCount);
       setTotalQuestions(questionsCount);
+      
+      // Voice mode integration - announce game started
+      if (isVoiceModeEnabled && user) {
+        speak(`¡Juego iniciado! Tendrás ${questionsCount} preguntas para responder.`, {
+          action: 'game_started',
+          questionId: 'game',
+          metadata: {
+            questionsCount,
+            gameId
+          }
+        });
+      }
     }
 
       socket.on('connect', onConnect);
@@ -125,6 +194,17 @@ export default function GamePage() {
       })();
     }
   }, [gameId, user, selected]);
+
+  // Voice mode timer warning
+  const handleTimerWarning = useCallback((timeLeft) => {
+    if (isVoiceModeEnabled && user && timeLeft <= 3 && timeLeft > 0) {
+      speak(`¡Atención! Te quedan ${timeLeft} segundos para responder.`, {
+        action: 'timer_warning',
+        questionId: question?.id || `question_${questionIndex}`,
+        metadata: { timeLeft }
+      });
+    }
+  }, [isVoiceModeEnabled, user, question, questionIndex, speak]);
 
   // const getOptionColor = (index) => {
   //   if (!showResult) {
@@ -185,9 +265,12 @@ export default function GamePage() {
                 <div className="shrink-0 pt-1">
                   <Timer
                     key={timerKey}
-                    seconds={10}
+                    seconds={selected === null ? (typeof timeLeft === 'number' ? timeLeft : (isVoiceModeEnabled ? 120 : 10)) : 0}
                     onEnd={handleTimerEnd}
-                    onTick={setTimeLeft}
+                    onTick={(timeLeft) => {
+                      setTimeLeft(timeLeft);
+                      handleTimerWarning(timeLeft);
+                    }}
                   />
                 </div>
               </div>
