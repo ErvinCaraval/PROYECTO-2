@@ -5,8 +5,6 @@ import { useVoice } from "../VoiceContext";
 import Layout from "../components/Layout";
 import { Card, CardBody } from "../components/ui/Card";
 import Button from "../components/ui/Button";
-import SimpleVoiceTest from "../components/SimpleVoiceTest";
-import VoiceTestSimple from "../components/VoiceTestSimple";
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -48,20 +46,7 @@ export default function HomePage() {
             )}
           </div>
           
-          {/* Voice Test Button */}
-          <div className="mt-8">
-            <Button 
-              onClick={testVoice}
-              variant="outline"
-              size="lg"
-              className="bg-green-500/20 border-green-500 text-green-400 hover:bg-green-500/30"
-            >
-              🔊 Probar Voz
-            </Button>
-            <p className="text-white/60 text-sm mt-2">
-              {isVoiceModeEnabled ? 'Modo de voz activo' : 'Modo de voz desactivado'}
-            </p>
-          </div>
+          {/* Voice test removed from home per request */}
         </section>
         <section className="w-full max-w-6xl mx-auto px-6 space-y-8">
           <h2 className="text-3xl font-bold text-center">Características</h2>
@@ -97,13 +82,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Voice Test Section */}
-        <section className="w-full max-w-6xl mx-auto px-6">
-          <VoiceTestSimple />
-          <div className="mt-4">
-            <SimpleVoiceTest />
-          </div>
-        </section>
+        {/* Voice diagnostic/test section removed from home per request */}
       </div>
     </Layout>
   );

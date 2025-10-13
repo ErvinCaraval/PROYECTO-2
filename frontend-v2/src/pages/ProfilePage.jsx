@@ -6,7 +6,7 @@ import Alert from '../components/ui/Alert';
 import VoiceSettings from '../components/VoiceSettings';
 import VoiceHistory from '../components/VoiceHistory';
 import AudioTutorial from '../components/AudioTutorial';
-import VoiceDiagnostic from '../components/VoiceDiagnostic';
+// Removed diagnostic from profile per request
 
 function ProfilePage() {
   const { user } = useAuth();
@@ -61,8 +61,7 @@ function ProfilePage() {
     { id: 'profile', label: 'Perfil', icon: '👤' },
     { id: 'voice-settings', label: 'Configuración de Voz', icon: '🎤' },
     { id: 'voice-history', label: 'Historial de Voz', icon: '📊' },
-    { id: 'tutorial', label: 'Tutorial', icon: '📚' },
-    { id: 'diagnostic', label: 'Diagnóstico', icon: '🔍' }
+    { id: 'tutorial', label: 'Tutorial', icon: '📚' }
   ];
 
   return (
@@ -163,7 +162,7 @@ function ProfilePage() {
             onSkip={() => setActiveTab('profile')}
           />
         )}
-        {activeTab === 'diagnostic' && <VoiceDiagnostic />}
+        {/* Diagnostic tab removed */}
       </div>
     </div>
   );
