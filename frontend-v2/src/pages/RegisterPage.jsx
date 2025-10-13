@@ -19,28 +19,9 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Register user with backend API to include visualDifficulty
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiBase}/api/users/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          displayName: email.split('@')[0], // Temporary display name
-          visualDifficulty
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error registering user');
-      }
-
+      await createUserWithEmailAndPassword(auth, email, password);
+      // The Firebase SDK signs the user in automatically after successful signup.
+      // Defer profile details to the complete profile page.
       navigate('/complete-profile');
     } catch (err) {
       setError(err.message);
