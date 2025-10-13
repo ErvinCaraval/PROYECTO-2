@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from './services/firebase';
-import { onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const AuthContext = createContext();
 
@@ -13,16 +13,11 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let unsubscribe = () => {};
-    setPersistence(auth, browserLocalPersistence)
-      .catch(() => {})
-      .finally(() => {
-        unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-          setUser(firebaseUser);
-          setLoading(false);
-        });
-      });
-    return () => unsubscribe();
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setLoading(false);
+    });
+    return unsubscribe;
   }, []);
 
   const logout = () => signOut(auth);
