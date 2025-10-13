@@ -1,7 +1,11 @@
 // Voice Interactions Service - Log voice interactions to backend
 class VoiceInteractionsService {
   constructor() {
-    this.apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    // Detect environment: use localhost if running locally, else use Render
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    this.apiBase = isLocal
+      ? 'http://localhost:5000'
+      : (import.meta.env.VITE_API_URL || 'https://backend-mg37.onrender.com');
     this.sessionId = this.generateSessionId();
   }
 
@@ -11,17 +15,28 @@ class VoiceInteractionsService {
 
   async logInteraction(interaction) {
     try {
-      console.log('[VoiceInteractionsService] Log interaction:', interaction);
+      // Ensure required fields for backend validation
+      const safeDuration = typeof interaction.duration === 'number' && interaction.duration >= 0 ? interaction.duration : 0;
+      const safeMetadata = interaction.metadata && typeof interaction.metadata === 'object' ? interaction.metadata : {};
+      const safeTimestamp = interaction.timestamp && !isNaN(Date.parse(interaction.timestamp))
+        ? interaction.timestamp
+        : new Date().toISOString();
+
+      const payload = {
+        ...interaction,
+        duration: safeDuration,
+        metadata: safeMetadata,
+        sessionId: this.sessionId,
+        timestamp: safeTimestamp
+      };
+
+      console.log('[VoiceInteractionsService] Log interaction:', payload);
       const response = await fetch(`${this.apiBase}/api/voice-interactions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...interaction,
-          sessionId: this.sessionId,
-          timestamp: new Date().toISOString()
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -67,19 +82,25 @@ class VoiceInteractionsService {
     });
   }
 
-  async logVoiceAnswer(userId, questionId, voiceResponse, confidence, matchedOption, answerIndex) {
+  async logVoiceAnswer(userId, questionId, voiceResponse, confidence, matchedOption, answerIndex, duration = 0, audioBase64) {
+    // Log timestamp and duration for backend validation
+    const metadata = {
+      matchedOption,
+      answerIndex,
+      recognitionType: 'voice_command'
+    };
+    if (audioBase64) {
+      metadata.audioBase64 = audioBase64;
+    }
     return this.logInteraction({
       userId,
       questionId,
       action: 'voice_answer',
-      duration: 0, // Will be calculated if needed
+      duration: typeof duration === 'number' && duration >= 0 ? duration : 0,
       voiceText: voiceResponse,
       confidence,
-      metadata: {
-        matchedOption,
-        answerIndex,
-        recognitionType: 'voice_command'
-      }
+      timestamp: new Date().toISOString(),
+      metadata
     });
   }
 

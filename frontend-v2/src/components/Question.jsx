@@ -86,13 +86,15 @@ export default function Question({ text, question, options, onSelect, selected, 
       if (result.isValid && result.matchedIndex !== -1) {
         // Log the voice answer con los IDs reales
         if (voiceInteractionsService) {
+          // Log with a default duration (simulate 1s if not measured)
           await voiceInteractionsService.logVoiceAnswer(
             (user && user.uid) || undefined,
             questionId || undefined,
             result.transcript,
             result.confidence,
             result.matchedOption,
-            result.matchedIndex
+            result.matchedIndex,
+            1000 // 1s duration for backend validation
           );
         }
 
@@ -174,11 +176,24 @@ export default function Question({ text, question, options, onSelect, selected, 
             {isVoiceAvailable && !showResult && (
               <VoiceAnswerButton 
                 options={options}
-                onAnswer={(idx) => {
+                onAnswer={async (idx, audioBase64) => {
                   onSelect(idx);
                   stopSpeaking();
                   setIsListening(false);
                   setRecognitionError('');
+                  // Loggear la respuesta con audioBase64 si está disponible
+                  if (voiceInteractionsService && user && questionId) {
+                    await voiceInteractionsService.logVoiceAnswer(
+                      user.uid,
+                      questionId,
+                      options[idx],
+                      undefined, // confidence (no disponible aquí)
+                      options[idx],
+                      idx,
+                      undefined, // duration (no disponible aquí)
+                      audioBase64 // nuevo argumento opcional
+                    );
+                  }
                 }}
                 disabled={selected !== null}
               />

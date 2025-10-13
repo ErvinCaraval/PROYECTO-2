@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useVoice } from '../VoiceContext';
 import Button from './ui/Button';
 import voiceRecognitionService from '../services/voiceRecognitionService';
@@ -8,8 +8,20 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
   const [isListening, setIsListening] = useState(false);
   const [recognitionError, setRecognitionError] = useState('');
   const [lastRecognized, setLastRecognized] = useState('');
-
   const [successMessage, setSuccessMessage] = useState('');
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
+  // Utilidad para convertir Blob a base64
+  const blobToBase64 = (blob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
   const startListening = async () => {
     if (!isVoiceModeEnabled || disabled) return;
 
@@ -18,25 +30,61 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
     setLastRecognized('');
     setSuccessMessage('');
 
+    // --- INICIO GRABACIÓN AUDIO ---
+    let stream = null;
     try {
-      // Usar las opciones para mejorar el reconocimiento
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = new window.MediaRecorder(stream);
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mediaRecorderRef.current.start();
+    } catch (err) {
+      setRecognitionError('No se pudo acceder al micrófono.');
+      setIsListening(false);
+      return;
+    }
+    // --- INICIO RECONOCIMIENTO TEXTO ---
+    try {
       const result = await voiceRecognitionService.recognizeAnswer(options);
 
-      if (result.stopped) {
-        setIsListening(false);
-        setRecognitionError('Reconocimiento detenido por el usuario.');
-        return;
+      // Parar grabación
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        await new Promise((resolve) => {
+          mediaRecorderRef.current.onstop = resolve;
+          mediaRecorderRef.current.stop();
+        });
       }
+      stream.getTracks().forEach((t) => t.stop());
+
+      // Unir audio y convertir a base64 (intentar 'audio/wav' para AssemblyAI)
+      let audioBlob;
+      try {
+        audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        // Si el navegador no soporta 'audio/wav', fallback a 'audio/webm'
+        if (audioBlob.size === 0) {
+          audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        }
+      } catch (e) {
+        audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      }
+      const audioBase64 = await blobToBase64(audioBlob);
 
       setLastRecognized(result.transcript);
 
       if (result.isValid && result.matchedIndex !== -1) {
         setSuccessMessage('✅ Respuesta reconocida: ' + options[result.matchedIndex]);
-        onAnswer(result.matchedIndex);
+        // Llama a onAnswer pasando el índice y el audioBase64
+        onAnswer(result.matchedIndex, audioBase64);
       } else {
         setRecognitionError('No pude entender tu respuesta. Por favor, di una de las opciones disponibles.');
       }
     } catch (error) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (stream) stream.getTracks().forEach((t) => t.stop());
       console.error('Voice recognition error:', error);
       setRecognitionError(error?.message || 'Error en el reconocimiento de voz. Intenta de nuevo.');
     } finally {
@@ -91,6 +139,9 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
 
   const stopListening = () => {
     voiceRecognitionService.stopRecognition();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
     setIsListening(false);
   };
 
