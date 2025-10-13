@@ -11,7 +11,8 @@ class VoiceRecognitionService {
       maxAlternatives: 1
     };
     
-    this.initializeRecognition();
+    // Lazy initialization to avoid constructing outside of a user gesture
+    // Some browsers are picky about initialization timing
   }
 
   initializeRecognition() {
@@ -20,23 +21,46 @@ class VoiceRecognitionService {
       return;
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    this.recognition = new SpeechRecognition();
-    
-    // Configure recognition
-    this.recognition.lang = this.settings.language;
-    this.recognition.continuous = this.settings.continuous;
-    this.recognition.interimResults = this.settings.interimResults;
-    this.recognition.maxAlternatives = this.settings.maxAlternatives;
+    try {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      this.recognition = new SpeechRecognition();
+      
+      // Configure recognition
+      this.recognition.lang = this.settings.language;
+      this.recognition.continuous = this.settings.continuous;
+      this.recognition.interimResults = this.settings.interimResults;
+      this.recognition.maxAlternatives = this.settings.maxAlternatives;
+    } catch (error) {
+      console.error('Failed to initialize SpeechRecognition:', error);
+      this.recognition = null;
+    }
+  }
+
+  ensureInitialized() {
+    if (!this.recognition) {
+      this.initializeRecognition();
+    }
+    return this.recognition != null;
   }
 
   async recognizeAnswer(questionOptions = []) {
     if (!this.isWebSpeechRecognitionAvailable) {
-      throw new Error('Web Speech Recognition API not available');
+      throw new Error('Reconocimiento de voz no disponible en este navegador');
+    }
+
+    // Must be secure context for mic permissions on most browsers
+    const isSecure = window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isSecure) {
+      throw new Error('Se requiere sitio seguro (https) para usar el micrófono');
     }
 
     if (this.isListening) {
       throw new Error('Recognition already in progress');
+    }
+
+    // Lazily (re)create recognizer
+    if (!this.ensureInitialized()) {
+      throw new Error('No se pudo inicializar el reconocimiento de voz');
     }
 
     return new Promise((resolve, reject) => {
@@ -101,6 +125,9 @@ class VoiceRecognitionService {
           case 'network':
             errorMessage = 'Error de red. Verifica tu conexión a internet.';
             break;
+          case 'aborted':
+            errorMessage = 'Reconocimiento cancelado.';
+            break;
           default:
             errorMessage = `Error de reconocimiento: ${event.error}`;
         }
@@ -115,7 +142,20 @@ class VoiceRecognitionService {
 
       // Start recognition
       try {
-        this.recognition.start();
+        // Prompt for mic permission proactively when possible
+        if (navigator?.mediaDevices?.getUserMedia) {
+          navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+              stream.getTracks().forEach(t => t.stop());
+              this.recognition.start();
+            })
+            .catch(() => {
+              this.isListening = false;
+              reject(new Error('Permiso de micrófono denegado o no disponible'));
+            });
+        } else {
+          this.recognition.start();
+        }
       } catch (error) {
         this.isListening = false;
         reject(new Error('No se pudo iniciar el reconocimiento de voz'));
@@ -210,7 +250,9 @@ class VoiceRecognitionService {
   }
 
   isAvailable() {
-    return this.isWebSpeechRecognitionAvailable;
+    // Must have API and be in a secure context for mic
+    const isSecure = (typeof window !== 'undefined') && (window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    return this.isWebSpeechRecognitionAvailable && isSecure;
   }
 
   getStatus() {
