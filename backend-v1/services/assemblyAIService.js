@@ -1,176 +1,210 @@
-const axios = require('axios');
+'use strict';
+
+// Load env vars (no-op if already loaded)
+try { require('dotenv').config(); } catch (_) {}
+
+const DEFAULT_BASE_URL = 'https://api.assemblyai.com/v2';
+
+async function ensureFetch() {
+  if (typeof fetch !== 'undefined') return fetch;
+  // Lazy import node-fetch if needed (Node <18)
+  const mod = await import('node-fetch');
+  return mod.default || mod;
+}
+
+function parseDataUrl(dataUrl) {
+  // Example: data:audio/wav;base64,AAAA...
+  const match = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
+  if (!match) {
+    throw new Error('Invalid data URL');
+  }
+  const mimeType = match[1];
+  const base64 = match[2];
+  return { mimeType, buffer: Buffer.from(base64, 'base64') };
+}
 
 class AssemblyAIService {
   constructor() {
-    this.apiKey = process.env.ASSEMBLYAI_API_KEY;
-    this.baseURL = 'https://api.assemblyai.com/v2';
-    
-    if (!this.apiKey) {
-      console.warn('ASSEMBLYAI_API_KEY not found in environment variables');
-    }
+    this.baseURL = DEFAULT_BASE_URL;
+    this.apiKey = process.env.ASSEMBLYAI_API_KEY || '';
   }
 
-  // [HU8] Text-to-Speech usando AssemblyAI
-  async textToSpeech(text, options = {}) {
-    try {
-      if (!this.apiKey) {
-        throw new Error('AssemblyAI API key not configured');
-      }
-
-      const response = await axios.post(`${this.baseURL}/text-to-speech`, {
-        text: text,
-        voice: options.voice || 'es-ES-EnriqueNeural',
-        speed: options.speed || 1.0,
-        format: options.format || 'mp3'
-      }, {
-        headers: {
-          'Authorization': this.apiKey,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      return {
-        success: true,
-        audioUrl: response.data.audio_url,
-        duration: response.data.duration,
-        format: response.data.format
-      };
-    } catch (error) {
-      console.error('AssemblyAI TTS Error:', error.response?.data || error.message);
-      throw new Error(`TTS Error: ${error.response?.data?.error || error.message}`);
-    }
+  isAvailable() {
+    return typeof this.apiKey === 'string' && this.apiKey.length > 0;
   }
 
-  // [HU8] Speech-to-Text usando AssemblyAI
-  async speechToText(audioUrl, options = {}) {
+  async checkAPIStatus() {
+    return {
+      available: this.isAvailable(),
+      service: 'AssemblyAI'
+    };
+  }
+
+  async uploadAudioFromDataUrl(dataUrl) {
+    const { buffer } = parseDataUrl(dataUrl);
+    const f = await ensureFetch();
+    const resp = await f(`${this.baseURL}/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: this.apiKey,
+        'Content-Type': 'application/octet-stream'
+      },
+      body: buffer
+    });
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '');
+      throw new Error(`AssemblyAI upload failed: ${resp.status} ${errText}`);
+    }
+    const json = await resp.json();
+    // { upload_url: "https://cdn.assemblyai.com/upload/.." }
+    if (!json || !json.upload_url) {
+      throw new Error('AssemblyAI upload did not return upload_url');
+    }
+    return json.upload_url;
+  }
+
+  async createTranscript(payload) {
+    const f = await ensureFetch();
+    const resp = await f(`${this.baseURL}/transcript`, {
+      method: 'POST',
+      headers: {
+        Authorization: this.apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '');
+      throw new Error(`AssemblyAI transcript create failed: ${resp.status} ${errText}`);
+    }
+    return await resp.json();
+  }
+
+  async getTranscript(id) {
+    const f = await ensureFetch();
+    const resp = await f(`${this.baseURL}/transcript/${id}`, {
+      method: 'GET',
+      headers: {
+        Authorization: this.apiKey
+      }
+    });
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '');
+      throw new Error(`AssemblyAI transcript get failed: ${resp.status} ${errText}`);
+    }
+    return await resp.json();
+  }
+
+  async transcribeAndWait(audioUrlOrDataUrl, options = {}) {
+    if (!this.isAvailable()) {
+      return { success: false, error: 'AssemblyAI API key not configured' };
+    }
+
     try {
-      if (!this.apiKey) {
-        throw new Error('AssemblyAI API key not configured');
+      let audio_url = audioUrlOrDataUrl;
+      if (typeof audioUrlOrDataUrl === 'string' && audioUrlOrDataUrl.startsWith('data:')) {
+        audio_url = await this.uploadAudioFromDataUrl(audioUrlOrDataUrl);
       }
 
-      // Subir audio para transcripción
-      const uploadResponse = await axios.post(`${this.baseURL}/upload`, {
-        audio_url: audioUrl
-      }, {
-        headers: {
-          'Authorization': this.apiKey,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const uploadId = uploadResponse.data.upload_url;
-
-      // Iniciar transcripción
-      const transcriptResponse = await axios.post(`${this.baseURL}/transcript`, {
-        audio_url: uploadId,
-        language_code: options.language || 'es',
+      const request = {
+        audio_url,
+        language_code: options.language_code || 'es',
         punctuate: options.punctuate !== false,
-        format_text: options.formatText !== false,
-        speaker_labels: options.speakerLabels || false
-      }, {
-        headers: {
-          'Authorization': this.apiKey,
-          'Content-Type': 'application/json'
+        format_text: options.format_text !== false,
+      };
+
+      const created = await this.createTranscript(request);
+      const id = created.id;
+      const startedAt = Date.now();
+      const timeoutMs = typeof options.timeoutMs === 'number' ? options.timeoutMs : 120000; // 2 min
+      const pollIntervalMs = 1500;
+
+      while (true) {
+        if (Date.now() - startedAt > timeoutMs) {
+          return { success: false, error: 'Transcription timed out' };
         }
-      });
 
-      const transcriptId = transcriptResponse.data.id;
-
-      // Polling para obtener resultado
-      let attempts = 0;
-      const maxAttempts = 30; // 30 segundos máximo
-      
-      while (attempts < maxAttempts) {
-        const statusResponse = await axios.get(`${this.baseURL}/transcript/${transcriptId}`, {
-          headers: {
-            'Authorization': this.apiKey
-          }
-        });
-
-        const status = statusResponse.data.status;
-        
-        if (status === 'completed') {
+        const status = await this.getTranscript(id);
+        if (status.status === 'completed') {
           return {
             success: true,
-            text: statusResponse.data.text,
-            confidence: statusResponse.data.confidence,
-            words: statusResponse.data.words,
-            duration: statusResponse.data.audio_duration
+            text: status.text || '',
+            confidence: typeof status.confidence === 'number' ? status.confidence : undefined,
+            duration: status.audio_duration,
+            language: status.language_code || request.language_code
           };
-        } else if (status === 'error') {
-          throw new Error(`Transcription failed: ${statusResponse.data.error}`);
         }
-
-        // Esperar 1 segundo antes del siguiente intento
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        attempts++;
+        if (status.status === 'error') {
+          return { success: false, error: status.error || 'Transcription error' };
+        }
+        await new Promise(r => setTimeout(r, pollIntervalMs));
       }
-
-      throw new Error('Transcription timeout');
     } catch (error) {
-      console.error('AssemblyAI STT Error:', error.response?.data || error.message);
-      throw new Error(`STT Error: ${error.response?.data?.error || error.message}`);
+      return { success: false, error: error.message };
     }
   }
 
-  // [HU8] Procesar audio directamente (base64)
-  async processAudio(audioBase64, options = {}) {
-    try {
-      if (!this.apiKey) {
-        throw new Error('AssemblyAI API key not configured');
-      }
-
-      // Convertir base64 a buffer
-      const audioBuffer = Buffer.from(audioBase64, 'base64');
-
-      // Subir audio
-      const uploadResponse = await axios.post(`${this.baseURL}/upload`, audioBuffer, {
-        headers: {
-          'Authorization': this.apiKey,
-          'Content-Type': 'application/octet-stream'
-        }
-      });
-
-      const uploadUrl = uploadResponse.data.upload_url;
-
-      // Procesar con speechToText
-      return await this.speechToText(uploadUrl, options);
-    } catch (error) {
-      console.error('AssemblyAI Audio Processing Error:', error.response?.data || error.message);
-      throw new Error(`Audio Processing Error: ${error.response?.data?.error || error.message}`);
-    }
+  generateSuggestions(questionOptions = []) {
+    if (!Array.isArray(questionOptions) || questionOptions.length === 0) return [];
+    const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const tips = [
+      'Di la letra de la opción (A, B, C...)',
+      'Di el número de la opción (1, 2, 3...)',
+      'Di parte del texto de la opción'
+    ];
+    const optionsList = questionOptions.slice(0, letters.length).map((opt, i) => `${letters[i]}: ${opt}`);
+    return [...tips, ...optionsList];
   }
 
-  // [HU8] Verificar si el servicio está disponible
-  isAvailable() {
-    return !!this.apiKey;
-  }
+  async processVoiceAnswer(audioUrlOrDataUrl, questionOptions = []) {
+    const result = await this.transcribeAndWait(audioUrlOrDataUrl, {
+      language_code: 'es',
+      punctuate: true,
+      format_text: true
+    });
 
-  // [HU8] Obtener voces disponibles
-  async getAvailableVoices() {
-    try {
-      if (!this.apiKey) {
-        return { success: false, error: 'API key not configured' };
-      }
-
-      const response = await axios.get(`${this.baseURL}/voices`, {
-        headers: {
-          'Authorization': this.apiKey
-        }
-      });
-
-      return {
-        success: true,
-        voices: response.data.voices || []
-      };
-    } catch (error) {
-      console.error('AssemblyAI Voices Error:', error.response?.data || error.message);
+    if (!result.success) {
       return {
         success: false,
-        error: error.response?.data?.error || error.message
+        error: result.error,
+        suggestions: this.generateSuggestions(questionOptions)
       };
     }
+
+    const { matchVoiceResponse } = require('../utils/voiceRecognition');
+    const validation = matchVoiceResponse(result.text, questionOptions);
+    return {
+      success: true,
+      text: result.text,
+      confidence: result.confidence,
+      duration: result.duration,
+      language: result.language,
+      validation,
+      suggestions: !validation.isValid ? this.generateSuggestions(questionOptions) : []
+    };
+  }
+
+  // Controller-facing helpers (used by assemblyAIController)
+  async speechToText(audioUrlOrDataUrl, options = {}) {
+    return this.transcribeAndWait(audioUrlOrDataUrl, options);
+  }
+
+  async processAudio(audioBase64, options = {}) {
+    const mimeType = options.mimeType || 'audio/wav';
+    const dataUrl = `data:${mimeType};base64,${audioBase64}`;
+    return this.transcribeAndWait(dataUrl, options);
+  }
+
+  async textToSpeech(text, options = {}) {
+    // AssemblyAI does not provide TTS; return a clear error
+    return { success: false, error: 'Text-to-Speech no soportado por AssemblyAI' };
+  }
+
+  async getAvailableVoices() {
+    // Not applicable for AssemblyAI; return empty list
+    return { success: true, voices: [] };
   }
 }
 
 module.exports = new AssemblyAIService();
+

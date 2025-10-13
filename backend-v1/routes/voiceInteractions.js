@@ -17,7 +17,20 @@ router.post('/', generalUserLimiter, async (req, res) => {
     if (!questionId || typeof questionId !== 'string') {
       return res.status(400).json({ error: 'Invalid or missing questionId.' });
     }
-    if (!['voice_answer', 'question_read'].includes(action)) {
+    // Extend allowed actions to include tutorial and settings logs
+    const allowedActions = new Set([
+      'voice_answer',
+      'voice_answer_assemblyai',
+      'question_read',
+      'option_read',
+      'settings_changed',
+      'tutorial_start',
+      'tutorial_step',
+      'tutorial_completed',
+      'tutorial_end',
+      'text_read'
+    ]);
+    if (!allowedActions.has(action)) {
       return res.status(400).json({ error: 'Invalid action.' });
     }
     if (typeof duration !== 'number' || duration < 0) {
@@ -37,23 +50,24 @@ router.post('/', generalUserLimiter, async (req, res) => {
     // Procesar audio con AssemblyAI si está disponible
     let processedVoiceText = voiceText;
     let processedConfidence = confidence;
-    
+    let assemblyAIProcessed = false;
     if (metadata.audioBase64 && action === 'voice_answer') {
       try {
-        // Convertir base64 a URL temporal para AssemblyAI
-        const audioBuffer = Buffer.from(metadata.audioBase64, 'base64');
-        const audioUrl = `data:audio/wav;base64,${metadata.audioBase64}`;
-        
+        // Convertir base64 a URL temporal para AssemblyAI (respetando mimeType si viene)
+        const safeMime = typeof metadata.mimeType === 'string' && metadata.mimeType.startsWith('audio/')
+          ? metadata.mimeType
+          : 'audio/wav';
+        const audioUrl = `data:${safeMime};base64,${metadata.audioBase64}`;
         // Procesar con AssemblyAI
         const result = await assemblyAI.transcribeAndWait(audioUrl, {
           language_code: 'es',
           punctuate: true,
           format_text: true
         });
-        
         if (result.success) {
           processedVoiceText = result.text;
           processedConfidence = result.confidence;
+          assemblyAIProcessed = true;
         } else {
           console.warn('AssemblyAI transcription failed:', result.error);
         }
@@ -61,6 +75,11 @@ router.post('/', generalUserLimiter, async (req, res) => {
         console.error('Error processing audio with AssemblyAI:', error);
         // Continuar sin fallar si AssemblyAI falla
       }
+    }
+
+    // Si desde el frontend ya marcamos que AssemblyAI se usó con éxito, respetarlo
+    if (!assemblyAIProcessed && metadata && metadata.assemblyAIResult && metadata.assemblyAIResult.success === true) {
+      assemblyAIProcessed = true;
     }
 
     const doc = {
@@ -73,11 +92,36 @@ router.post('/', generalUserLimiter, async (req, res) => {
       confidence: typeof processedConfidence === 'number' ? processedConfidence : null,
       metadata: {
         ...metadata,
-        assemblyAIProcessed: !!metadata.audioBase64 && action === 'voice_answer'
+        assemblyAIProcessed
       }
     };
     await db.collection(COLLECTION).add(doc);
     res.status(201).json({ message: 'Voice interaction registered successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// [HU5] Endpoint de estadísticas básicas
+router.get('/stats/:userId', generalUserLimiter, async (req, res) => {
+  try {
+    const { userId } = req.params;
+      if (!userId || typeof userId !== 'string') {
+        return res.status(404).json({ error: 'Not found.' });
+      }
+    const snapshot = await db.collection(COLLECTION).where('userId', '==', userId).get();
+    let total = 0;
+    let totalDuration = 0;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (typeof data.duration === 'number') {
+        total++;
+        totalDuration += data.duration;
+      }
+    });
+    const avgDuration = total > 0 ? totalDuration / total : 0;
+    res.json({ total, averageDuration: avgDuration });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -152,7 +196,7 @@ router.get('/stats/:userId', generalUserLimiter, async (req, res) => {
 // [HU8] Procesar audio directamente con AssemblyAI
 router.post('/process-audio', generalUserLimiter, async (req, res) => {
   try {
-    const { audioBase64, questionOptions } = req.body;
+    const { audioBase64, questionOptions, mimeType } = req.body;
     
     if (!audioBase64 || typeof audioBase64 !== 'string') {
       return res.status(400).json({ error: 'Invalid or missing audioBase64.' });
@@ -163,7 +207,8 @@ router.post('/process-audio', generalUserLimiter, async (req, res) => {
     }
     
     // Convertir base64 a URL temporal para AssemblyAI
-    const audioUrl = `data:audio/wav;base64,${audioBase64}`;
+    const safeMime = typeof mimeType === 'string' && mimeType.startsWith('audio/') ? mimeType : 'audio/wav';
+    const audioUrl = `data:${safeMime};base64,${audioBase64}`;
     
     // Procesar con AssemblyAI
     const result = await assemblyAI.transcribeAndWait(audioUrl, {
