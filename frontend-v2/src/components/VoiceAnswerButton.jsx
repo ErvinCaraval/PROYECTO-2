@@ -38,7 +38,7 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
       }
     } catch (error) {
       console.error('Voice recognition error:', error);
-      setRecognitionError('Error en el reconocimiento de voz. Intenta de nuevo.');
+      setRecognitionError(error?.message || 'Error en el reconocimiento de voz. Intenta de nuevo.');
     } finally {
       setIsListening(false);
     }
