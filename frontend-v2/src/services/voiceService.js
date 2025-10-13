@@ -8,7 +8,7 @@ class VoiceService {
       rate: 1.0,
       volume: 1.0,
       pitch: 1.0,
-      voice: null,
+      voiceName: null, // Solo el nombre de la voz
       language: 'es-ES'
     };
     
@@ -32,7 +32,7 @@ class VoiceService {
 
   saveSettings() {
     try {
-      localStorage.setItem('voiceSettings', JSON.stringify(this.settings));
+  localStorage.setItem('voiceSettings', JSON.stringify(this.settings));
     } catch (error) {
       console.warn('Error saving voice settings:', error);
     }
@@ -45,14 +45,22 @@ class VoiceService {
     const loadVoices = () => {
       const voices = speechSynthesis.getVoices();
       this.availableVoices = voices;
-      
-      // Try to find a Spanish voice
+      // Buscar la voz específica de Google Español de Estados Unidos (es-US)
+      const googleEsUsVoice = voices.find(
+        (voice) =>
+          (voice.name === 'Google Español de Estados Unidos' || voice.name === 'Google US Spanish' || (voice.name.includes('Google') && voice.lang === 'es-US'))
+      );
+      if (googleEsUsVoice && !this.settings.voiceName) {
+        this.settings.voiceName = googleEsUsVoice.name;
+        this.saveSettings();
+        return;
+      }
+      // Si no está, buscar cualquier voz en español
       const spanishVoice = voices.find(voice => 
         voice.lang.includes('es') || voice.lang.includes('ES')
       );
-      
-      if (spanishVoice && !this.settings.voice) {
-        this.settings.voice = spanishVoice;
+      if (spanishVoice && !this.settings.voiceName) {
+        this.settings.voiceName = spanishVoice.name;
         this.saveSettings();
       }
     };
@@ -85,8 +93,15 @@ class VoiceService {
       utterance.lang = options.language || this.settings.language;
       
       // Set voice if available
-      if (this.settings.voice) {
-        utterance.voice = this.settings.voice;
+      let voiceToUse = null;
+      const voices = this.getAvailableVoices();
+      if (options.voiceName) {
+        voiceToUse = voices.find(v => v.name === options.voiceName);
+      } else if (this.settings.voiceName) {
+        voiceToUse = voices.find(v => v.name === this.settings.voiceName);
+      }
+      if (voiceToUse) {
+        utterance.voice = voiceToUse;
       }
 
       utterance.onstart = () => {
@@ -131,12 +146,18 @@ class VoiceService {
   }
 
   updateSettings(newSettings) {
-    this.settings = { ...this.settings, ...newSettings };
+    // Si viene un objeto de voz, solo guardar el nombre
+    const settingsToSave = { ...newSettings };
+    if (settingsToSave.voice && settingsToSave.voice.name) {
+      settingsToSave.voiceName = settingsToSave.voice.name;
+      delete settingsToSave.voice;
+    }
+    this.settings = { ...this.settings, ...settingsToSave };
     this.saveSettings();
   }
 
   getSettings() {
-    return { ...this.settings };
+  return { ...this.settings };
   }
 
   getAvailableVoices() {
