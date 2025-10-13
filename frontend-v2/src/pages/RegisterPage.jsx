@@ -9,7 +9,6 @@ import Alert from '../components/ui/Alert';
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [visualDifficulty, setVisualDifficulty] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -20,8 +19,6 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      // The Firebase SDK signs the user in automatically after successful signup.
-      // Defer profile details to the complete profile page.
       navigate('/complete-profile');
     } catch (err) {
       setError(err.message);
@@ -47,20 +44,6 @@ export default function RegisterPage() {
           <div>
             <label className="block mb-1 text-sm text-white/80" htmlFor="password">Contraseña</label>
             <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required disabled={loading} />
-          </div>
-
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-            <input
-              id="visualDifficulty"
-              type="checkbox"
-              checked={visualDifficulty}
-              onChange={e => setVisualDifficulty(e.target.checked)}
-              disabled={loading}
-              className="h-4 w-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2"
-            />
-            <label htmlFor="visualDifficulty" className="text-sm text-white/80 cursor-pointer">
-              Tengo dificultades visuales
-            </label>
           </div>
 
           {error && <Alert intent="error">{error}</Alert>}

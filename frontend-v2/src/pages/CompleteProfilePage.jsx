@@ -9,7 +9,6 @@ import Alert from '../components/ui/Alert';
 
 export default function CompleteProfilePage() {
   const [displayName, setDisplayName] = useState('');
-  const [visualDifficulty, setVisualDifficulty] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -24,7 +23,6 @@ export default function CompleteProfilePage() {
       await setDoc(doc(db, 'users', auth.currentUser.uid), {
         email: auth.currentUser.email,
         displayName,
-        visualDifficulty,
         stats: { gamesPlayed: 0, wins: 0, correctAnswers: 0 }
       }, { merge: true });
       navigate('/dashboard');
@@ -47,21 +45,6 @@ export default function CompleteProfilePage() {
             <label className="block mb-1 text-sm text-white/80" htmlFor="displayName">Nombre para mostrar</label>
             <Input id="displayName" type="text" placeholder="Tu nombre" value={displayName} onChange={e => setDisplayName(e.target.value)} required disabled={loading} />
           </div>
-
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-            <input
-              id="visualDifficulty"
-              type="checkbox"
-              checked={visualDifficulty}
-              onChange={e => setVisualDifficulty(e.target.checked)}
-              disabled={loading}
-              className="h-4 w-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2"
-            />
-            <label htmlFor="visualDifficulty" className="text-sm text-white/80 cursor-pointer">
-              Tengo dificultades visuales
-            </label>
-          </div>
-
           {error && <Alert intent="error">{error}</Alert>}
           <Button type="submit" size="lg" disabled={loading}>{loading ? 'Guardando…' : 'Guardar'}</Button>
         </form>
