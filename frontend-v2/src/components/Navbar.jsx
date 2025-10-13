@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useVoice } from '../VoiceContext'
 
 function MenuIcon({ open }) {
   return (
@@ -15,6 +16,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false)
   const location = useLocation()
   const isHome = location.pathname === '/'
+  const { isVoiceModeEnabled, toggleVoiceMode, isVoiceAvailable } = useVoice()
 
   return (
     <header className="bg-transparent backdrop-blur-md border-white/10 border-b w-full py-2">
@@ -28,6 +30,22 @@ export default function Navbar() {
           {!isHome && <Link to="/" className="text-sm hover:underline">Inicio</Link>}
           <Link to="/dashboard" className="text-sm hover:underline">Panel</Link>
           {!isHome && <Link to="/ranking" className="text-sm hover:underline">Ranking</Link>}
+          
+          {/* Voice Mode Toggle */}
+          {isVoiceAvailable && (
+            <button
+              onClick={toggleVoiceMode}
+              className={`px-3 py-2 rounded-md text-sm transition-colors ${
+                isVoiceModeEnabled 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-gray-600 text-white hover:bg-gray-500'
+              }`}
+              title={isVoiceModeEnabled ? 'Desactivar modo de voz' : 'Activar modo de voz'}
+            >
+              🎤 {isVoiceModeEnabled ? 'Voz ON' : 'Voz OFF'}
+            </button>
+          )}
+          
           <Link to="/login" className="bg-bb-primary px-3 py-2 rounded-md text-sm">Iniciar</Link>
         </nav>
 
@@ -47,6 +65,24 @@ export default function Navbar() {
           {!isHome && <Link to="/" className="block px-3 py-3 rounded-md text-base" onClick={() => setOpen(false)}>Inicio</Link>}
           <Link to="/dashboard" className="block px-3 py-3 rounded-md text-base" onClick={() => setOpen(false)}>Panel</Link>
           {!isHome && <Link to="/ranking" className="block px-3 py-3 rounded-md text-base" onClick={() => setOpen(false)}>Ranking</Link>}
+          
+          {/* Voice Mode Toggle - Mobile */}
+          {isVoiceAvailable && (
+            <button
+              onClick={() => {
+                toggleVoiceMode();
+                setOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-3 rounded-md text-base transition-colors ${
+                isVoiceModeEnabled 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-gray-600 text-white'
+              }`}
+            >
+              🎤 {isVoiceModeEnabled ? 'Voz ON' : 'Voz OFF'}
+            </button>
+          )}
+          
           <Link to="/login" className="block bg-bb-primary px-3 py-3 rounded-md text-white text-base" onClick={() => setOpen(false)}>Iniciar</Link>
         </div>
       </div>

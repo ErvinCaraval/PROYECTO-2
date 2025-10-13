@@ -1,6 +1,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../AuthContext';
+import { useVoice } from '../VoiceContext';
 import { useNavigate } from 'react-router-dom';
 import { getSocket } from '../services/socket';
 import Button from '../components/ui/Button';
@@ -11,10 +12,12 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Skeleton, { SkeletonText } from '../components/ui/Skeleton';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
+import VoiceGuide from '../components/VoiceGuide';
 const AIQuestionGenerator = React.lazy(() => import('../components/AIQuestionGenerator'));
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
+  const { userHasVisualDifficulty, isVoiceModeEnabled } = useVoice();
   const navigate = useNavigate();
   const [gameCode, setGameCode] = useState('');
   const [publicGames, setPublicGames] = useState([]);
@@ -24,10 +27,18 @@ export default function DashboardPage() {
   const [generatedQuestions, setGeneratedQuestions] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [showVoiceGuide, setShowVoiceGuide] = useState(false);
 
   useEffect(() => {
     fetchPublicGames();
   }, []);
+
+  // Show voice guide for users with visual difficulties
+  useEffect(() => {
+    if (userHasVisualDifficulty && !isVoiceModeEnabled) {
+      setShowVoiceGuide(true);
+    }
+  }, [userHasVisualDifficulty, isVoiceModeEnabled]);
 
   const fetchPublicGames = async () => {
     try {
@@ -207,6 +218,13 @@ export default function DashboardPage() {
           <Alert intent={errorMessage ? 'error' : 'success'} className="shadow-xl">
             {errorMessage || successMessage}
           </Alert>
+        </div>
+      )}
+
+      {/* Voice Guide Modal */}
+      {showVoiceGuide && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <VoiceGuide onComplete={() => setShowVoiceGuide(false)} />
         </div>
       )}
 

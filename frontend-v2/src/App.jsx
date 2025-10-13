@@ -1,11 +1,14 @@
 import React from 'react';
 import { AuthProvider } from './AuthContext';
+import { VoiceProvider } from './VoiceContext';
 import AppRoutes from './routes';
 
 function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <VoiceProvider>
+        <AppRoutes />
+      </VoiceProvider>
     </AuthProvider>
   );
 }

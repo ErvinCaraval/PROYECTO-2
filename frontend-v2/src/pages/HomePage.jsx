@@ -1,12 +1,27 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import { useVoice } from "../VoiceContext";
 import Layout from "../components/Layout";
 import { Card, CardBody } from "../components/ui/Card";
 import Button from "../components/ui/Button";
+import SimpleVoiceTest from "../components/SimpleVoiceTest";
+import VoiceTestSimple from "../components/VoiceTestSimple";
 
 export default function HomePage() {
   const { user } = useAuth();
+  const { speak, isVoiceModeEnabled } = useVoice();
+
+  const testVoice = async () => {
+    try {
+      console.log('Testing voice...');
+      await speak('Hola, este es un test de voz. Si puedes escuchar esto, el sistema de voz está funcionando correctamente.');
+      console.log('Voice test completed');
+    } catch (error) {
+      console.error('Voice test failed:', error);
+      alert('Error en la prueba de voz: ' + error.message);
+    }
+  };
 
   return (
     <Layout>
@@ -31,6 +46,21 @@ export default function HomePage() {
                 </Button>
               </>
             )}
+          </div>
+          
+          {/* Voice Test Button */}
+          <div className="mt-8">
+            <Button 
+              onClick={testVoice}
+              variant="outline"
+              size="lg"
+              className="bg-green-500/20 border-green-500 text-green-400 hover:bg-green-500/30"
+            >
+              🔊 Probar Voz
+            </Button>
+            <p className="text-white/60 text-sm mt-2">
+              {isVoiceModeEnabled ? 'Modo de voz activo' : 'Modo de voz desactivado'}
+            </p>
           </div>
         </section>
         <section className="w-full max-w-6xl mx-auto px-6 space-y-8">
@@ -64,6 +94,14 @@ export default function HomePage() {
                 </p>
               </CardBody>
             </Card>
+          </div>
+        </section>
+
+        {/* Voice Test Section */}
+        <section className="w-full max-w-6xl mx-auto px-6">
+          <VoiceTestSimple />
+          <div className="mt-4">
+            <SimpleVoiceTest />
           </div>
         </section>
       </div>
