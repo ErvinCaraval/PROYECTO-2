@@ -83,6 +83,31 @@ router.post('/', generalUserLimiter, async (req, res) => {
   }
 });
 
+
+// [HU5] Endpoint de estadísticas básicas
+router.get('/stats/:userId', generalUserLimiter, async (req, res) => {
+  try {
+    const { userId } = req.params;
+      if (!userId || typeof userId !== 'string') {
+        return res.status(404).json({ error: 'Not found.' });
+      }
+    const snapshot = await db.collection(COLLECTION).where('userId', '==', userId).get();
+    let total = 0;
+    let totalDuration = 0;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (typeof data.duration === 'number') {
+        total++;
+        totalDuration += data.duration;
+      }
+    });
+    const avgDuration = total > 0 ? totalDuration / total : 0;
+    res.json({ total, averageDuration: avgDuration });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // [HU5] Recuperar historial de voz por usuario
 router.get('/:userId', generalUserLimiter, async (req, res) => {
   try {
