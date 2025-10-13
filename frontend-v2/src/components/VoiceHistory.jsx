@@ -99,7 +99,18 @@ export default function VoiceHistory() {
   };
 
   const formatDate = (timestamp) => {
-    return new Date(timestamp).toLocaleString('es-ES');
+    // Handle Firestore Timestamp object, ISO string, or number
+    if (!timestamp) return '';
+    // Firestore Timestamp object: { seconds, nanoseconds }
+    if (typeof timestamp === 'object' && timestamp.seconds) {
+      return new Date(timestamp.seconds * 1000).toLocaleString('es-ES');
+    }
+    // If it's a string or number, try to parse as Date
+    const date = new Date(timestamp);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleString('es-ES');
+    }
+    return '';
   };
 
   const getActionLabel = (action) => {

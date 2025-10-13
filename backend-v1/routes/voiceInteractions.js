@@ -49,23 +49,22 @@ router.post('/', generalUserLimiter, async (req, res) => {
     // Procesar audio con AssemblyAI si está disponible
     let processedVoiceText = voiceText;
     let processedConfidence = confidence;
-    
+    let assemblyAIProcessed = false;
     if (metadata.audioBase64 && action === 'voice_answer') {
       try {
         // Convertir base64 a URL temporal para AssemblyAI
         const audioBuffer = Buffer.from(metadata.audioBase64, 'base64');
         const audioUrl = `data:audio/wav;base64,${metadata.audioBase64}`;
-        
         // Procesar con AssemblyAI
         const result = await assemblyAI.transcribeAndWait(audioUrl, {
           language_code: 'es',
           punctuate: true,
           format_text: true
         });
-        
         if (result.success) {
           processedVoiceText = result.text;
           processedConfidence = result.confidence;
+          assemblyAIProcessed = true;
         } else {
           console.warn('AssemblyAI transcription failed:', result.error);
         }
@@ -85,7 +84,7 @@ router.post('/', generalUserLimiter, async (req, res) => {
       confidence: typeof processedConfidence === 'number' ? processedConfidence : null,
       metadata: {
         ...metadata,
-        assemblyAIProcessed: !!metadata.audioBase64 && action === 'voice_answer'
+        assemblyAIProcessed
       }
     };
     await db.collection(COLLECTION).add(doc);
