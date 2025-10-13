@@ -1,25 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../AuthContext";
-import { useVoice } from "../VoiceContext";
 import Layout from "../components/Layout";
 import { Card, CardBody } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { speak, isVoiceModeEnabled } = useVoice();
-
-  const testVoice = async () => {
-    try {
-      console.log('Testing voice...');
-      await speak('Hola, este es un test de voz. Si puedes escuchar esto, el sistema de voz está funcionando correctamente.');
-      console.log('Voice test completed');
-    } catch (error) {
-      console.error('Voice test failed:', error);
-      alert('Error en la prueba de voz: ' + error.message);
-    }
-  };
 
   return (
     <Layout>
@@ -45,8 +32,6 @@ export default function HomePage() {
               </>
             )}
           </div>
-          
-          {/* Voice test removed from home per request */}
         </section>
         <section className="w-full max-w-6xl mx-auto px-6 space-y-8">
           <h2 className="text-3xl font-bold text-center">Características</h2>
@@ -81,8 +66,6 @@ export default function HomePage() {
             </Card>
           </div>
         </section>
-
-        {/* Voice diagnostic/test section removed from home per request */}
       </div>
     </Layout>
   );

@@ -20,6 +20,7 @@ router.post('/', generalUserLimiter, async (req, res) => {
     // Extend allowed actions to include tutorial and settings logs
     const allowedActions = new Set([
       'voice_answer',
+      'voice_answer_assemblyai',
       'question_read',
       'option_read',
       'settings_changed',
@@ -52,9 +53,11 @@ router.post('/', generalUserLimiter, async (req, res) => {
     let assemblyAIProcessed = false;
     if (metadata.audioBase64 && action === 'voice_answer') {
       try {
-        // Convertir base64 a URL temporal para AssemblyAI
-        const audioBuffer = Buffer.from(metadata.audioBase64, 'base64');
-        const audioUrl = `data:audio/wav;base64,${metadata.audioBase64}`;
+        // Convertir base64 a URL temporal para AssemblyAI (respetando mimeType si viene)
+        const safeMime = typeof metadata.mimeType === 'string' && metadata.mimeType.startsWith('audio/')
+          ? metadata.mimeType
+          : 'audio/wav';
+        const audioUrl = `data:${safeMime};base64,${metadata.audioBase64}`;
         // Procesar con AssemblyAI
         const result = await assemblyAI.transcribeAndWait(audioUrl, {
           language_code: 'es',
@@ -72,6 +75,11 @@ router.post('/', generalUserLimiter, async (req, res) => {
         console.error('Error processing audio with AssemblyAI:', error);
         // Continuar sin fallar si AssemblyAI falla
       }
+    }
+
+    // Si desde el frontend ya marcamos que AssemblyAI se usó con éxito, respetarlo
+    if (!assemblyAIProcessed && metadata && metadata.assemblyAIResult && metadata.assemblyAIResult.success === true) {
+      assemblyAIProcessed = true;
     }
 
     const doc = {
@@ -188,7 +196,7 @@ router.get('/stats/:userId', generalUserLimiter, async (req, res) => {
 // [HU8] Procesar audio directamente con AssemblyAI
 router.post('/process-audio', generalUserLimiter, async (req, res) => {
   try {
-    const { audioBase64, questionOptions } = req.body;
+    const { audioBase64, questionOptions, mimeType } = req.body;
     
     if (!audioBase64 || typeof audioBase64 !== 'string') {
       return res.status(400).json({ error: 'Invalid or missing audioBase64.' });
@@ -199,7 +207,8 @@ router.post('/process-audio', generalUserLimiter, async (req, res) => {
     }
     
     // Convertir base64 a URL temporal para AssemblyAI
-    const audioUrl = `data:audio/wav;base64,${audioBase64}`;
+    const safeMime = typeof mimeType === 'string' && mimeType.startsWith('audio/') ? mimeType : 'audio/wav';
+    const audioUrl = `data:${safeMime};base64,${audioBase64}`;
     
     // Procesar con AssemblyAI
     const result = await assemblyAI.transcribeAndWait(audioUrl, {
