@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../AuthContext';
 import { useVoice } from '../VoiceContext';
 import Button from './ui/Button';
 import Alert from './ui/Alert';
@@ -64,6 +65,7 @@ export default function AudioTutorial({ onComplete, onSkip }) {
     isVoiceAvailable,
     voiceInteractionsService 
   } = useVoice();
+  const { user } = useAuth();
   
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -96,7 +98,16 @@ export default function AudioTutorial({ onComplete, onSkip }) {
     setProgress(0);
 
     try {
-      await playCurrentStep();
+      // Log tutorial start
+      if (voiceInteractionsService && user?.uid) {
+        await voiceInteractionsService.logTutorialInteraction(
+          user.uid,
+          0,
+          'start',
+          0
+        );
+      }
+      await playCurrentStep(0);
     } catch (error) {
       setError('Error reproduciendo el tutorial: ' + error.message);
       setIsPlaying(false);
@@ -105,16 +116,16 @@ export default function AudioTutorial({ onComplete, onSkip }) {
     }
   };
 
-  const playCurrentStep = async () => {
-    const step = TUTORIAL_STEPS[currentStep];
+  const playCurrentStep = async (stepIndex = currentStep) => {
+    const step = TUTORIAL_STEPS[stepIndex];
     const fullText = `${step.title}. ${step.content}`;
     
     // Log tutorial interaction
-    if (voiceInteractionsService) {
+    if (voiceInteractionsService && user?.uid) {
       await voiceInteractionsService.logTutorialInteraction(
-        'user', // This should be the actual user ID
-        currentStep,
-        'step_played',
+        user.uid,
+        stepIndex,
+        'step',
         step.duration
       );
     }
@@ -134,7 +145,7 @@ export default function AudioTutorial({ onComplete, onSkip }) {
         metadata: {
           stepId: step.id,
           stepTitle: step.title,
-          stepIndex: currentStep
+          stepIndex
         }
       });
     } finally {
@@ -168,23 +179,28 @@ export default function AudioTutorial({ onComplete, onSkip }) {
       return;
     }
 
-    setCurrentStep(prev => prev + 1);
-    setProgress(0);
-    
-    if (isPlaying) {
-      await playCurrentStep();
-    }
+    setCurrentStep(prev => {
+      const next = prev + 1;
+      setProgress(0);
+      if (isPlaying) {
+        // Play using the next index to avoid stale state
+        playCurrentStep(next);
+      }
+      return next;
+    });
   };
 
   const previousStep = async () => {
     if (isFirstStep) return;
 
-    setCurrentStep(prev => prev - 1);
-    setProgress(0);
-    
-    if (isPlaying) {
-      await playCurrentStep();
-    }
+    setCurrentStep(prev => {
+      const prevIdx = prev - 1;
+      setProgress(0);
+      if (isPlaying) {
+        playCurrentStep(prevIdx);
+      }
+      return prevIdx;
+    });
   };
 
   const completeTutorial = async () => {
@@ -192,9 +208,9 @@ export default function AudioTutorial({ onComplete, onSkip }) {
     
     try {
       // Log tutorial completion
-      if (voiceInteractionsService) {
+      if (voiceInteractionsService && user?.uid) {
         await voiceInteractionsService.logTutorialInteraction(
-          'user', // This should be the actual user ID
+          user.uid,
           currentStep,
           'completed',
           0
@@ -344,11 +360,13 @@ export default function AudioTutorial({ onComplete, onSkip }) {
               <button
                 key={index}
                 onClick={() => {
-                  setCurrentStep(index);
-                  setProgress(0);
-                  if (isPlaying) {
-                    playCurrentStep();
-                  }
+                  setCurrentStep(() => {
+                    setProgress(0);
+                    if (isPlaying) {
+                      playCurrentStep(index);
+                    }
+                    return index;
+                  });
                 }}
                 className={`w-3 h-3 rounded-full transition-colors ${
                   index === currentStep 

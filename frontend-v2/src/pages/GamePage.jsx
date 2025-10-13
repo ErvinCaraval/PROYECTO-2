@@ -243,6 +243,23 @@ export default function GamePage() {
         <div className="text-right shrink-0">
           <div className="text-lg md:text-xl font-bold">#{getPlayerRank()}</div>
           <div className="text-[10px] md:text-xs text-white/70">Tu posición</div>
+          {isVoiceModeEnabled && (
+            <button
+              className="mt-2 px-3 py-2 rounded-md text-xs md:text-sm bg-white/10 hover:bg-white/20 border border-white/20"
+              onClick={() => {
+                const parts = []
+                parts.push('Estás en la página de juego de preguntas.')
+                parts.push(`Progreso: pregunta ${questionIndex + 1} de ${totalQuestions || 'desconocido'}.`)
+                parts.push('A la izquierda está la tarjeta con la pregunta y las opciones. Usa las teclas o el ratón para seleccionar tu respuesta.')
+                parts.push('A la derecha verás el temporizador de la pregunta.')
+                parts.push('Más abajo, se mostrará si tu respuesta fue correcta y la explicación, cuando esté disponible.')
+                parts.push('A la derecha de la página está el ranking con la puntuación de los jugadores.')
+                speak(parts.join(' '), { action: 'page_guide', questionId: 'game', metadata: { gameId } })
+              }}
+            >
+              🛈 Explicar página
+            </button>
+          )}
         </div>
       </header>
 

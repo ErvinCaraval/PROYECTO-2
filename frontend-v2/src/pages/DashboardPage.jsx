@@ -17,7 +17,7 @@ const AIQuestionGenerator = React.lazy(() => import('../components/AIQuestionGen
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
-  const { userHasVisualDifficulty, isVoiceModeEnabled } = useVoice();
+  const { userHasVisualDifficulty, isVoiceModeEnabled, speak, enableVoiceMode } = useVoice();
   const navigate = useNavigate();
   const [gameCode, setGameCode] = useState('');
   const [publicGames, setPublicGames] = useState([]);
@@ -210,6 +210,13 @@ export default function DashboardPage() {
     }
   };
 
+  // Voice announce helper
+  const announce = (text) => {
+    if (isVoiceModeEnabled) {
+      speak(text, { action: 'text_read', questionId: 'dashboard', metadata: { origin: 'dashboard' } });
+    }
+  };
+
   return (
     <div className="min-h-screen">
       {loading && <LoadingOverlay text="Creando partida…" mobileOnly />}
@@ -234,11 +241,56 @@ export default function DashboardPage() {
             ¡Bienvenido, {user?.displayName || user?.email}!
           </h2>
           <div className="flex flex-wrap gap-3">
-            <Button variant="secondary" onClick={() => navigate('/profile')} aria-label="Ir a tu perfil">
+            <Button
+              variant="secondary"
+              onClick={() => navigate('/profile')}
+              aria-label="Ir a tu perfil"
+              onFocus={() => announce('Ir a tu perfil, ajusta configuración y voz')}
+              onMouseEnter={() => announce('Ir a tu perfil, ajusta configuración y voz')}
+            >
               Perfil
             </Button>
-            <Button variant="outline" onClick={logout} aria-label="Cerrar sesión">
+            <Button
+              variant="outline"
+              onClick={logout}
+              aria-label="Cerrar sesión"
+              onFocus={() => announce('Cerrar sesión de tu cuenta')}
+              onMouseEnter={() => announce('Cerrar sesión de tu cuenta')}
+            >
               Cerrar sesión
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                console.log('🛈 Explicar página clicked');
+                console.log('isVoiceModeEnabled:', isVoiceModeEnabled);
+                console.log('speak function:', typeof speak);
+                
+                try {
+                  // Test simple first
+                  console.log('Testing simple voice...');
+                  await speak('Hola, esto es una prueba de voz.', { force: true });
+                  console.log('Simple test completed');
+                  
+                  // Then full explanation
+                  const parts = []
+                  parts.push('Estás en el panel de control.')
+                  parts.push('Arriba puedes ir a tu perfil o cerrar sesión.')
+                  parts.push('A la izquierda puedes crear una partida o generar preguntas con inteligencia artificial.')
+                  parts.push('A la derecha puedes unirte a una partida con un código.')
+                  parts.push('Más abajo verás las partidas públicas y podrás unirte o eliminar si eres anfitrión.')
+                  
+                  console.log('Speaking full explanation...');
+                  await speak(parts.join(' '), { action: 'page_guide', questionId: 'dashboard', force: true });
+                  console.log('Full explanation completed');
+                } catch (error) {
+                  console.error('Error in voice explanation:', error);
+                  alert('Error de voz: ' + error.message);
+                }
+              }}
+              aria-label="Explicar la página"
+            >
+              🛈 Explicar página
             </Button>
           </div>
         </div>
@@ -256,6 +308,8 @@ export default function DashboardPage() {
                 disabled={loading}
                 title="Primero genera preguntas con IA para que tu partida tenga contenido."
                 size="lg"
+                onFocus={() => announce('Crear partida nueva con el tema seleccionado')}
+                onMouseEnter={() => announce('Crear partida nueva con el tema seleccionado')}
               >
                 {loading ? 'Creando…' : 'Crear partida'}
               </Button>
@@ -264,6 +318,8 @@ export default function DashboardPage() {
                 size="lg"
                 onClick={() => setShowAIGenerator(true)}
                 title="Genera preguntas personalizadas antes de crear tu partida."
+                onFocus={() => announce('Generar preguntas con inteligencia artificial')}
+                onMouseEnter={() => announce('Generar preguntas con inteligencia artificial')}
               >
                 🤖 Generar preguntas
               </Button>
@@ -290,8 +346,14 @@ export default function DashboardPage() {
                 onChange={(e) => setGameCode(e.target.value)}
                 maxLength={6}
                 className="font-semibold text-center tracking-widest"
+                onFocus={() => announce('Campo para ingresar código de partida, seis caracteres')}
               />
-              <Button type="submit" variant="secondary">
+              <Button
+                type="submit"
+                variant="secondary"
+                onFocus={() => announce('Unirse a la partida con el código ingresado')}
+                onMouseEnter={() => announce('Unirse a la partida con el código ingresado')}
+              >
                 Unirse
               </Button>
             </form>
@@ -330,13 +392,20 @@ export default function DashboardPage() {
                           <p>Anfitrión: {game.players?.[0]?.displayName || 'Desconocido'}</p>
                         </div>
                         <div className="flex gap-2">
-                          <Button onClick={() => handleJoinPublicGame(game.id)} aria-label={`Unirse a la partida ${game.id}`}>
+                          <Button
+                            onClick={() => handleJoinPublicGame(game.id)}
+                            aria-label={`Unirse a la partida ${game.id}`}
+                            onFocus={() => announce(`Unirse a la partida pública ${game.id}`)}
+                            onMouseEnter={() => announce(`Unirse a la partida pública ${game.id}`)}
+                          >
                             Unirse
                           </Button>
                           <Button
   onClick={() => handleDeleteGame(game.id)}
   variant="danger"
   aria-label={`Eliminar la partida ${game.id}`}
+  onFocus={() => announce(`Eliminar la partida ${game.id}`)}
+  onMouseEnter={() => announce(`Eliminar la partida ${game.id}`)}
 >
   Eliminar
 </Button>
