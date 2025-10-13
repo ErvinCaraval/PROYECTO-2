@@ -65,7 +65,7 @@ export function VoiceProvider({ children }) {
   };
 
   const speak = async (text, options = {}) => {
-    if (!isVoiceModeEnabled) {
+    if (!isVoiceModeEnabled && !options.force) {
       console.warn('Voice mode is disabled');
       return;
     }
@@ -75,7 +75,7 @@ export function VoiceProvider({ children }) {
     try {
       await voiceService.speak(text, options);
       
-      // Log the interaction if user is available
+      // Log the interaction if user is available and not forced silent
       if (user) {
         const duration = timer.getDuration();
         await voiceInteractionsService.logInteraction({

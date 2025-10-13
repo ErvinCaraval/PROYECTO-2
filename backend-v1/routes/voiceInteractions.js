@@ -17,7 +17,19 @@ router.post('/', generalUserLimiter, async (req, res) => {
     if (!questionId || typeof questionId !== 'string') {
       return res.status(400).json({ error: 'Invalid or missing questionId.' });
     }
-    if (!['voice_answer', 'question_read'].includes(action)) {
+    // Extend allowed actions to include tutorial and settings logs
+    const allowedActions = new Set([
+      'voice_answer',
+      'question_read',
+      'option_read',
+      'settings_changed',
+      'tutorial_start',
+      'tutorial_step',
+      'tutorial_completed',
+      'tutorial_end',
+      'text_read'
+    ]);
+    if (!allowedActions.has(action)) {
       return res.status(400).json({ error: 'Invalid action.' });
     }
     if (typeof duration !== 'number' || duration < 0) {
