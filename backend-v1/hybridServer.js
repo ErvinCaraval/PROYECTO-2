@@ -705,12 +705,22 @@ async function sendQuestion(io, gameId, questionIndex) {
     return;
   }
   
+  // Determinar el tiempo límite según el modo de voz del jugador
+  let questionTimeout = 10; // por defecto 10 segundos
+  if (Array.isArray(game.players) && game.players.length > 0) {
+    // Si al menos un jugador tiene voiceModeEnabled true, aumentar el tiempo
+    const anyVoiceMode = game.players.some(p => p.voiceModeEnabled === true || p.visualDifficulty === true);
+    if (anyVoiceMode) {
+      questionTimeout = 120;
+    }
+  }
+
   // Capturar el timestamp cuando se envía la pregunta
   const questionStartTime = Date.now();
   const questionStartTimes = game.questionStartTimes || {};
   questionStartTimes[questionIndex] = questionStartTime;
   await gameRef.update({ questionStartTimes });
-  
+
   let question = game.questions[questionIndex];
   // Solo adaptar el campo 'question' si viene como 'text', pero JAMÁS modificar options ni correctAnswerIndex
   if (question) {
@@ -721,10 +731,10 @@ async function sendQuestion(io, gameId, questionIndex) {
       io.to(gameId).emit('newQuestion', { question: { question: 'Error: pregunta sin texto', options: [], correctAnswerIndex: null }, index: questionIndex });
       return;
     }
-    // Enviar la pregunta tal como está guardada (sin modificar options ni correctAnswerIndex)
-    io.to(gameId).emit('newQuestion', { question, index: questionIndex });
+    // Enviar la pregunta y el tiempo límite
+    io.to(gameId).emit('newQuestion', { question, index: questionIndex, timeout: questionTimeout });
   } else {
-    io.to(gameId).emit('newQuestion', { question: { question: 'Error: pregunta no encontrada', options: [], correctAnswerIndex: null }, index: questionIndex });
+    io.to(gameId).emit('newQuestion', { question: { question: 'Error: pregunta no encontrada', options: [], correctAnswerIndex: null }, index: questionIndex, timeout: questionTimeout });
   }
 }
 
