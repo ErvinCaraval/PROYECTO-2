@@ -749,7 +749,7 @@ const { matchVoiceResponse, generateSuggestions } = require('./utils/voiceRecogn
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Servidor híbrido ejecutándose en puerto ${PORT}`);
-  console.log(`📚 Documentación API disponible en http://localhost:${PORT}/api-docs`);
+  console.log(`📚 Documentación API disponible en https://proyecto-2-olvb.onrender.com/api-docs`);
 });
 
 module.exports = { app, matchVoiceResponse };
