@@ -9,10 +9,15 @@ const { db, auth } = require('./firebase');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
+
+
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin:  ['https://proyecto-2-flax.vercel.app/' ,'http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
   }
+
+
+
 });
 
 // Swagger UI para documentación interactiva usando swagger.yaml
