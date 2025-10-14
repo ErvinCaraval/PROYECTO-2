@@ -25,7 +25,10 @@ info:
       ```
 
 servers:
-  - url: https://brainblitz-backend.onrender.com
+  - url: https://proyecto-2-olvb.onrender.com
+    description: Entorno de producción
+  - url: http://localhost:5000
+    description: Entorno local
 
 tags:
   - name: Users
@@ -44,6 +47,400 @@ tags:
     description: Controles administrativos para funcionalidades de accesibilidad.
 
 paths:
+
+  /api/admin/accessibility:
+    get:
+      tags: [AdminAccessibility]
+      summary: Obtener configuración de accesibilidad del usuario autenticado
+      description: |
+        Devuelve la configuración de accesibilidad del usuario autenticado.
+        **Requiere autenticación Firebase.**
+        
+        ### Ejemplo de uso
+        **Local:**
+        ```bash
+        curl -X GET http://localhost:5000/api/admin/accessibility -H "Authorization: Bearer <TOKEN>"
+        ```
+        **Producción:**
+        ```bash
+        curl -X GET https://proyecto-2-olvb.onrender.com/api/admin/accessibility -H "Authorization: Bearer <TOKEN>"
+        ```
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Configuración de accesibilidad del usuario.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  visualDifficulty:
+                    type: boolean
+                    example: false
+                  stats:
+                    type: object
+                  email:
+                    type: string
+                    example: "usuario@ejemplo.com"
+                  displayName:
+                    type: string
+                    example: "Usuario Ejemplo"
+              example:
+                visualDifficulty: false
+                stats: { gamesPlayed: 10, wins: 2, correctAnswers: 30 }
+                email: "usuario@ejemplo.com"
+                displayName: "Usuario Ejemplo"
+        401:
+          description: No autenticado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "No autenticado"
+        404:
+          description: Usuario no encontrado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Usuario no encontrado"
+        500:
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Error interno del servidor"
+
+    put:
+      tags: [AdminAccessibility]
+      summary: Actualizar configuración de accesibilidad del usuario autenticado
+      description: |
+        Actualiza la preferencia de accesibilidad visual del usuario autenticado.
+        **Requiere autenticación Firebase.**
+        
+        ### Ejemplo de uso
+        **Local:**
+        ```bash
+        curl -X PUT http://localhost:5000/api/admin/accessibility \
+          -H "Authorization: Bearer <TOKEN>" \
+          -H "Content-Type: application/json" \
+          -d '{"visualDifficulty": true}'
+        ```
+        **Producción:**
+        ```bash
+        curl -X PUT https://proyecto-2-olvb.onrender.com/api/admin/accessibility \
+          -H "Authorization: Bearer <TOKEN>" \
+          -H "Content-Type: application/json" \
+          -d '{"visualDifficulty": true}'
+        ```
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visualDifficulty:
+                  type: boolean
+                  description: "Indica si el usuario tiene dificultades visuales."
+                  example: true
+            example:
+              visualDifficulty: true
+      responses:
+        200:
+          description: Configuración actualizada.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  visualDifficulty:
+                    type: boolean
+                    example: true
+                  email:
+                    type: string
+                    example: "usuario@ejemplo.com"
+                  displayName:
+                    type: string
+                    example: "Usuario Ejemplo"
+              example:
+                visualDifficulty: true
+                email: "usuario@ejemplo.com"
+                displayName: "Usuario Ejemplo"
+        400:
+          description: visualDifficulty debe ser booleano.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "visualDifficulty debe ser booleano"
+        401:
+          description: No autenticado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "No autenticado"
+        500:
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Error interno del servidor"
+
+  /api/admin/accessibility/stats:
+    get:
+      tags: [AdminAccessibility]
+      summary: Obtener estadísticas de accesibilidad del usuario autenticado
+      description: |
+        Devuelve estadísticas de interacciones de voz del usuario autenticado.
+        **Requiere autenticación Firebase.**
+        
+        ### Ejemplo de uso
+        **Local:**
+        ```bash
+        curl -X GET http://localhost:5000/api/admin/accessibility/stats -H "Authorization: Bearer <TOKEN>"
+        ```
+        **Producción:**
+        ```bash
+        curl -X GET https://proyecto-2-olvb.onrender.com/api/admin/accessibility/stats -H "Authorization: Bearer <TOKEN>"
+        ```
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Estadísticas de accesibilidad del usuario.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalInteractions:
+                    type: integer
+                    example: 12
+                  averageDuration:
+                    type: number
+                    example: 2.5
+              example:
+                totalInteractions: 12
+                averageDuration: 2.5
+        401:
+          description: No autenticado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "No autenticado"
+        500:
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Error interno del servidor"
+
+  /api/admin/accessibility-stats:
+    get:
+      tags: [AdminAccessibility]
+      summary: Obtener estadísticas globales de accesibilidad (ADMIN)
+      description: |
+        Devuelve estadísticas globales de accesibilidad y uso del modo de voz.
+        **Requiere autenticación Firebase.**
+        
+        ### Ejemplo de uso
+        **Local:**
+        ```bash
+        curl -X GET http://localhost:5000/api/admin/accessibility-stats -H "Authorization: Bearer <TOKEN>"
+        ```
+        **Producción:**
+        ```bash
+        curl -X GET https://proyecto-2-olvb.onrender.com/api/admin/accessibility-stats -H "Authorization: Bearer <TOKEN>"
+        ```
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Estadísticas globales de accesibilidad.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalUsers:
+                    type: integer
+                    example: 100
+                  usersWithVisualDifficulty:
+                    type: integer
+                    example: 20
+                  voiceModeUsers:
+                    type: integer
+                    example: 20
+                  adoptionRate:
+                    type: number
+                    example: 20.0
+                  totalVoiceInteractions:
+                    type: integer
+                    example: 300
+                  avgVoiceDuration:
+                    type: number
+                    example: 2.7
+                  voiceAnswerCount:
+                    type: integer
+                    example: 180
+                  questionReadCount:
+                    type: integer
+                    example: 120
+                  lastUpdated:
+                    type: string
+                    example: "2025-10-14T12:00:00.000Z"
+              example:
+                totalUsers: 100
+                usersWithVisualDifficulty: 20
+                voiceModeUsers: 20
+                adoptionRate: 20.0
+                totalVoiceInteractions: 300
+                avgVoiceDuration: 2.7
+                voiceAnswerCount: 180
+                questionReadCount: 120
+                lastUpdated: "2025-10-14T12:00:00.000Z"
+        401:
+          description: No autenticado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "No autenticado"
+        500:
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Error interno del servidor"
+
+  /api/admin/voice-mode-users:
+    get:
+      tags: [AdminAccessibility]
+      summary: Obtener lista de usuarios con modo de voz (ADMIN)
+      description: |
+        Devuelve la lista de usuarios que tienen activada la preferencia de accesibilidad visual.
+        **Requiere autenticación Firebase.**
+        
+        ### Ejemplo de uso
+        **Local:**
+        ```bash
+        curl -X GET http://localhost:5000/api/admin/voice-mode-users -H "Authorization: Bearer <TOKEN>"
+        ```
+        **Producción:**
+        ```bash
+        curl -X GET https://proyecto-2-olvb.onrender.com/api/admin/voice-mode-users -H "Authorization: Bearer <TOKEN>"
+        ```
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Lista de usuarios con modo de voz.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 3
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uid:
+                          type: string
+                          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+                        email:
+                          type: string
+                          example: "usuario@ejemplo.com"
+                        displayName:
+                          type: string
+                          example: "Usuario Ejemplo"
+                        visualDifficulty:
+                          type: boolean
+                          example: true
+                        createdAt:
+                          type: string
+                          example: "2025-10-01T10:00:00.000Z"
+                        lastLogin:
+                          type: string
+                          example: "2025-10-14T09:00:00.000Z"
+              example:
+                total: 2
+                users:
+                  - uid: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+                    email: "usuario1@ejemplo.com"
+                    displayName: "Usuario Uno"
+                    visualDifficulty: true
+                    createdAt: "2025-10-01T10:00:00.000Z"
+                    lastLogin: "2025-10-14T09:00:00.000Z"
+                  - uid: "u1a2b3c4d5e6f7g8h9i0j1k2l3"
+                    email: "usuario2@ejemplo.com"
+                    displayName: "Usuario Dos"
+                    visualDifficulty: true
+                    createdAt: "2025-10-02T11:00:00.000Z"
+                    lastLogin: "2025-10-14T08:00:00.000Z"
+        401:
+          description: No autenticado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "No autenticado"
+        500:
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Error interno del servidor"
 
   /api/voice-interactions:
     post:
