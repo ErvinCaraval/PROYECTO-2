@@ -743,7 +743,7 @@ async function sendQuestion(io, gameId, questionIndex) {
   }
 }
 
-// [HU8] Importar funciones de reconocimiento de voz
+// [HU8] Importar funciones de recnocimiento de voz
 const { matchVoiceResponse, generateSuggestions } = require('./utils/voiceRecognition');
 
 const PORT = process.env.PORT || 5000;
