@@ -23,21 +23,38 @@ jobs:
             const repo = context.repo.repo;
             const marker = '<!-- iteration-sync -->';
 
-            // Fetch all open issues in the repo (pagination handled)
+            // Fetch all issues in the repo (pagination handled). Use 'all' to include closed if needed.
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner,
               repo,
               state: 'open',
             });
 
-            // Filter HU issues: title starts with HU<number> or has label 'user-story'
-            const huIssues = issues.filter(i => {
-              const isHuTitle = /^HU\d+/i.test(i.title || '');
-              const hasUserStoryLabel = (i.labels || []).some(l => (l.name || '').toLowerCase() === 'user-story');
-              return isHuTitle || hasUserStoryLabel;
+            console.log(`Total issues fetched: ${issues.length}`);
+            // Diagnostic: print first 10 issue titles and labels to help debug matching
+            issues.slice(0, 10).forEach(i => {
+              const labelNames = (i.labels || []).map(l => l.name).join(', ');
+              console.log(`#${i.number} '${i.title}' labels: [${labelNames}] milestone: ${i.milestone ? i.milestone.title : 'none'}`);
             });
 
-            console.log(`Found ${huIssues.length} HU issues to process`);
+            // Filter HU issues: support several conventions used in this repo
+            // - Titles starting with HU123
+            // - Titles containing US123 (created by product_backlog.yml)
+            // - Titles starting with [BE] or [FE]
+            // - Or issues labeled as user-story (flexible normalization)
+            const huIssues = issues.filter(i => {
+              const title = (i.title || '');
+              const titleMatch = /(^HU\d+)|\bUS\d+|^\[BE\]|^\[FE\]/i.test(title);
+
+              const hasUserStoryLabel = (i.labels || []).some(l => {
+                const normalized = (l.name || '').toLowerCase().replace(/\s|_|-/g, '');
+                return normalized === 'userstory' || normalized === 'userstory';
+              });
+
+              return titleMatch || hasUserStoryLabel;
+            });
+
+            console.log(`Found ${huIssues.length} HU/US issues to process`);
 
             for (const issue of huIssues) {
               try {
@@ -83,3 +100,4 @@ jobs:
             }
 
             console.log('Sync complete');
+
