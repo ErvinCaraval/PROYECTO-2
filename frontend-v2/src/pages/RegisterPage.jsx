@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { auth } from '../services/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -19,10 +19,7 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      // First create user with Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Then register with backend API to store visualDifficulty preference
+      // Register with backend API (which handles Firebase Auth internally)
       const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const response = await fetch(`${apiBase}/api/users/register`, {
         method: 'POST',
@@ -42,7 +39,20 @@ export default function RegisterPage() {
         throw new Error(errorData.error || 'Error registering with backend');
       }
 
-      navigate('/complete-profile');
+      // Backend registration successful, now sign in with Firebase Auth
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        navigate('/complete-profile');
+      } catch (firebaseError) {
+        // If Firebase Auth fails, the user might already exist, try to sign in instead
+        if (firebaseError.code === 'auth/email-already-in-use') {
+          // User already exists, try to sign in
+          await signInWithEmailAndPassword(auth, email, password);
+          navigate('/complete-profile');
+        } else {
+          throw firebaseError;
+        }
+      }
     } catch (err) {
       setError(err.message);
     } finally {
