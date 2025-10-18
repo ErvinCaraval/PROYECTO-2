@@ -3,6 +3,7 @@ import globals from 'globals'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import vitest from 'eslint-plugin-vitest' // <-- AÑADIDO: Importamos el plugin de Vitest
 
 export default [
   { ignores: ['dist'] },
@@ -54,6 +55,22 @@ export default [
     rules: {
       // keep undef errors but allow typeof checks
       'no-undef': ['error', { typeof: true }],
+    },
+  },
+  
+  // <-- AÑADIDO: Bloque de configuración para los archivos de prueba de Vitest
+  {
+    files: ['src/**/*.test.{js,jsx}'], // Se aplica solo a los archivos de test
+    plugins: {
+      vitest,
+    },
+    rules: {
+      ...vitest.configs.recommended.rules, // Reglas recomendadas para Vitest
+    },
+    languageOptions: {
+      globals: {
+        ...vitest.environments.env.globals, // Reconoce los globales de Vitest
+      },
     },
   },
 ]
