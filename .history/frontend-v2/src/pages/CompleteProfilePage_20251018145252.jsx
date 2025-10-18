@@ -1,48 +1,59 @@
 import React, { useState } from 'react';
-import { auth } from '../services/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { useNavigate, Link } from 'react-router-dom';
+import { auth, db } from '../services/firebase';
+import { updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
 
-export default function RegisterPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export default function CompleteProfilePage() {
+  const [displayName, setDisplayName] = useState('');
   const [visualDifficulty, setVisualDifficulty] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleRegister = async (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      // First create user with Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      if (!auth.currentUser) throw new Error('No autenticado');
       
-      // Then register with backend API to store visualDifficulty preference
+      // Update Firebase Auth profile
+      await updateProfile(auth.currentUser, { displayName });
+      
+      // Update user data in Firestore with visualDifficulty preference
+      await setDoc(doc(db, 'users', auth.currentUser.uid), {
+        email: auth.currentUser.email,
+        displayName,
+        visualDifficulty,
+        stats: { gamesPlayed: 0, wins: 0, correctAnswers: 0 }
+      }, { merge: true });
+
+      // Also update via backend API to ensure consistency
       const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiBase}/api/users/register`, {
-        method: 'POST',
+      const idToken = await auth.currentUser.getIdToken();
+      
+      const response = await fetch(`${apiBase}/api/users/profile`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
         },
         body: JSON.stringify({
-          email,
-          password,
-          displayName: email.split('@')[0], // Use email prefix as default display name
+          displayName,
           visualDifficulty
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error registering with backend');
+        throw new Error(errorData.error || 'Error updating profile');
       }
 
-      navigate('/complete-profile');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -54,19 +65,13 @@ export default function RegisterPage() {
     <div className="container min-h-screen px-4 py-10 grid place-items-center">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl p-6">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-extrabold">⚡ BrainBlitz</h1>
-          <h2 className="mt-2 text-xl font-bold">¡Únete a la diversión!</h2>
-          <p className="text-white/70">Crea tu cuenta y comienza a jugar</p>
+          <h1 className="text-2xl font-bold">Completa tu perfil</h1>
+          <p className="text-white/70">Elige tu nombre para mostrar</p>
         </div>
-
-        <form onSubmit={handleRegister} className="grid gap-4">
+        <form onSubmit={handleSave} className="grid gap-4">
           <div>
-            <label className="block mb-1 text-sm text-white/80" htmlFor="email">Correo electrónico</label>
-            <Input id="email" type="email" placeholder="tú@correo.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={loading} />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm text-white/80" htmlFor="password">Contraseña</label>
-            <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required disabled={loading} />
+            <label className="block mb-1 text-sm text-white/80" htmlFor="displayName">Nombre para mostrar</label>
+            <Input id="displayName" type="text" placeholder="Tu nombre" value={displayName} onChange={e => setDisplayName(e.target.value)} required disabled={loading} />
           </div>
 
           <div className="flex items-start gap-3">
@@ -90,17 +95,8 @@ export default function RegisterPage() {
           </div>
 
           {error && <Alert intent="error">{error}</Alert>}
-
-          <Button type="submit" size="lg" disabled={loading}>
-            {loading ? 'Creando cuenta…' : 'Crear cuenta'}
-          </Button>
+          <Button type="submit" size="lg" disabled={loading}>{loading ? 'Guardando…' : 'Guardar'}</Button>
         </form>
-
-        <div className="mt-6 text-center text-sm">
-          <p>
-            ¿Ya tienes cuenta? <Link className="underline" to="/login">Inicia sesión aquí</Link>
-          </p>
-        </div>
       </div>
     </div>
   );
