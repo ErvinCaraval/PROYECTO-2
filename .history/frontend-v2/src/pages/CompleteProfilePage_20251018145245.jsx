@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { auth, db } from '../services/firebase';
 import { updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -13,16 +13,6 @@ export default function CompleteProfilePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  // Load visualDifficulty preference from localStorage on component mount
-  useEffect(() => {
-    const savedVisualDifficulty = localStorage.getItem('pendingVisualDifficulty');
-    if (savedVisualDifficulty !== null) {
-      setVisualDifficulty(savedVisualDifficulty === 'true');
-      // Clear the localStorage after reading
-      localStorage.removeItem('pendingVisualDifficulty');
-    }
-  }, []);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -46,7 +36,7 @@ export default function CompleteProfilePage() {
       const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const idToken = await auth.currentUser.getIdToken();
       
-      const response = await fetch(`${apiBase}/api/users/me/profile`, {
+      const response = await fetch(`${apiBase}/api/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -83,27 +73,6 @@ export default function CompleteProfilePage() {
             <label className="block mb-1 text-sm text-white/80" htmlFor="displayName">Nombre para mostrar</label>
             <Input id="displayName" type="text" placeholder="Tu nombre" value={displayName} onChange={e => setDisplayName(e.target.value)} required disabled={loading} />
           </div>
-
-          <div className="flex items-start gap-3">
-            <input
-              id="visualDifficulty"
-              type="checkbox"
-              checked={visualDifficulty}
-              onChange={e => setVisualDifficulty(e.target.checked)}
-              disabled={loading}
-              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
-              aria-describedby="visualDifficulty-description"
-            />
-            <div className="flex-1">
-              <label htmlFor="visualDifficulty" className="block text-sm text-white/80 cursor-pointer">
-                Tengo dificultades visuales
-              </label>
-              <p id="visualDifficulty-description" className="text-xs text-white/60 mt-1">
-                Esta opción activará automáticamente el modo de voz para una mejor experiencia de accesibilidad
-              </p>
-            </div>
-          </div>
-
           {error && <Alert intent="error">{error}</Alert>}
           <Button type="submit" size="lg" disabled={loading}>{loading ? 'Guardando…' : 'Guardar'}</Button>
         </form>
