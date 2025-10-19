@@ -39,7 +39,7 @@ Implementar funcionalidades de accesibilidad para permitir que usuarios con disc
 - Controles administrativos
 - Análisis de datos y reportes
 
-### Desarrolladores Frontend (4 personas)
+### Desarrolladores Frontend (4 personas) 
 **Responsabilidades Principales:**
 - Implementación de UI/UX
 - Integración del modo de voz
