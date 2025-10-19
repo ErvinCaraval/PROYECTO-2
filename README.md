@@ -1,4 +1,4 @@
-# BrainBlitz - Plan de Implementación de Funcionalidades de Accesibilidad  
+# BrainBlitz - Plan de Implementación de Funcionalidades de Accesibilidad   
 
 ## 📋 Resumen del Proyecto...
 
