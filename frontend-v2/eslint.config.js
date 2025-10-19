@@ -1,9 +1,9 @@
 import js from '@eslint/js'
-import globals from 'globals'
+import globals from 'globals' // <-- Este import nos da los globales de Node y Browser
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
-import vitest from 'eslint-plugin-vitest' // <-- AÑADIDO: Importamos el plugin de Vitest
+import vitest from 'eslint-plugin-vitest'
 
 export default [
   { ignores: ['dist'] },
@@ -29,13 +29,10 @@ export default [
       ...react.configs.recommended.rules,
       ...react.configs['jsx-runtime'].rules,
       ...reactHooks.configs.recommended.rules,
-      // project prefers the new JSX transform; avoid forcing React identifier usage
-      // make unused-vars a warning to avoid failing CI for many legacy/noisy files
       'no-unused-vars': [
         'warn',
         { vars: 'all', args: 'after-used', ignoreRestSiblings: true, varsIgnorePattern: '^React$' }
       ],
-      // disable prop-types since this project uses TypeScript/implicit typings or relies on hooks
       'react/prop-types': 'off',
       'react/jsx-no-target-blank': 'off',
       'react-refresh/only-export-components': [
@@ -44,7 +41,6 @@ export default [
       ],
     },
   },
-  // Node-specific override for scripts (allow `process` global)
   {
     files: ['scripts/**/*.js'],
     languageOptions: {
@@ -53,23 +49,23 @@ export default [
       parserOptions: { sourceType: 'module' },
     },
     rules: {
-      // keep undef errors but allow typeof checks
       'no-undef': ['error', { typeof: true }],
     },
   },
   
-  // <-- AÑADIDO: Bloque de configuración para los archivos de prueba de Vitest
+  // Bloque de configuración para los archivos de prueba de Vitest
   {
-    files: ['src/**/*.test.{js,jsx}'], // Se aplica solo a los archivos de test
+    files: ['src/**/*.test.{js,jsx}'],
     plugins: {
       vitest,
     },
     rules: {
-      ...vitest.configs.recommended.rules, // Reglas recomendadas para Vitest
+      ...vitest.configs.recommended.rules,
     },
     languageOptions: {
       globals: {
-        ...vitest.environments.env.globals, // Reconoce los globales de Vitest
+        ...globals.node, // <-- AJUSTE CLAVE: Agregamos los globales de Node.js
+        ...vitest.environments.env.globals,
       },
     },
   },
