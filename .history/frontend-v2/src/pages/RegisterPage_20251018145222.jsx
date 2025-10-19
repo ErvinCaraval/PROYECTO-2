@@ -19,13 +19,7 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      // Create user with Firebase Auth only
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Store visualDifficulty preference in localStorage for now
-      // It will be saved to Firestore in CompleteProfilePage
-      localStorage.setItem('pendingVisualDifficulty', visualDifficulty.toString());
-      
+      await createUserWithEmailAndPassword(auth, email, password);
       navigate('/complete-profile');
     } catch (err) {
       setError(err.message);
@@ -51,26 +45,6 @@ export default function RegisterPage() {
           <div>
             <label className="block mb-1 text-sm text-white/80" htmlFor="password">Contraseña</label>
             <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required disabled={loading} />
-          </div>
-
-          <div className="flex items-start gap-3">
-            <input
-              id="visualDifficulty"
-              type="checkbox"
-              checked={visualDifficulty}
-              onChange={e => setVisualDifficulty(e.target.checked)}
-              disabled={loading}
-              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
-              aria-describedby="visualDifficulty-description"
-            />
-            <div className="flex-1">
-              <label htmlFor="visualDifficulty" className="block text-sm text-white/80 cursor-pointer">
-                Tengo dificultades visuales
-              </label>
-              <p id="visualDifficulty-description" className="text-xs text-white/60 mt-1">
-                Esta opción activará automáticamente el modo de voz para una mejor experiencia de accesibilidad
-              </p>
-            </div>
           </div>
 
           {error && <Alert intent="error">{error}</Alert>}

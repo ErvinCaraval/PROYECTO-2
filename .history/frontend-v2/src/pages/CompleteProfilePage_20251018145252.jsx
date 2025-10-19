@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { auth, db } from '../services/firebase';
 import { updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -13,16 +13,6 @@ export default function CompleteProfilePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  // Load visualDifficulty preference from localStorage on component mount
-  useEffect(() => {
-    const savedVisualDifficulty = localStorage.getItem('pendingVisualDifficulty');
-    if (savedVisualDifficulty !== null) {
-      setVisualDifficulty(savedVisualDifficulty === 'true');
-      // Clear the localStorage after reading
-      localStorage.removeItem('pendingVisualDifficulty');
-    }
-  }, []);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -46,7 +36,7 @@ export default function CompleteProfilePage() {
       const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const idToken = await auth.currentUser.getIdToken();
       
-      const response = await fetch(`${apiBase}/api/users/me/profile`, {
+      const response = await fetch(`${apiBase}/api/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

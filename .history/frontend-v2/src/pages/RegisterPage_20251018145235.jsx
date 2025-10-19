@@ -19,13 +19,29 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      // Create user with Firebase Auth only
+      // First create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Store visualDifficulty preference in localStorage for now
-      // It will be saved to Firestore in CompleteProfilePage
-      localStorage.setItem('pendingVisualDifficulty', visualDifficulty.toString());
-      
+      // Then register with backend API to store visualDifficulty preference
+      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiBase}/api/users/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          displayName: email.split('@')[0], // Use email prefix as default display name
+          visualDifficulty
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error registering with backend');
+      }
+
       navigate('/complete-profile');
     } catch (err) {
       setError(err.message);
