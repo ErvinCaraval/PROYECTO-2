@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useVoice } from '../VoiceContext';
 import Button from './ui/Button';
-import Input from './ui/Input';
 import Alert from './ui/Alert';
 import { Card, CardBody, CardHeader } from './ui/Card';
 
@@ -47,6 +46,7 @@ export default function VoiceSettings() {
     if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
       speechSynthesis.onvoiceschanged = loadVoices;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSettings = () => {

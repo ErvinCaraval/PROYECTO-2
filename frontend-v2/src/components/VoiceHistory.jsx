@@ -30,6 +30,7 @@ export default function VoiceHistory() {
     );
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (user) {
       // loadHistory and loadStats are stable service calls provided by context/service and
