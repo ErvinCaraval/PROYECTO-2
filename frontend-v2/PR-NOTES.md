@@ -1,4 +1,4 @@
-# PR: UI/UX mobile improvements, accessibility, tests & coverage.....P
+# PR: UI/UX mobile improvements, accessibility, tests & coverage....
 
 Resumen de cambios principales (no funcionales):
 - UI/UX modernizada con Tailwind, componentes reutilizables (`Button`, `Input`, `Card`, `Alert`, `Section`, `Modal`, `Skeleton`, `Spinner`).
