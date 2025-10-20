@@ -13,7 +13,7 @@ export default function GamePage() {
   const [questionTimeout, setQuestionTimeout] = useState(false);
   const { gameId } = useParams();
   const { user } = useAuth();
-    const { isVoiceModeEnabled, speak } = useVoice();
+  const { isVoiceModeEnabled, speak, voiceInteractionsService } = useVoice();
   const [question, setQuestion] = useState(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
@@ -198,7 +198,6 @@ export default function GamePage() {
         }
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questionIndex, question, isVoiceModeEnabled, user, speak, gameId]);
 
   const questionRef = useRef(question);
@@ -235,7 +234,21 @@ export default function GamePage() {
     }
   }, [isVoiceModeEnabled, user, question, questionIndex, speak]);
 
-  // getOptionColor removed (not used)
+    const getOptionColor = (index) => {
+     if (!showResult) {
+      return selected === index ? 'selected' : '';
+    }
+    
+     if (index === result.correctAnswerIndex) {
+      return 'correct';
+   }
+    
+    if (selected === index && index !== result.correctAnswerIndex) {
+       return 'incorrect';
+     }
+    
+     return '';
+  };
 
   const getPlayerRank = () => {
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
