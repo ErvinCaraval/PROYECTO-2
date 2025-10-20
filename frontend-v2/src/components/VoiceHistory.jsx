@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'; // 1. Se importa useCallback
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { useVoice } from '../VoiceContext';
 import Button from './ui/Button';
@@ -30,8 +30,14 @@ export default function VoiceHistory() {
     );
   };
 
-  // 2. Se envuelve 'loadHistory' en useCallback para memorizar la función
-  const loadHistory = useCallback(async () => {
+  useEffect(() => {
+    if (user) {
+      loadHistory();
+      loadStats();
+    }
+  }, [user]);
+
+  const loadHistory = async () => {
     if (!user) return;
     
     setLoading(true);
@@ -46,10 +52,9 @@ export default function VoiceHistory() {
     } finally {
       setLoading(false);
     }
-  }, [user, voiceInteractionsService]); // Dependencias de la función
+  };
 
-  // 3. Se envuelve 'loadStats' en useCallback
-  const loadStats = useCallback(async () => {
+  const loadStats = async () => {
     if (!user) return;
     
     try {
@@ -58,15 +63,7 @@ export default function VoiceHistory() {
     } catch (error) {
       console.error('Error loading voice stats:', error);
     }
-  }, [user, voiceInteractionsService]); // Dependencias de la función
-
-  // 4. Ahora se pueden añadir las funciones al array de dependencias de forma segura
-  useEffect(() => {
-    if (user) {
-      loadHistory();
-      loadStats();
-    }
-  }, [user, loadHistory, loadStats]);
+  };
 
   const deleteHistory = async () => {
     if (!user) return;
@@ -117,10 +114,13 @@ export default function VoiceHistory() {
   };
 
   const formatDate = (timestamp) => {
+    // Handle Firestore Timestamp object, ISO string, or number
     if (!timestamp) return '';
+    // Firestore Timestamp object: { seconds, nanoseconds }
     if (typeof timestamp === 'object' && timestamp.seconds) {
       return new Date(timestamp.seconds * 1000).toLocaleString('es-ES');
     }
+    // If it's a string or number, try to parse as Date
     const date = new Date(timestamp);
     if (!isNaN(date.getTime())) {
       return date.toLocaleString('es-ES');
@@ -243,8 +243,7 @@ export default function VoiceHistory() {
                   
                   {interaction.voiceText && (
                     <div className="text-sm text-white/80 mb-2">
-                      {/* 5. Corrección de las comillas dobles */}
-                      {`"${interaction.voiceText}"`}
+                      "{interaction.voiceText}"
                     </div>
                   )}
                   

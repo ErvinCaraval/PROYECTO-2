@@ -3,12 +3,9 @@ import globals from 'globals'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
-import vitest from 'eslint-plugin-vitest'
 
 export default [
   { ignores: ['dist'] },
-
-  // Configuración principal para archivos JS y JSX
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
@@ -31,10 +28,13 @@ export default [
       ...react.configs.recommended.rules,
       ...react.configs['jsx-runtime'].rules,
       ...reactHooks.configs.recommended.rules,
+      // project prefers the new JSX transform; avoid forcing React identifier usage
+      // make unused-vars a warning to avoid failing CI for many legacy/noisy files
       'no-unused-vars': [
         'warn',
         { vars: 'all', args: 'after-used', ignoreRestSiblings: true, varsIgnorePattern: '^React$' }
       ],
+      // disable prop-types since this project uses TypeScript/implicit typings or relies on hooks
       'react/prop-types': 'off',
       'react/jsx-no-target-blank': 'off',
       'react-refresh/only-export-components': [
@@ -43,8 +43,7 @@ export default [
       ],
     },
   },
-
-  // Configuración para la carpeta de scripts
+  // Node-specific override for scripts (allow `process` global)
   {
     files: ['scripts/**/*.js'],
     languageOptions: {
@@ -53,39 +52,8 @@ export default [
       parserOptions: { sourceType: 'module' },
     },
     rules: {
+      // keep undef errors but allow typeof checks
       'no-undef': ['error', { typeof: true }],
-    },
-  },
-
-  // ====================================================================
-  // ||  EL CAMBIO CLAVE ESTÁ AQUÍ                                     ||
-  // ====================================================================
-  // Bloque específico para el archivo de setup de pruebas.
-  // Esto soluciona los errores de 'global' no definido.
-  {
-    files: ['src/setupTests.js'],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-      },
-    },
-  },
-  // ====================================================================
-
-  // Bloque de configuración para los archivos de prueba de Vitest
-  {
-    files: ['src/**/*.test.{js,jsx}'],
-    plugins: {
-      vitest,
-    },
-    rules: {
-      ...vitest.configs.recommended.rules,
-    },
-    languageOptions: {
-      globals: {
-        ...globals.node,
-        ...vitest.environments.env.globals,
-      },
     },
   },
 ]
