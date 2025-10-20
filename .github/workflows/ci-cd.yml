@@ -1,4 +1,4 @@
-# GitHub Actions CI/CD Workflow para frontend-v2
+# GitHub Actions CI/CD Workflow para frontend-v
 # Ejecuta pruebas, builds, y despliegue para el servicio de frontend.
 
 name: Frontend-v2 - CI/CD
