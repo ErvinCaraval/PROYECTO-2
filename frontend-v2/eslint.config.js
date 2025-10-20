@@ -1,5 +1,5 @@
 import js from '@eslint/js'
-import globals from 'globals' // <-- Este import nos da los globales de Node y Browser
+import globals from 'globals'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
@@ -7,6 +7,8 @@ import vitest from 'eslint-plugin-vitest'
 
 export default [
   { ignores: ['dist'] },
+
+  // Configuración principal para archivos JS y JSX
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
@@ -41,6 +43,8 @@ export default [
       ],
     },
   },
+
+  // Configuración para la carpeta de scripts
   {
     files: ['scripts/**/*.js'],
     languageOptions: {
@@ -52,7 +56,22 @@ export default [
       'no-undef': ['error', { typeof: true }],
     },
   },
-  
+
+  // ====================================================================
+  // ||  EL CAMBIO CLAVE ESTÁ AQUÍ                                     ||
+  // ====================================================================
+  // Bloque específico para el archivo de setup de pruebas.
+  // Esto soluciona los errores de 'global' no definido.
+  {
+    files: ['src/setupTests.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  // ====================================================================
+
   // Bloque de configuración para los archivos de prueba de Vitest
   {
     files: ['src/**/*.test.{js,jsx}'],
@@ -64,7 +83,7 @@ export default [
     },
     languageOptions: {
       globals: {
-        ...globals.node, // <-- AJUSTE CLAVE: Agregamos los globales de Node.js
+        ...globals.node,
         ...vitest.environments.env.globals,
       },
     },
