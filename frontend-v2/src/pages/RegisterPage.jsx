@@ -19,13 +19,9 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      // Create user with Firebase Auth only
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Store visualDifficulty preference in localStorage for now
-      // It will be saved to Firestore in CompleteProfilePage
-      localStorage.setItem('pendingVisualDifficulty', visualDifficulty.toString());
-      
+      await createUserWithEmailAndPassword(auth, email, password);
+      // The Firebase SDK signs the user in automatically after successful signup.
+      // Defer profile details to the complete profile page.
       navigate('/complete-profile');
     } catch (err) {
       setError(err.message);
@@ -53,24 +49,18 @@ export default function RegisterPage() {
             <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required disabled={loading} />
           </div>
 
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
             <input
               id="visualDifficulty"
               type="checkbox"
               checked={visualDifficulty}
               onChange={e => setVisualDifficulty(e.target.checked)}
               disabled={loading}
-              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
-              aria-describedby="visualDifficulty-description"
+              className="h-4 w-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2"
             />
-            <div className="flex-1">
-              <label htmlFor="visualDifficulty" className="block text-sm text-white/80 cursor-pointer">
-                Tengo dificultades visuales
-              </label>
-              <p id="visualDifficulty-description" className="text-xs text-white/60 mt-1">
-                Esta opción activará automáticamente el modo de voz para una mejor experiencia de accesibilidad
-              </p>
-            </div>
+            <label htmlFor="visualDifficulty" className="text-sm text-white/80 cursor-pointer">
+              Tengo dificultades visuales
+            </label>
           </div>
 
           {error && <Alert intent="error">{error}</Alert>}
