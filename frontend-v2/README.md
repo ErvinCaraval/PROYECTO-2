@@ -2,22 +2,6 @@
 
 This branch contains an automated modernization pass: TailwindCSS integration, responsive layout, lazy-loading improvements and performance hints targeted for mobile-first experiences.
 
-## Accessibility Features
-
-The frontend now includes comprehensive accessibility features for users with visual difficulties:
-
-### Registration & Profile
-- **Accessibility Checkbox**: Users can indicate visual difficulties during registration and profile completion
-- **ARIA Labels**: Proper accessibility labels and descriptions for screen readers
-- **Keyboard Navigation**: Full keyboard support for all form elements
-- **Visual Feedback**: Clear visual indicators for form states and interactions
-
-### Implementation Details
-- `RegisterPage.jsx`: Includes "Tengo dificultades visuales" checkbox with proper ARIA attributes
-- `CompleteProfilePage.jsx`: Allows users to update their accessibility preferences
-- Backend Integration: Sends `visualDifficulty` field to backend API for storage
-- Default Value: `false` for users who don't select the option
-
 What I changed
 - Added TailwindCSS + PostCSS configs
 - Created a responsive Layout (Navbar, Footer) using Tailwind utilities
@@ -25,8 +9,6 @@ What I changed
 - Added lazy loading to avatar images
 - Added preconnect/preload hints in `index.html`
 - Kept original CSS files as fallback to avoid breaking styles
-- **NEW**: Added accessibility checkbox to registration and profile forms
-- **NEW**: Implemented proper ARIA labels and keyboard navigation
 
 Quick start
 1. Install dependencies:
