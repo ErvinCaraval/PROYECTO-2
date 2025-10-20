@@ -16,7 +16,6 @@ export default function Question({ text, question, options, onSelect, selected, 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [hasReadQuestion, setHasReadQuestion] = useState(false);
   const [autoReadError, setAutoReadError] = useState('');
-  const [isListening, setIsListening] = useState(false);
   const [recognitionError, setRecognitionError] = useState('');
 
 
@@ -28,7 +27,7 @@ export default function Question({ text, question, options, onSelect, selected, 
   // Auto-read question when it appears and voice mode is enabled
   useEffect(() => {
     if (isVoiceModeEnabled && title && Array.isArray(options) && options.length > 0 && !hasReadQuestion && !showResult) {
-      readQuestion().catch((err) => {
+      readQuestion().catch(() => {
         setAutoReadError('No se pudo leer la pregunta automáticamente. Usa el botón para escuchar.');
       });
     }
@@ -65,87 +64,7 @@ export default function Question({ text, question, options, onSelect, selected, 
     }
   };
 
-  const stopReading = () => {
-    stopSpeaking();
-    setIsSpeaking(false);
-  };
-
-  const startVoiceRecognition = async () => {
-    if (!isVoiceModeEnabled || !voiceRecognitionService.isAvailable()) {
-      setRecognitionError('Reconocimiento de voz no disponible');
-      return;
-    }
-
-    if (selected !== null) {
-      setRecognitionError('Ya has seleccionado una respuesta');
-      return;
-    }
-
-    setIsListening(true);
-    setRecognitionError('');
-
-    try {
-      const result = await voiceRecognitionService.recognizeAnswer(options);
-
-      if (result.stopped) {
-        // Si el usuario dijo "parar", no mostrar error ni hablar
-        setIsListening(false);
-        return;
-      }
-
-      if (result.isValid && result.matchedIndex !== -1) {
-        // Log the voice answer con los IDs reales
-        if (voiceInteractionsService) {
-          // Log with a default duration (simulate 1s if not measured)
-          await voiceInteractionsService.logVoiceAnswer(
-            (user && user.uid) || undefined,
-            questionId || undefined,
-            result.transcript,
-            result.confidence,
-            result.matchedOption,
-            result.matchedIndex,
-            1000 // 1s duration for backend validation
-          );
-        }
-
-        // Confirm the recognized answer
-        await speak(`Respuesta reconocida: ${result.matchedOption}. ¿Es correcta?`, {
-          action: 'voice_answer_confirmation',
-          questionId: 'question'
-        });
-
-        // Si la respuesta es única o autoSelected, seleccionar inmediatamente
-        if (result.autoSelected || options.length === 1) {
-          onSelect(result.matchedIndex);
-        } else {
-          // Auto-select the recognized answer after a short delay
-          setTimeout(() => {
-            onSelect(result.matchedIndex);
-          }, 2000);
-        }
-      } else {
-        setRecognitionError(`No se pudo reconocer la respuesta: "${result.transcript}". Intenta decir "A", "B", "C", "D" o "primera opción", "segunda opción", etc.`);
-        await speak(`No se pudo reconocer la respuesta. Intenta decir "A", "B", "C", "D" o "primera opción", "segunda opción", etc.`, {
-          action: 'voice_answer_error',
-          questionId: 'question'
-        });
-      }
-    } catch (error) {
-      setRecognitionError(error.message);
-      await speak(`Error en el reconocimiento: ${error.message}`, {
-        action: 'voice_recognition_error',
-        questionId: 'question'
-      });
-    } finally {
-      setIsListening(false);
-    }
-  };
-
-  const stopVoiceRecognition = () => {
-    voiceRecognitionService.stopRecognition();
-    setIsListening(false);
-    setRecognitionError('');
-  };
+  // La lógica de reconocimiento de voz se delega al componente VoiceAnswerButton para evitar duplicación
   const getOptionClasses = (idx) => {
     if (showResult) {
       if (idx === correctIndex) return 'border-emerald-400/60 bg-emerald-500/10';
@@ -203,7 +122,6 @@ export default function Question({ text, question, options, onSelect, selected, 
                     );
                   }
                   stopSpeaking();
-                  setIsListening(false);
                   setRecognitionError('');
                   onSelect(idx);
                 }}

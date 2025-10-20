@@ -151,8 +151,8 @@ const SimpleVoiceTest = () => {
         <div className="p-4 bg-yellow-50 rounded">
           <h3 className="font-bold mb-2">Instrucciones:</h3>
           <ul className="text-sm space-y-1">
-            <li>• Haz clic en "Prueba Básica" para un test corto</li>
-            <li>• Haz clic en "Prueba Larga" para un test más completo</li>
+            <li>• Haz clic en &quot;Prueba Básica&quot; para un test corto</li>
+            <li>• Haz clic en &quot;Prueba Larga&quot; para un test más completo</li>
             <li>• Si no escuchas nada, verifica el volumen del sistema</li>
             <li>• Asegúrate de que no hay bloqueos de audio en el navegador</li>
             <li>• Revisa la consola del navegador (F12) para ver errores</li>
