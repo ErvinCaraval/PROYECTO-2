@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import voiceService from './services/voiceService';
@@ -7,35 +6,7 @@ import voiceInteractionsService from './services/voiceInteractionsService';
 const VoiceContext = createContext();
 
 export function useVoice() {
-  const ctx = useContext(VoiceContext);
-  if (!ctx) {
-    // Return a safe default to allow components to render in tests without the provider
-    return {
-      isVoiceModeEnabled: false,
-      userHasVisualDifficulty: false,
-      loading: false,
-      toggleVoiceMode: () => {},
-      enableVoiceMode: () => {},
-      disableVoiceMode: () => {},
-      speak: async () => {},
-      stopSpeaking: () => {},
-      pauseSpeaking: () => {},
-      resumeSpeaking: () => {},
-      updateVoiceSettings: () => {},
-      getVoiceSettings: () => ({}),
-      getVoiceStatus: () => ({}),
-      isVoiceAvailable: false,
-      voiceInteractionsService: {
-        logInteraction: async () => {},
-        logVoiceAnswer: async () => {},
-        logSettingsChange: async () => {},
-        logTutorialInteraction: async () => {},
-        getUserVoiceHistory: async () => [],
-        getUserVoiceStats: async () => ({})
-      }
-    };
-  }
-  return ctx;
+  return useContext(VoiceContext);
 }
 
 export function VoiceProvider({ children }) {

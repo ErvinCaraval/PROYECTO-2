@@ -54,7 +54,6 @@ const VoiceGuide = ({ onComplete }) => {
     if (isVoiceModeEnabled && currentStepData) {
       speakStep();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, isVoiceModeEnabled]);
 
   const speakStep = async () => {

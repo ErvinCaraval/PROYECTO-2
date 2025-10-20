@@ -30,11 +30,8 @@ export default function VoiceHistory() {
     );
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (user) {
-      // loadHistory and loadStats are stable service calls provided by context/service and
-      // including them in deps causes noisy warnings; intentionally only depend on `user`.
       loadHistory();
       loadStats();
     }
@@ -246,7 +243,7 @@ export default function VoiceHistory() {
                   
                   {interaction.voiceText && (
                     <div className="text-sm text-white/80 mb-2">
-                        <span>&quot;{interaction.voiceText}&quot;</span>
+                      &quot;{interaction.voiceText}&quot;
                     </div>
                   )}
                   
