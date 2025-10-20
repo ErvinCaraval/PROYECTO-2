@@ -104,10 +104,33 @@ jobs:
 
       - name: Deploy to Vercel
         if: success()
+        env:
+          # Enable more verbose debugging from Vercel CLI to capture server errors
+          VERCEL_DEBUG: 1
         run: |
           if [ -n "${{ secrets.VERCEL_TOKEN }}" ]; then
-            npm i -g vercel
-            npx vercel --prod --confirm --token "${{ secrets.VERCEL_TOKEN }}"
+            echo "Installing Vercel CLI..."
+            # install latest CLI but avoid changing global state too much
+            npm i -g vercel@latest
+            echo "Vercel CLI version: $(vercel --version || true)"
+            echo "Running vercel deploy (prod) with debug enabled..."
+            # Use --yes instead of deprecated --confirm and pin latest with npx
+            # Capture output and exit code to print debug info on failure
+            set -o pipefail
+            npx vercel@latest --prod --yes --token "${{ secrets.VERCEL_TOKEN }}" 2>&1 | tee vercel-deploy.log || {
+              echo "Vercel deploy failed — printing last 200 lines of vercel-deploy.log"
+              tail -n 200 vercel-deploy.log || true
+              echo "If this is an intermittent internal server error (500) from Vercel, try re-running the workflow or contact Vercel support."
+              exit 1
+            }
+            echo "Vercel deploy finished successfully."
           else
             echo "VERCEL_TOKEN not set - skipping deploy"
           fi
+
+      - name: Upload Vercel deploy log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vercel-deploy-log
+          path: vercel-deploy.log
