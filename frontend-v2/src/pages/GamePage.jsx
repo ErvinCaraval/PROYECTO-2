@@ -13,7 +13,7 @@ export default function GamePage() {
   const [questionTimeout, setQuestionTimeout] = useState(false);
   const { gameId } = useParams();
   const { user } = useAuth();
-  const { isVoiceModeEnabled, speak, voiceInteractionsService } = useVoice();
+    const { isVoiceModeEnabled, speak } = useVoice();
   const [question, setQuestion] = useState(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
@@ -28,7 +28,7 @@ export default function GamePage() {
   const [showResult, setShowResult] = useState(false);
   const [result, setResult] = useState(null);
   const [timerKey, setTimerKey] = useState(0);
-  const [, setTimeLeft] = useState(10);
+  const [timeLeft, setTimeLeft] = useState(10);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -234,21 +234,7 @@ export default function GamePage() {
     }
   }, [isVoiceModeEnabled, user, question, questionIndex, speak]);
 
-    const getOptionColor = (index) => {
-     if (!showResult) {
-      return selected === index ? 'selected' : '';
-    }
-    
-     if (index === result.correctAnswerIndex) {
-      return 'correct';
-   }
-    
-    if (selected === index && index !== result.correctAnswerIndex) {
-       return 'incorrect';
-     }
-    
-     return '';
-  };
+  // getOptionColor removed (not used)
 
   const getPlayerRank = () => {
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
