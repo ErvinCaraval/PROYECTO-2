@@ -102,7 +102,50 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
     }
   };
 
-  // findMatchingOption removed (not used)
+  const findMatchingOption = (spokenText, options) => {
+    const text = spokenText.toLowerCase().trim();
+    
+    // Try to match with option text
+    for (let i = 0; i < options.length; i++) {
+      const optionText = options[i].toLowerCase();
+      
+      // Direct match
+      if (text.includes(optionText) || optionText.includes(text)) {
+        return i;
+      }
+      
+      // Match with option letters (A, B, C, D)
+      const optionLetter = String.fromCharCode(65 + i); // A, B, C, D
+      if (text.includes(optionLetter.toLowerCase()) || text.includes(optionLetter)) {
+        return i;
+      }
+      
+      // Match with numbers (1, 2, 3, 4)
+      if (text.includes((i + 1).toString())) {
+        return i;
+      }
+    }
+    
+    // Try to match with common words
+    const commonMatches = {
+      'primera': 0,
+      'segunda': 1,
+      'tercera': 2,
+      'cuarta': 3,
+      'uno': 0,
+      'dos': 1,
+      'tres': 2,
+      'cuatro': 3
+    };
+    
+    for (const [word, index] of Object.entries(commonMatches)) {
+      if (text.includes(word) && index < options.length) {
+        return index;
+      }
+    }
+    
+    return -1;
+  };
 
   const stopListening = () => {
     voiceRecognitionService.stopRecognition();
@@ -141,9 +184,6 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
         <div className="text-sm text-green-500 bg-green-500/10 border border-green-500/30 rounded p-2 text-center font-semibold animate-fade-in">
           {successMessage}
         </div>
-      )}
-      {lastRecognized && (
-        <div className="text-xs text-white/70">Último reconocido: {lastRecognized}</div>
       )}
       {recognitionError && (
         <div className="text-sm text-red-400 bg-red-500/20 p-2 rounded text-center font-semibold">

@@ -258,17 +258,9 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
               value={selectedDifficulty}
               onChange={(e) => setSelectedDifficulty(e.target.value)}
             >
-              {difficultyLevels && difficultyLevels.length > 0 ? (
-                difficultyLevels.map(level => (
-                  <option key={level} value={level}>{level}</option>
-                ))
-              ) : (
-                <>
-                  <option value="easy">Fácil</option>
-                  <option value="medium">Media</option>
-                  <option value="hard">Difícil</option>
-                </>
-              )}
+              <option value="easy">Fácil</option>
+              <option value="medium">Media</option>
+              <option value="hard">Difícil</option>
             </select>
           </div>
           <div>
@@ -309,7 +301,6 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
               </div>
           </div>
           {error && <Alert intent="error" className="sm:col-span-3">{error}</Alert>}
-          {statusMessage && <Alert intent="success" className="sm:col-span-3">{statusMessage}</Alert>}
           <div className="sm:col-span-3 mt-2 flex flex-wrap gap-3 justify-end items-center">
             <Button
               type="button"

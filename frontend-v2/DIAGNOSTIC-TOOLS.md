@@ -5,7 +5,7 @@ El sistema de voz no está funcionando correctamente. Se han creado múltiples h
 
 ## 🛠️ Herramientas de Diagnóstico Disponibles
 
-### 1. **Diagnóstico HTML Independiente** (Recomendado).
+### 1. **Diagnóstico HTML Independiente** (Recomendado)
 - **URL:** http://localhost:3001/voice-diagnostic.html
 - **Descripción:** Página HTML completa que no depende de React
 - **Funciones:**
