@@ -83,6 +83,7 @@ export default function AudioTutorial({ onComplete, onSkip }) {
     if (isVoiceModeEnabled && isVoiceAvailable && !isPlaying && !isPaused) {
       startTutorial();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVoiceModeEnabled, isVoiceAvailable]);
 
   const startTutorial = async () => {
