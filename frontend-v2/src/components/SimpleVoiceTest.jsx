@@ -20,7 +20,7 @@ const SimpleVoiceTest = () => {
       };
 
       loadVoices();
-
+      
       // Recargar voces cuando cambien
       if (speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = loadVoices;
@@ -38,7 +38,7 @@ const SimpleVoiceTest = () => {
     speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
-
+    
     // Configuración básica
     utterance.rate = 1.0;
     utterance.volume = 1.0;
@@ -86,7 +86,7 @@ const SimpleVoiceTest = () => {
   return (
     <div className="p-6 bg-white rounded-lg shadow-lg max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">🔊 Prueba Simple de Voz</h2>
-
+      
       <div className="space-y-4">
         {/* Estado del sistema */}
         <div className="p-4 bg-gray-100 rounded">
@@ -115,7 +115,7 @@ const SimpleVoiceTest = () => {
           >
             🔊 Prueba Básica
           </button>
-
+          
           <button
             onClick={testLong}
             disabled={!isSupported || isSpeaking}
@@ -123,7 +123,7 @@ const SimpleVoiceTest = () => {
           >
             🔊 Prueba Larga
           </button>
-
+          
           <button
             onClick={stopSpeaking}
             disabled={!isSpeaking}
@@ -151,8 +151,8 @@ const SimpleVoiceTest = () => {
         <div className="p-4 bg-yellow-50 rounded">
           <h3 className="font-bold mb-2">Instrucciones:</h3>
           <ul className="text-sm space-y-1">
-            <li>• Haz clic en {'"Prueba Básica"'} para un test corto</li>
-            <li>• Haz clic en {'"Prueba Larga"'} para un test más completo</li>
+            <li>• Haz clic en "Prueba Básica" para un test corto</li>
+            <li>• Haz clic en "Prueba Larga" para un test más completo</li>
             <li>• Si no escuchas nada, verifica el volumen del sistema</li>
             <li>• Asegúrate de que no hay bloqueos de audio en el navegador</li>
             <li>• Revisa la consola del navegador (F12) para ver errores</li>
