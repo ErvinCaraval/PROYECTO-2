@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           # Se especifica la ruta al package-lock.json para el caché del monorepo
           cache-dependency-path: frontend-v2/package-lock.json
@@ -89,63 +89,8 @@ jobs:
           name: eslint-report
           path: frontend-v2/reports/eslint.json
 
-      - name: Auto-push generated changes
+      - name: Deploy to Render
         if: success()
         run: |
-          if [ "${{ secrets.ALLOW_AUTO_PUSH }}" = "true" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "chore(ci): update generated artifacts [skip ci]" || echo "No changes to commit"
-            git push origin HEAD:${{ github.ref_name }}
-          else
-            echo "Auto-push disabled. Set secret ALLOW_AUTO_PUSH=true to enable."
-          fi
+          curl -X POST "https://api.render.com/deploy/srv-d3rc8qbuibrs739primg?key=-aEMV4yr7Z0"
 
-      - name: Verify Vercel token and access
-        if: success()
-        run: |
-          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
-            echo "VERCEL_TOKEN not set - skipping Vercel verification and deploy"
-            exit 0
-          fi
-          echo "Checking Vercel token (whoami)"
-          # Check token validity and identity
-          npx vercel@latest whoami --token "${{ secrets.VERCEL_TOKEN }}" || {
-            echo "VERCEL_TOKEN appears invalid or lacks access. Aborting deploy."; exit 1;
-          }
-          echo "Listing projects visible to this token (first 50)"
-          npx vercel@latest projects ls --token "${{ secrets.VERCEL_TOKEN }}" || echo "Could not list projects (may be permission-limited)"
-
-      - name: Deploy to Vercel
-        if: success()
-        env:
-          # Enable more verbose debugging from Vercel CLI to capture server errors
-          VERCEL_DEBUG: 1
-        run: |
-          if [ -n "${{ secrets.VERCEL_TOKEN }}" ]; then
-            echo "Installing Vercel CLI..."
-            # install latest CLI but avoid changing global state too much
-            npm i -g vercel@latest
-            echo "Vercel CLI version: $(vercel --version || true)"
-            echo "Running vercel deploy (prod) with debug enabled..."
-            # Use --yes instead of deprecated --confirm and pin latest with npx
-            # Capture output and exit code to print debug info on failure
-            set -o pipefail
-            npx vercel@latest --prod --yes --token "${{ secrets.VERCEL_TOKEN }}" 2>&1 | tee vercel-deploy.log || {
-              echo "Vercel deploy failed — printing last 200 lines of vercel-deploy.log"
-              tail -n 200 vercel-deploy.log || true
-              echo "If this is an intermittent internal server error (500) from Vercel, try re-running the workflow or contact Vercel support."
-              exit 1
-            }
-            echo "Vercel deploy finished successfully."
-          else
-            echo "VERCEL_TOKEN not set - skipping deploy"
-          fi
-
-      - name: Upload Vercel deploy log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: vercel-deploy-log
-          path: vercel-deploy.log
