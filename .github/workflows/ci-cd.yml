@@ -102,6 +102,21 @@ jobs:
             echo "Auto-push disabled. Set secret ALLOW_AUTO_PUSH=true to enable."
           fi
 
+      - name: Verify Vercel token and access
+        if: success()
+        run: |
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "VERCEL_TOKEN not set - skipping Vercel verification and deploy"
+            exit 0
+          fi
+          echo "Checking Vercel token (whoami)"
+          # Check token validity and identity
+          npx vercel@latest whoami --token "${{ secrets.VERCEL_TOKEN }}" || {
+            echo "VERCEL_TOKEN appears invalid or lacks access. Aborting deploy."; exit 1;
+          }
+          echo "Listing projects visible to this token (first 50)"
+          npx vercel@latest projects ls --token "${{ secrets.VERCEL_TOKEN }}" || echo "Could not list projects (may be permission-limited)"
+
       - name: Deploy to Vercel
         if: success()
         env:
