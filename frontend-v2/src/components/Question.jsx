@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useVoice } from '../VoiceContext';
 import Button from './ui/Button';
 import VoiceAnswerButton from './VoiceAnswerButton';
-import voiceRecognitionService from '../services/voiceRecognitionService';
+// voiceRecognitionService is no longer used here; VoiceAnswerButton handles recognition
 
 export default function Question({ text, question, options, onSelect, selected, showResult = false, correctIndex = null }) {
   const title = typeof text === 'string' && text.length > 0 ? text : question;

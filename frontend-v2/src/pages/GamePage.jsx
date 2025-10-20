@@ -198,6 +198,7 @@ export default function GamePage() {
         }
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questionIndex, question, isVoiceModeEnabled, user, speak, gameId]);
 
   const questionRef = useRef(question);
