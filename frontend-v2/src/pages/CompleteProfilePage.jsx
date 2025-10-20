@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { auth, db } from '../services/firebase';
 import { updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -14,55 +14,19 @@ export default function CompleteProfilePage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Load visualDifficulty preference from localStorage on component mount
-  useEffect(() => {
-    const savedVisualDifficulty = localStorage.getItem('pendingVisualDifficulty');
-    if (savedVisualDifficulty !== null) {
-      setVisualDifficulty(savedVisualDifficulty === 'true');
-      // Clear the localStorage after reading
-      localStorage.removeItem('pendingVisualDifficulty');
-    }
-  }, []);
-
   const handleSave = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
       if (!auth.currentUser) throw new Error('No autenticado');
-      
-      // Update Firebase Auth profile
       await updateProfile(auth.currentUser, { displayName });
-      
-      // Update user data in Firestore with visualDifficulty preference
       await setDoc(doc(db, 'users', auth.currentUser.uid), {
         email: auth.currentUser.email,
         displayName,
         visualDifficulty,
         stats: { gamesPlayed: 0, wins: 0, correctAnswers: 0 }
       }, { merge: true });
-
-      // Also update via backend API to ensure consistency
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const idToken = await auth.currentUser.getIdToken();
-      
-      const response = await fetch(`${apiBase}/api/users/me/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          displayName,
-          visualDifficulty
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error updating profile');
-      }
-
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
@@ -84,24 +48,18 @@ export default function CompleteProfilePage() {
             <Input id="displayName" type="text" placeholder="Tu nombre" value={displayName} onChange={e => setDisplayName(e.target.value)} required disabled={loading} />
           </div>
 
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
             <input
               id="visualDifficulty"
               type="checkbox"
               checked={visualDifficulty}
               onChange={e => setVisualDifficulty(e.target.checked)}
               disabled={loading}
-              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
-              aria-describedby="visualDifficulty-description"
+              className="h-4 w-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2"
             />
-            <div className="flex-1">
-              <label htmlFor="visualDifficulty" className="block text-sm text-white/80 cursor-pointer">
-                Tengo dificultades visuales
-              </label>
-              <p id="visualDifficulty-description" className="text-xs text-white/60 mt-1">
-                Esta opción activará automáticamente el modo de voz para una mejor experiencia de accesibilidad
-              </p>
-            </div>
+            <label htmlFor="visualDifficulty" className="text-sm text-white/80 cursor-pointer">
+              Tengo dificultades visuales
+            </label>
           </div>
 
           {error && <Alert intent="error">{error}</Alert>}
