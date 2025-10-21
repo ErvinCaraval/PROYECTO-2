@@ -13,7 +13,7 @@ Este documento describe el plan de implementación para agregar funcionalidades 
 
 ---
 
-## 🎯 Objetivos del Proyecto
+## 🎯 Objetivos del Proyecto 
 
 Implementar funcionalidades de accesibilidad para permitir que usuarios con discapacidades visuales participen completamente en juegos de trivia multijugador a través de funcionalidades de modo de voz.
 
