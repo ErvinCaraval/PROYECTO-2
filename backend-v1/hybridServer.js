@@ -13,7 +13,8 @@ const io = new Server(server, {
 
   cors: {
     origin:  ['https://proyecto-2-2.onrender.com/' ,'http://localhost:3000'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
   }
 
 
