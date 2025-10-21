@@ -28,7 +28,7 @@ export default function GamePage() {
   const [showResult, setShowResult] = useState(false);
   const [result, setResult] = useState(null);
   const [timerKey, setTimerKey] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(10);
+  const [, setTimeLeft] = useState(10);
   const navigate = useNavigate();
 
   useEffect(() => {
