@@ -12,7 +12,7 @@ const io = new Server(server, {
 
 
   cors: {
-    origin:  ['https://proyecto-2-flax.vercel.app/' ,'http://localhost:3000'],
+    origin:  ['https://proyecto-2-2.onrender.com/' ,'http://localhost:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE']
   }
 
