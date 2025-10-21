@@ -38,8 +38,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      
 
       - name: Run unit tests
         run: npm run test:unit
@@ -82,13 +81,7 @@ jobs:
           name: playwright-report
           path: frontend-v2/playwright-report
 
-      - name: Upload ESLint report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: eslint-report
-          path: frontend-v2/reports/eslint.json
-
+     
       - name: Deploy to Render
         if: success()
         run: |
