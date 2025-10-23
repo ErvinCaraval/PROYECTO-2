@@ -9,10 +9,16 @@ const { db, auth } = require('./firebase');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
+
+
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin:  ['https://proyecto-2-2.onrender.com/' ,'http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
   }
+
+
+
 });
 
 // Swagger UI para documentación interactiva usando swagger.yaml
@@ -29,6 +35,11 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/games', require('./routes/games'));
 app.use('/api/questions', require('./routes/questions'));
 app.use('/api/ai', require('./routes/ai'));
+
+app.use('/api/voice-interactions', require('./routes/voiceInteractions'));
+app.use('/api/voice-responses', require('./routes/voiceResponses'));
+
+app.use('/api/assemblyai', require('./routes/assemblyAI'));
 
 io.on('connection', (socket) => {
   // Listener para enviar la primera pregunta al socket que lo solicita
@@ -335,6 +346,358 @@ io.on('connection', (socket) => {
       socket.emit('error', { error: error.message });
     }
   });
+
+  // [HU8] Submit Voice Answer - Nueva funcionalidad para respuestas de voz
+  socket.on('submitVoiceAnswer', async ({ gameId, uid, voiceResponse, questionOptions }) => {
+    try {
+      const gameRef = db.collection('games').doc(gameId);
+      const gameDoc = await gameRef.get();
+      if (!gameDoc.exists) {
+        socket.emit('error', { error: 'Game not found' });
+        return;
+      }
+      const game = gameDoc.data();
+      const currentQ = game.questions[game.currentQuestion];
+      if (!currentQ) {
+        socket.emit('error', { error: 'No current question' });
+        return;
+      }
+
+      // Validar respuesta de voz usando el controlador
+      const voiceController = require('./controllers/voiceController');
+      const validation = matchVoiceResponse(voiceResponse, questionOptions || currentQ.options);
+      
+      if (!validation.isValid) {
+        socket.emit('voiceAnswerError', { 
+          error: 'No se pudo reconocer la respuesta de voz',
+          suggestions: generateSuggestions(questionOptions || currentQ.options)
+        });
+        return;
+      }
+
+      // Registrar interacción de voz
+      await db.collection('voiceInteractions').add({
+        userId: uid,
+        questionId: currentQ.id || `q_${game.currentQuestion}`,
+        gameId: gameId,
+        action: 'voice_answer',
+        voiceText: voiceResponse,
+        confidence: validation.confidence,
+        timestamp: new Date(),
+        metadata: {
+          matchedOption: validation.matchedOption,
+          isValid: validation.isValid,
+          questionOptions: questionOptions || currentQ.options
+        }
+      });
+
+      // Procesar la respuesta como una respuesta normal
+      if (!socket.data.answers) socket.data.answers = {};
+      const responseTime = Date.now();
+      socket.data.answers[game.currentQuestion] = { 
+        answerIndex: validation.answerIndex, 
+        answerValue: validation.matchedOption, 
+        responseTime,
+        isVoiceAnswer: true,
+        confidence: validation.confidence
+      };
+      socket.data.uid = uid;
+
+      // Notificar a todos los jugadores que se recibió una respuesta de voz
+      io.to(gameId).emit('voiceAnswerReceived', {
+        uid,
+        confidence: validation.confidence,
+        matchedOption: validation.matchedOption
+      });
+
+      // Continuar con el flujo normal de procesamiento de respuestas
+      const sockets = await io.in(gameId).fetchSockets();
+      const answers = {};
+      sockets.forEach(s => {
+        if (s.data.answers && s.data.answers[game.currentQuestion] !== undefined) {
+          answers[s.data.uid] = s.data.answers[game.currentQuestion];
+        }
+      });
+
+      // Solo avanzar si todos respondieron
+      if (Object.keys(answers).length === game.players.length) {
+        const correctValue = Array.isArray(currentQ.options) && typeof currentQ.correctAnswerIndex === 'number'
+          ? currentQ.options[currentQ.correctAnswerIndex]
+          : undefined;
+        
+        const questionStartTime = game.questionStartTimes && game.questionStartTimes[game.currentQuestion] 
+          ? game.questionStartTimes[game.currentQuestion] 
+          : Date.now();
+        
+        const updatedPlayers = game.players.map(player => {
+          const ansObj = answers[player.uid];
+          let score = player.score;
+          let responseTimes = player.responseTimes || [];
+          
+          if (ansObj && ansObj.responseTime) {
+            const responseTimeMs = ansObj.responseTime - questionStartTime;
+            responseTimes.push(responseTimeMs);
+          }
+          
+          if (ansObj) {
+            if (
+              typeof ansObj.answerValue !== 'undefined' &&
+              typeof correctValue !== 'undefined' &&
+              ansObj.answerValue === correctValue
+            ) {
+              score += 1;
+            } else if (
+              typeof ansObj.answerIndex === 'number' &&
+              typeof currentQ.correctAnswerIndex === 'number' &&
+              ansObj.answerIndex === currentQ.correctAnswerIndex
+            ) {
+              score += 1;
+            }
+          }
+          return { ...player, score, responseTimes };
+        });
+        
+        await gameRef.update({ players: updatedPlayers });
+        io.to(gameId).emit('answerResult', {
+          correctAnswerIndex: currentQ.correctAnswerIndex,
+          explanation: currentQ.explanation,
+          players: updatedPlayers
+        });
+        
+        const nextIndex = game.currentQuestion + 1;
+        setTimeout(async () => {
+          if (nextIndex < game.questions.length) {
+            await gameRef.update({ currentQuestion: nextIndex });
+            sendQuestion(io, gameId, nextIndex);
+          } else {
+            await gameRef.update({ status: 'finished' });
+            io.to(gameId).emit('gameFinished', { players: updatedPlayers });
+            // ... resto del código de finalización del juego
+          }
+        }, 3000);
+      }
+    } catch (error) {
+      socket.emit('error', { error: error.message });
+    }
+  });
+
+  // [HU8] Toggle Voice Mode - Activar/desactivar modo de voz
+  socket.on('toggleVoiceMode', async ({ gameId, uid, voiceModeEnabled }) => {
+    try {
+      const gameRef = db.collection('games').doc(gameId);
+      const gameDoc = await gameRef.get();
+      if (!gameDoc.exists) {
+        socket.emit('error', { error: 'Game not found' });
+        return;
+      }
+
+      // Actualizar el estado del modo de voz del jugador
+      const game = gameDoc.data();
+      const updatedPlayers = game.players.map(player => {
+        if (player.uid === uid) {
+          return { ...player, voiceModeEnabled: voiceModeEnabled };
+        }
+        return player;
+      });
+
+      await gameRef.update({ players: updatedPlayers });
+
+      // Notificar a todos los jugadores sobre el cambio de modo de voz
+      io.to(gameId).emit('voiceModeChanged', {
+        uid,
+        voiceModeEnabled,
+        players: updatedPlayers
+      });
+
+      // Registrar la interacción de voz
+      await db.collection('voiceInteractions').add({
+        userId: uid,
+        questionId: null,
+        gameId: gameId,
+        action: 'voice_mode_toggle',
+        voiceText: null,
+        confidence: null,
+        timestamp: new Date(),
+        metadata: {
+          voiceModeEnabled,
+          gameId
+        }
+      });
+
+    } catch (error) {
+      socket.emit('error', { error: error.message });
+    }
+  });
+
+  // [HU8] Voice Mode Status - Obtener estado del modo de voz de todos los jugadores
+  socket.on('getVoiceModeStatus', async ({ gameId }) => {
+    try {
+      const gameRef = db.collection('games').doc(gameId);
+      const gameDoc = await gameRef.get();
+      if (!gameDoc.exists) {
+        socket.emit('error', { error: 'Game not found' });
+        return;
+      }
+
+      const game = gameDoc.data();
+      const voiceModeStatus = game.players.map(player => ({
+        uid: player.uid,
+        displayName: player.displayName,
+        voiceModeEnabled: player.voiceModeEnabled || false
+      }));
+
+      socket.emit('voiceModeStatus', { players: voiceModeStatus });
+    } catch (error) {
+      socket.emit('error', { error: error.message });
+    }
+  });
+
+  // [HU8] Submit Audio Answer - Nueva funcionalidad para respuestas de audio con AssemblyAI
+  socket.on('submitAudioAnswer', async ({ gameId, uid, audioUrl, questionOptions }) => {
+    try {
+      const gameRef = db.collection('games').doc(gameId);
+      const gameDoc = await gameRef.get();
+      if (!gameDoc.exists) {
+        socket.emit('error', { error: 'Game not found' });
+        return;
+      }
+      const game = gameDoc.data();
+      const currentQ = game.questions[game.currentQuestion];
+      if (!currentQ) {
+        socket.emit('error', { error: 'No current question' });
+        return;
+      }
+
+      // Procesar audio con AssemblyAI
+      const assemblyAI = require('./services/assemblyAIService');
+      const result = await assemblyAI.processVoiceAnswer(audioUrl, questionOptions || currentQ.options);
+      
+      if (!result.success) {
+        socket.emit('audioAnswerError', { 
+          error: result.error,
+          suggestions: result.suggestions
+        });
+        return;
+      }
+
+      if (!result.validation.isValid) {
+        socket.emit('audioAnswerError', { 
+          error: 'No se pudo reconocer la respuesta de audio',
+          suggestions: result.suggestions
+        });
+        return;
+      }
+
+      // Registrar interacción de voz
+      await db.collection('voiceInteractions').add({
+        userId: uid,
+        questionId: currentQ.id || `q_${game.currentQuestion}`,
+        gameId: gameId,
+        action: 'voice_answer_assemblyai',
+        voiceText: result.text,
+        confidence: result.confidence,
+        timestamp: new Date(),
+        metadata: {
+          matchedOption: result.validation.matchedOption,
+          isValid: result.validation.isValid,
+          questionOptions: questionOptions || currentQ.options,
+          assemblyAIUsed: true,
+          audioUrl: audioUrl
+        }
+      });
+
+      // Procesar la respuesta como una respuesta normal
+      if (!socket.data.answers) socket.data.answers = {};
+      const responseTime = Date.now();
+      socket.data.answers[game.currentQuestion] = { 
+        answerIndex: result.validation.answerIndex, 
+        answerValue: result.validation.matchedOption, 
+        responseTime,
+        isAudioAnswer: true,
+        confidence: result.confidence,
+        assemblyAIUsed: true
+      };
+      socket.data.uid = uid;
+
+      // Notificar a todos los jugadores que se recibió una respuesta de audio
+      io.to(gameId).emit('audioAnswerReceived', {
+        uid,
+        confidence: result.confidence,
+        matchedOption: result.validation.matchedOption,
+        text: result.text,
+        assemblyAIUsed: true
+      });
+
+      // Continuar con el flujo normal de procesamiento de respuestas
+      const sockets = await io.in(gameId).fetchSockets();
+      const answers = {};
+      sockets.forEach(s => {
+        if (s.data.answers && s.data.answers[game.currentQuestion] !== undefined) {
+          answers[s.data.uid] = s.data.answers[game.currentQuestion];
+        }
+      });
+
+      // Solo avanzar si todos respondieron
+      if (Object.keys(answers).length === game.players.length) {
+        const correctValue = Array.isArray(currentQ.options) && typeof currentQ.correctAnswerIndex === 'number'
+          ? currentQ.options[currentQ.correctAnswerIndex]
+          : undefined;
+        
+        const questionStartTime = game.questionStartTimes && game.questionStartTimes[game.currentQuestion] 
+          ? game.questionStartTimes[game.currentQuestion] 
+          : Date.now();
+        
+        const updatedPlayers = game.players.map(player => {
+          const ansObj = answers[player.uid];
+          let score = player.score;
+          let responseTimes = player.responseTimes || [];
+          
+          if (ansObj && ansObj.responseTime) {
+            const responseTimeMs = ansObj.responseTime - questionStartTime;
+            responseTimes.push(responseTimeMs);
+          }
+          
+          if (ansObj) {
+            if (
+              typeof ansObj.answerValue !== 'undefined' &&
+              typeof correctValue !== 'undefined' &&
+              ansObj.answerValue === correctValue
+            ) {
+              score += 1;
+            } else if (
+              typeof ansObj.answerIndex === 'number' &&
+              typeof currentQ.correctAnswerIndex === 'number' &&
+              ansObj.answerIndex === currentQ.correctAnswerIndex
+            ) {
+              score += 1;
+            }
+          }
+          return { ...player, score, responseTimes };
+        });
+        
+        await gameRef.update({ players: updatedPlayers });
+        io.to(gameId).emit('answerResult', {
+          correctAnswerIndex: currentQ.correctAnswerIndex,
+          explanation: currentQ.explanation,
+          players: updatedPlayers
+        });
+        
+        const nextIndex = game.currentQuestion + 1;
+        setTimeout(async () => {
+          if (nextIndex < game.questions.length) {
+            await gameRef.update({ currentQuestion: nextIndex });
+            sendQuestion(io, gameId, nextIndex);
+          } else {
+            await gameRef.update({ status: 'finished' });
+            io.to(gameId).emit('gameFinished', { players: updatedPlayers });
+            // ... resto del código de finalización del juego
+          }
+        }, 3000);
+      }
+    } catch (error) {
+      socket.emit('error', { error: error.message });
+    }
+  });
 });
 
 async function sendQuestion(io, gameId, questionIndex) {
@@ -348,12 +711,22 @@ async function sendQuestion(io, gameId, questionIndex) {
     return;
   }
   
+  // Determinar el tiempo límite según el modo de voz del jugador
+  let questionTimeout = 10; // por defecto 10 segundos
+  if (Array.isArray(game.players) && game.players.length > 0) {
+    // Si al menos un jugador tiene voiceModeEnabled true, aumentar el tiempo
+    const anyVoiceMode = game.players.some(p => p.voiceModeEnabled === true || p.visualDifficulty === true);
+    if (anyVoiceMode) {
+      questionTimeout = 120;
+    }
+  }
+
   // Capturar el timestamp cuando se envía la pregunta
   const questionStartTime = Date.now();
   const questionStartTimes = game.questionStartTimes || {};
   questionStartTimes[questionIndex] = questionStartTime;
   await gameRef.update({ questionStartTimes });
-  
+
   let question = game.questions[questionIndex];
   // Solo adaptar el campo 'question' si viene como 'text', pero JAMÁS modificar options ni correctAnswerIndex
   if (question) {
@@ -364,15 +737,21 @@ async function sendQuestion(io, gameId, questionIndex) {
       io.to(gameId).emit('newQuestion', { question: { question: 'Error: pregunta sin texto', options: [], correctAnswerIndex: null }, index: questionIndex });
       return;
     }
-    // Enviar la pregunta tal como está guardada (sin modificar options ni correctAnswerIndex)
-    io.to(gameId).emit('newQuestion', { question, index: questionIndex });
+    // Enviar la pregunta y el tiempo límite
+    io.to(gameId).emit('newQuestion', { question, index: questionIndex, timeout: questionTimeout });
   } else {
-    io.to(gameId).emit('newQuestion', { question: { question: 'Error: pregunta no encontrada', options: [], correctAnswerIndex: null }, index: questionIndex });
+    io.to(gameId).emit('newQuestion', { question: { question: 'Error: pregunta no encontrada', options: [], correctAnswerIndex: null }, index: questionIndex, timeout: questionTimeout });
   }
 }
 
+// [HU8] Importar funciones de recnocimiento de voz
+const { matchVoiceResponse, generateSuggestions } = require('./utils/voiceRecognition');
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-
+  console.log(`🚀 Servidor híbrido ejecutándose en puerto ${PORT}`);
+  console.log(`📚 Documentación API disponible en https://proyecto-2-olvb.onrender.com/api-docs`);
 });
+
+module.exports = { app, matchVoiceResponse };
 

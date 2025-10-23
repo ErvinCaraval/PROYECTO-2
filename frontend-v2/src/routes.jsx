@@ -12,7 +12,9 @@ const GamePage = React.lazy(() => import('./pages/GamePage'));
 const GameSummaryPage = React.lazy(() => import('./pages/GameSummaryPage'));
 const AdminPage = React.lazy(() => import('./pages/AdminPage'));
 const CompleteProfilePage = React.lazy(() => import('./pages/CompleteProfilePage'));
+const VoiceTestPage = React.lazy(() => import('./pages/VoiceTestPage'));
 const ProtectedRoute = React.lazy(() => import('./components/ProtectedRoute'));
+const AuthRedirect = React.lazy(() => import('./components/AuthRedirect'));
 
 export default function AppRoutes() {
   return (
@@ -20,8 +22,8 @@ export default function AppRoutes() {
       <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<AuthRedirect><RegisterPage /></AuthRedirect>} />
+          <Route path="/login" element={<AuthRedirect><LoginPage /></AuthRedirect>} />
           <Route path="/reset" element={<PasswordResetPage />} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
@@ -30,6 +32,7 @@ export default function AppRoutes() {
           <Route path="/game/:gameId" element={<ProtectedRoute><GamePage /></ProtectedRoute>} />
           <Route path="/summary/:gameId" element={<ProtectedRoute><GameSummaryPage /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminPage /></ProtectedRoute>} />
+          <Route path="/voice-test" element={<VoiceTestPage />} />
         </Routes>
       </Suspense>
     </Router>
