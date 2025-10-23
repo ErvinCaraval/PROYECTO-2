@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion'
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import { useVoice } from '../VoiceContext';
 import { getSocket, disconnectSocket } from '../services/socket';
 import Button from '../components/ui/Button';
 import Alert from '../components/ui/Alert';
@@ -12,6 +13,7 @@ import Skeleton from '../components/ui/Skeleton';
 export default function GameLobbyPage() {
   const { gameId } = useParams();
   const { user } = useAuth();
+  const { isVoiceModeEnabled, speak } = useVoice();
   const [players, setPlayers] = useState([]);
   const [hostId, setHostId] = useState(null);
   const [status] = useState('waiting');
@@ -20,6 +22,13 @@ export default function GameLobbyPage() {
   const [connected, setConnected] = useState(false);
   const [connectionTimeout, setConnectionTimeout] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
+
+  // Voice announce helper
+  const announce = (text) => {
+    if (isVoiceModeEnabled) {
+      speak(text, { action: 'text_read', questionId: 'lobby', metadata: { origin: 'lobby' } });
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -183,7 +192,13 @@ export default function GameLobbyPage() {
         <Alert intent="error" className="mb-4">
           {error === 'Game already started' ? 'La partida ya ha comenzado. No puedes unirte en este momento.' : error}
         </Alert>
-        <Button onClick={() => navigate('/dashboard')}>Volver al inicio</Button>
+        <Button 
+          onClick={() => navigate('/dashboard')}
+          onFocus={() => announce('Volver al panel principal')}
+          onMouseEnter={() => announce('Volver al panel principal')}
+        >
+          Volver al inicio
+        </Button>
       </div>
     );
   }
@@ -229,6 +244,25 @@ export default function GameLobbyPage() {
         <div>
           <h1 className="text-3xl font-bold">🎮 Sala de Juego</h1>
           <p className="text-white/70">Comparte el código para que tus amigos se unan</p>
+          {isVoiceModeEnabled && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={async () => {
+                const parts = []
+                parts.push('Estás en la sala de juego.')
+                parts.push('Arriba está el código de la partida que puedes copiar para compartir.')
+                parts.push('A la izquierda verás la lista de jugadores conectados.')
+                parts.push('A la derecha están las acciones: iniciar partida si eres anfitrión, o esperar si eres jugador.')
+                parts.push('El anfitrión puede iniciar cuando haya al menos un jugador.')
+                speak(parts.join(' '), { action: 'page_guide', questionId: 'lobby', force: true })
+              }}
+              aria-label="Explicar la página"
+            >
+              🛈 Explicar página
+            </Button>
+          )}
         </div>
         <Card className="w-full md:w-auto">
           <CardBody className="flex items-center gap-3">
@@ -236,7 +270,15 @@ export default function GameLobbyPage() {
               <div className="text-sm text-white/70">Código</div>
               <div className="text-xl font-bold tracking-widest">{gameId}</div>
             </div>
-            <Button variant="secondary" onClick={copyGameCode} aria-label="Copiar código">📋 Copiar</Button>
+            <Button 
+              variant="secondary" 
+              onClick={copyGameCode} 
+              aria-label="Copiar código"
+              onFocus={() => announce('Copiar código de la partida')}
+              onMouseEnter={() => announce('Copiar código de la partida')}
+            >
+              📋 Copiar
+            </Button>
           </CardBody>
         </Card>
       </header>
@@ -280,7 +322,15 @@ export default function GameLobbyPage() {
             {user && user.uid === hostId && status === 'waiting' ? (
               <>
                 <p>¿Listo para comenzar la partida?</p>
-                <Button onClick={handleStart} disabled={players.length < 1} size="lg">🚀 Iniciar partida</Button>
+                <Button 
+                  onClick={handleStart} 
+                  disabled={players.length < 1} 
+                  size="lg"
+                  onFocus={() => announce('Iniciar la partida')}
+                  onMouseEnter={() => announce('Iniciar la partida')}
+                >
+                  🚀 Iniciar partida
+                </Button>
                 {players.length < 1 && (
                   <p className="text-sm text-white/70">Esperando a que se unan jugadores...</p>
                 )}
