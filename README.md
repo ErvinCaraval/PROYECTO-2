@@ -1,6 +1,6 @@
-# BrainBlitz - Plan de Implementación de Funcionalidades de Accesibilidad
+# BrainBlitz - Plan de Implementación de Funcionalidades de Accesibilidad   
 
-## 📋 Resumen del Proyecto...
+## 📋 Resumen del Proyecto... 
 
 Este documento describe el plan de implementación para agregar funcionalidades integrales de accesibilidad a BrainBlitz, un juego de trivia multijugador. El proyecto involucra 5 desarrolladores: 1 Desarrollador Backend y 4 Desarrolladores Frontend.
 
@@ -13,7 +13,7 @@ Este documento describe el plan de implementación para agregar funcionalidades 
 
 ---
 
-## 🎯 Objetivos del Proyecto
+## 🎯 Objetivos del Proyecto 
 
 Implementar funcionalidades de accesibilidad para permitir que usuarios con discapacidades visuales participen completamente en juegos de trivia multijugador a través de funcionalidades de modo de voz.
 
@@ -39,7 +39,7 @@ Implementar funcionalidades de accesibilidad para permitir que usuarios con disc
 - Controles administrativos
 - Análisis de datos y reportes
 
-### Desarrolladores Frontend (4 personas)
+### Desarrolladores Frontend (4 personas) 
 **Responsabilidades Principales:**
 - Implementación de UI/UX
 - Integración del modo de voz
