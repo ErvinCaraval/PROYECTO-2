@@ -1,18 +1,24 @@
+/* global require */
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent } from './testUtils'
 import React from 'react'
 import AIQuestionGenerator from '../components/AIQuestionGenerator'
 
-// Mock del hook useAuth
-vi.mock('../AuthContext', () => ({
-  useAuth: () => ({
-    user: {
-      uid: 'test-user-id',
-      email: 'test@example.com',
-      displayName: 'Test User'
-    }
-  })
-}))
+// Mock del hook useAuth and provide a minimal AuthProvider for test wrapper
+vi.mock('../AuthContext', () => {
+  const React = require('react')
+  return {
+    useAuth: () => ({
+      user: {
+        uid: 'test-user-id',
+        email: 'test@example.com',
+        displayName: 'Test User'
+      },
+      loading: false
+    }),
+    AuthProvider: ({ children }) => React.createElement(React.Fragment, null, children)
+  }
+})
 
 // Mock de las funciones de API
 vi.mock('../services/api', () => ({
