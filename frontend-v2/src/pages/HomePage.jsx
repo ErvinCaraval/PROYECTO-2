@@ -23,8 +23,8 @@ export default function HomePage() {
 
   return (
     <Layout>
-      <div className="min-h-screen flex flex-col items-center justify-start pt-32 px-4 gap-12">
-        <section className="w-full max-w-6xl mx-auto text-center px-6 space-y-6">
+      <div className="min-h-screen flex flex-col items-center justify-start pt-32 px-3 gap-10">
+        <section className="w-full max-w-6xl mx-auto text-center px-5 space-y-6">
           <h1 className="text-5xl md:text-6xl font-extrabold">⚡ BrainBlitz</h1>
           <p className="text-white/80 text-lg md:text-xl max-w-2xl mx-auto">
             La experiencia definitiva de trivia multijugador
@@ -48,11 +48,11 @@ export default function HomePage() {
           
           {/* Voice test removed from home per request */}
         </section>
-        <section className="w-full max-w-6xl mx-auto px-6 space-y-8">
+        <section className="w-full max-w-6xl mx-auto px-5 space-y-8">
           <h2 className="text-3xl font-bold text-center">Características</h2>
-          <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
+          <div className="grid gap-5 md:grid-cols-3 max-w-5xl mx-auto">
             <Card>
-              <CardBody className="text-center space-y-3 p-6">
+              <CardBody className="text-center space-y-2 p-5">
                 <div className="text-4xl">⚡</div>
                 <h3 className="text-xl font-semibold">Juego en tiempo real</h3>
                 <p className="text-white/70">
@@ -62,7 +62,7 @@ export default function HomePage() {
               </CardBody>
             </Card>
             <Card>
-              <CardBody className="text-center space-y-3 p-6">
+              <CardBody className="text-center space-y-2 p-5">
                 <div className="text-4xl">🎮</div>
                 <h3 className="text-xl font-semibold">Fácil de unirse</h3>
                 <p className="text-white/70">
@@ -71,7 +71,7 @@ export default function HomePage() {
               </CardBody>
             </Card>
             <Card>
-              <CardBody className="text-center space-y-3 p-6">
+              <CardBody className="text-center space-y-2 p-5">
                 <div className="text-4xl">🤝</div>
                 <h3 className="text-xl font-semibold">Compite con amigos</h3>
                 <p className="text-white/70">
