@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useVoice } from '../VoiceContext';
 import { useAuth } from '../AuthContext';
 import ManualQuestionForm from './ManualQuestionForm';
 import { fetchTopics, fetchDifficultyLevels } from '../services/api';
@@ -10,6 +11,7 @@ import Spinner from './ui/Spinner';
 import LoadingOverlay from './ui/LoadingOverlay';
 
 const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
+  const { isVoiceModeEnabled, speak } = useVoice();
   const { user } = useAuth();
   const [topics, setTopics] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState('');
@@ -160,16 +162,54 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
 
   return (
     <Modal open={true} title="🤖 Generador de Preguntas" onClose={onClose}>
+      {isVoiceModeEnabled && (!showManualForm) && (
+        <div className="flex justify-end mb-2">
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={async () => {
+              const parts = [];
+              if (!showManualForm && !useAI) {
+                parts.push('Estás en el generador de preguntas.');
+                parts.push('Botón Crear con IA: genera preguntas automáticamente usando inteligencia artificial.');
+                parts.push('Botón Escribir preguntas: te permite escribir preguntas manualmente.');
+                parts.push('Selecciona una opción para continuar.');
+              } else if (useAI && !showManualForm) {
+                parts.push('Formulario para generar preguntas con inteligencia artificial.');
+                parts.push('Campo Tema: selecciona el tema de las preguntas.');
+                parts.push('Campo Dificultad: elige la dificultad.');
+                parts.push('Campo Cantidad: indica cuántas preguntas quieres generar.');
+                parts.push('Botón Crear preguntas: genera las preguntas.');
+                parts.push('Botón Atrás: vuelve a la pantalla anterior.');
+              }
+              await speak(parts.join(' '), { action: 'page_guide', questionId: 'ai_question_generator', force: true });
+            }}
+            aria-label="Explicar la página"
+            onFocus={() => speak('Explicar página: describe la función de cada botón y campo en esta vista.', { force: true })}
+            onMouseEnter={() => speak('Explicar página: describe la función de cada botón y campo en esta vista.', { force: true })}
+          >
+            🛈 Explicar página
+          </Button>
+        </div>
+      )}
       {loading && <LoadingOverlay text="Generando…" mobileOnly />}
       {!showManualForm && !useAI && (
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button onClick={() => setUseAI(true)} size="lg">
+          <Button
+            onClick={() => setUseAI(true)}
+            size="lg"
+            onFocus={() => isVoiceModeEnabled && speak('Crear con IA: genera preguntas automáticamente usando inteligencia artificial.', { force: true })}
+            onMouseEnter={() => isVoiceModeEnabled && speak('Crear con IA: genera preguntas automáticamente usando inteligencia artificial.', { force: true })}
+          >
             Crear con IA
           </Button>
           <Button
             variant="secondary"
             size="lg"
             onClick={() => { setShowManualForm(true); setUseAI(false); setManualStep(0); setManualQuestions([]); }}
+            onFocus={() => isVoiceModeEnabled && speak('Escribir preguntas: te permite escribir preguntas manualmente.', { force: true })}
+            onMouseEnter={() => isVoiceModeEnabled && speak('Escribir preguntas: te permite escribir preguntas manualmente.', { force: true })}
           >
             Escribir preguntas
           </Button>
@@ -262,8 +302,22 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
           </div>
           {error && <Alert intent="error" className="sm:col-span-3">{error}</Alert>}
           <div className="sm:col-span-3 mt-2 flex flex-wrap gap-3 justify-end items-center">
-            <Button type="button" variant="secondary" onClick={() => setUseAI(false)} disabled={loading}>Atrás</Button>
-            <Button type="submit" disabled={loading}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setUseAI(false)}
+              disabled={loading}
+              onFocus={() => isVoiceModeEnabled && speak('Atrás: vuelve a la pantalla anterior.', { force: true })}
+              onMouseEnter={() => isVoiceModeEnabled && speak('Atrás: vuelve a la pantalla anterior.', { force: true })}
+            >
+              Atrás
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              onFocus={() => isVoiceModeEnabled && speak('Crear preguntas: genera las preguntas con inteligencia artificial.', { force: true })}
+              onMouseEnter={() => isVoiceModeEnabled && speak('Crear preguntas: genera las preguntas con inteligencia artificial.', { force: true })}
+            >
               {loading ? (<><Spinner size={16} className="mr-2" />Creando…</>) : 'Crear preguntas'}
             </Button>
           </div>
@@ -323,8 +377,22 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
                 </div>
               </div>
               <div className="flex justify-end gap-3">
-                <Button type="button" variant="secondary" onClick={() => setShowManualForm(false)}>Volver</Button>
-                <Button type="submit">Empezar</Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowManualForm(false)}
+                  onFocus={() => isVoiceModeEnabled && speak('Volver: cierra el formulario de preguntas manuales y regresa a la pantalla anterior.', { force: true })}
+                  onMouseEnter={() => isVoiceModeEnabled && speak('Volver: cierra el formulario de preguntas manuales y regresa a la pantalla anterior.', { force: true })}
+                >
+                  Volver
+                </Button>
+                <Button
+                  type="submit"
+                  onFocus={() => isVoiceModeEnabled && speak('Empezar: inicia la creación manual de preguntas.', { force: true })}
+                  onMouseEnter={() => isVoiceModeEnabled && speak('Empezar: inicia la creación manual de preguntas.', { force: true })}
+                >
+                  Empezar
+                </Button>
               </div>
             </form>
           ) : (
