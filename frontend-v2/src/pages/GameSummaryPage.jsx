@@ -37,21 +37,26 @@ export default function GameSummaryPage() {
                 speak(parts.join(' '), { action: 'page_guide', questionId: 'summary', force: true })
               }}
               aria-label="Explicar la página"
+              title="Explicar la página"
             >
               🛈 Explicar página
             </Button>
           )}
         </CardHeader>
         <CardBody>
-          <Ranking players={players} />
-          <div className="mt-6 flex justify-center">
+          <div role="region" aria-label="Ranking final de jugadores">
+            <Ranking players={players} />
+          </div>
+          <div className="mt-8 flex justify-center">
             <Button 
               size="lg" 
               onClick={() => navigate('/dashboard')}
               onFocus={() => announce('Volver al panel principal')}
               onMouseEnter={() => announce('Volver al panel principal')}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bb-primary"
+              title="Volver al panel principal"
             >
-              Volver al Panel Principal
+              🏠 Volver al Panel Principal
             </Button>
           </div>
         </CardBody>
