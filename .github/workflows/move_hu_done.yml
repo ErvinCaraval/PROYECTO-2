@@ -16,13 +16,39 @@ jobs:
         id: extract_hu
         run: |
           BRANCH_NAME="${{ github.head_ref }}"
+          echo "Nombre de la rama: $BRANCH_NAME"
+          echo "Repositorio: ${{ github.repository }}"
+          echo "Owner: ${{ github.repository_owner }}"
+          
           # Extrae el número de HU del nombre de la rama (ejemplo: hu-12-nombre)
           if [[ "$BRANCH_NAME" =~ hu-([0-9]+)- ]]; then
             echo "HU_NUMBER=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+            echo "Número de HU extraído: ${BASH_REMATCH[1]}"
           else
-            echo "No se encontró HU_NUMBER en la rama."
+            echo "❌ No se encontró HU_NUMBER en la rama '$BRANCH_NAME'"
+            echo "El formato esperado es: hu-XXX-nombre (ejemplo: hu-171-us1-registro-de-preferencia-de-accesibilidad)"
             exit 1
           fi
+
+      - name: Verificar que la issue existe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          HU_NUMBER=${{ steps.extract_hu.outputs.HU_NUMBER }}
+          REPO_OWNER="${{ github.repository_owner }}"
+          REPO_NAME="${{ github.event.repository.name }}"
+          
+          echo "Verificando que la issue #$HU_NUMBER existe en $REPO_OWNER/$REPO_NAME..."
+          
+          # Verificar que la issue existe
+          if ! gh issue view $HU_NUMBER --repo "$REPO_OWNER/$REPO_NAME" > /dev/null 2>&1; then
+            echo "❌ Error: La issue #$HU_NUMBER no existe en $REPO_OWNER/$REPO_NAME"
+            echo "Issues disponibles:"
+            gh issue list --repo "$REPO_OWNER/$REPO_NAME" --limit 10
+            exit 1
+          fi
+          
+          echo "✅ Issue #$HU_NUMBER encontrada"
 
       - name: Mover la HU a la columna Done si el PR fue mergeado
         env:
@@ -36,32 +62,66 @@ jobs:
           fi
           
           HU_NUMBER=${{ steps.extract_hu.outputs.HU_NUMBER }}
-          echo "Moviendo HU #$HU_NUMBER a Done..."
+          REPO_OWNER="${{ github.repository_owner }}"
+          REPO_NAME="${{ github.event.repository.name }}"
           
-          # Obtener ID de la issue
-          ISSUE_ID=$(gh issue view $HU_NUMBER --json id | jq -r '.id')
+          echo "Moviendo HU #$HU_NUMBER a Done..."
+          echo "Repositorio: $REPO_OWNER/$REPO_NAME"
+          
+          # Obtener ID de la issue usando el repositorio correcto
+          ISSUE_ID=$(gh issue view $HU_NUMBER --repo "$REPO_OWNER/$REPO_NAME" --json id | jq -r '.id')
           if [ "$ISSUE_ID" = "null" ] || [ -z "$ISSUE_ID" ]; then
-            echo "Error: No se pudo encontrar la issue #$HU_NUMBER"
+            echo "Error: No se pudo encontrar la issue #$HU_NUMBER en $REPO_OWNER/$REPO_NAME"
+            echo "Verificando si la issue existe..."
+            gh issue view $HU_NUMBER --repo "$REPO_OWNER/$REPO_NAME" || echo "Issue no encontrada"
             exit 1
           fi
+          
+          echo "Issue ID encontrado: $ISSUE_ID"
           
           # Obtener ID del proyecto
-          PROJECT_ID=$(gh project list --owner "@me" --format json | jq -r '.projects[] | select(.title == "Product Backlog") | .id')
+          PROJECT_ID=$(gh project list --owner "$REPO_OWNER" --format json | jq -r '.projects[] | select(.title == "Product Backlog") | .id')
           if [ "$PROJECT_ID" = "null" ] || [ -z "$PROJECT_ID" ]; then
-            echo "Error: No se pudo encontrar el proyecto 'Product Backlog'"
+            echo "Error: No se pudo encontrar el proyecto 'Product Backlog' para $REPO_OWNER"
+            echo "Proyectos disponibles:"
+            gh project list --owner "$REPO_OWNER" --format json | jq -r '.projects[] | .title'
             exit 1
           fi
+          
+          echo "Proyecto ID encontrado: $PROJECT_ID"
           
           # Obtener ID de la tarjeta en el proyecto
           CARD_ID=$(gh api graphql -f query='query($project:ID!, $content:ID!) { projectV2ItemById(projectId: $project, id: $content) { id } }' -f project="$PROJECT_ID" -f content="$ISSUE_ID" | jq -r '.data.projectV2ItemById.id')
           if [ "$CARD_ID" = "null" ] || [ -z "$CARD_ID" ]; then
             echo "Error: La issue #$HU_NUMBER no está en el proyecto 'Product Backlog'"
-            exit 1
+            echo "Intentando agregar la issue al proyecto..."
+            
+            # Intentar agregar la issue al proyecto si no está
+            ADD_RESULT=$(gh api graphql -f query="
+              mutation {
+                addProjectV2ItemById(input: {
+                  projectId: \"$PROJECT_ID\",
+                  contentId: \"$ISSUE_ID\"
+                }) {
+                  item { id }
+                }
+              }
+            " | jq -r '.data.addProjectV2ItemById.item.id')
+            
+            if [ "$ADD_RESULT" != "null" ] && [ -n "$ADD_RESULT" ]; then
+              echo "Issue agregada al proyecto. ID de tarjeta: $ADD_RESULT"
+              CARD_ID="$ADD_RESULT"
+            else
+              echo "No se pudo agregar la issue al proyecto"
+              exit 1
+            fi
+          else
+            echo "Tarjeta ID encontrado: $CARD_ID"
           fi
           
           # Mover a Done
           echo "Moviendo la HU a la columna Done..."
-          gh api graphql -f query="
+          MOVE_RESULT=$(gh api graphql -f query="
             mutation {
               updateProjectV2ItemFieldValue(input: {
                 projectId: \"$PROJECT_ID\",
@@ -72,11 +132,13 @@ jobs:
                 projectV2Item { id }
               }
             }
-          "
+          ")
           
           if [ $? -eq 0 ]; then
             echo "✅ HU #$HU_NUMBER movida exitosamente a Done"
+            echo "Resultado: $MOVE_RESULT"
           else
             echo "❌ Error: No se pudo mover la HU a Done. Revisa los IDs de las columnas."
+            echo "Respuesta de la API: $MOVE_RESULT"
             exit 1
           fi
