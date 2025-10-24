@@ -44,7 +44,7 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
       console.log('🎤 Deteniendo grabación y enviando audio...');
       const result = await voiceService.stop();
       console.log('📝 Resultado recibido:', result);
-      const { transcript } = result;
+      const { transcript, audioBase64, audioMimeType, assemblyAIResult } = result;
 
       if (!transcript) {
         throw new Error('No se detectó ninguna voz.');
@@ -58,7 +58,7 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
 
       if (match.isValid) {
         console.log('✅ Respuesta válida, llamando onAnswer con índice:', match.index);
-        onAnswer(match.index);
+        onAnswer(match.index, audioBase64, assemblyAIResult, audioMimeType);
         setSuccessMessage(`✅ Respuesta reconocida: ${options[match.index]}`);
       } else {
         console.log('❌ No se pudo matchear la respuesta');
