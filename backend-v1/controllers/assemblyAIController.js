@@ -58,7 +58,7 @@ exports.speechToText = async (req, res) => {
 // [HU8] Procesar audio base64
 exports.processAudio = async (req, res) => {
   try {
-    const { audioBase64, language, punctuate, formatText } = req.body;
+    const { audioBase64, language, punctuate, formatText, mimeType } = req.body;
     
     if (!audioBase64 || typeof audioBase64 !== 'string') {
       return res.status(400).json({ error: 'audioBase64 is required and must be a string' });
@@ -71,6 +71,7 @@ exports.processAudio = async (req, res) => {
     }
 
     const result = await assemblyAIService.processAudio(audioBase64, {
+      mimeType: typeof mimeType === 'string' ? mimeType : undefined,
       language: language || 'es',
       punctuate: punctuate !== false,
       formatText: formatText !== false
