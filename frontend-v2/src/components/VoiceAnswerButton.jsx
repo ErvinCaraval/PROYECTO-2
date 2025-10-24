@@ -82,16 +82,20 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
     onTouchEnd: handleRecordingStop,
   };
 
-  let buttonText = "🎤 Mantén presionado para hablar";
+  // Use separate texts for desktop and mobile so the label fits on small screens
+  let buttonTextDesktop = "🎤 Mantén presionado para hablar";
+  let buttonTextMobile = "🎤 Mantén";
   let buttonVariant = "primary";
   let isPulsing = false;
 
   if (isRecording) {
-    buttonText = "🎤 Escuchando...";
+    buttonTextDesktop = "🎤 Escuchando...";
+    buttonTextMobile = "🎤 Escuchando";
     buttonVariant = "secondary";
     isPulsing = true;
   } else if (isProcessing) {
-    buttonText = "🔄 Procesando...";
+    buttonTextDesktop = "🔄 Procesando...";
+    buttonTextMobile = "🔄 Procesando";
     buttonVariant = "secondary";
     isPulsing = true;
   }
@@ -105,7 +109,9 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
         className={`w-full touch-none ${isPulsing ? 'animate-pulse' : ''}`}>
         <div className="flex items-center justify-center gap-2">
           {isRecording && <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>}
-          {buttonText}
+          {/* Desktop: show full text on sm+ screens. Mobile: show shorter text on smaller screens */}
+          <span className="hidden sm:inline">{buttonTextDesktop}</span>
+          <span className="inline sm:hidden">{buttonTextMobile}</span>
         </div>
       </Button>
       {successMessage && (
