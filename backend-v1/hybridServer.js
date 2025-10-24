@@ -47,25 +47,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Rutas de API
 app.use('/api/users', require('./routes/users'));
-
-// Servir archivos estáticos del frontend si estamos en producción
-if (process.env.NODE_ENV === 'production') {
-  const path = require('path');
-  // Asumiendo que el build del frontend está en ../frontend-v2/dist
-  const buildPath = path.join(__dirname, '..', 'frontend-v2', 'dist');
-  
-  // Servir archivos estáticos
-  app.use(express.static(buildPath));
-  
-  // Manejar todas las rutas que no sean /api/* enviando index.html
-  app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api/')) {
-      res.sendFile(path.join(buildPath, 'index.html'));
-    }
-  });
-}
 app.use('/api/games', require('./routes/games'));
 app.use('/api/questions', require('./routes/questions'));
 app.use('/api/ai', require('./routes/ai'));
