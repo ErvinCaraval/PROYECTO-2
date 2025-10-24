@@ -11,15 +11,21 @@ export async function getSocket() {
   
   socket = io(SOCKET_URL, { 
     autoConnect: false,
-    // Configuración para mejorar conectividad en móviles
+    // Configuración optimizada para dispositivos móviles
     transports: isMobile ? ['polling', 'websocket'] : ['websocket', 'polling'],
-    timeout: isMobile ? 10000 : (import.meta.env.VITE_SOCKET_TIMEOUT || 8000),
+    timeout: isMobile ? 15000 : (import.meta.env.VITE_SOCKET_TIMEOUT || 8000),
     forceNew: true, // Forzar nueva conexión
     reconnection: true,
-    reconnectionAttempts: isMobile ? 5 : 3,
-    reconnectionDelay: isMobile ? 2000 : 1000,
-    reconnectionDelayMax: isMobile ? 10000 : 5000,
-    maxReconnectionAttempts: isMobile ? 5 : 3
+    reconnectionAttempts: isMobile ? 8 : 5,
+    reconnectionDelay: isMobile ? 3000 : 1000,
+    reconnectionDelayMax: isMobile ? 15000 : 8000,
+    maxReconnectionAttempts: isMobile ? 8 : 5,
+    // Configuraciones adicionales para móviles
+    upgrade: true,
+    rememberUpgrade: false,
+    // Mejorar estabilidad en redes móviles
+    pingTimeout: isMobile ? 60000 : 20000,
+    pingInterval: isMobile ? 25000 : 10000
   });
   
   return socket;

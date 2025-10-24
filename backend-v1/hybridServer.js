@@ -12,9 +12,15 @@ const io = new Server(server, {
 
 
   cors: {
-    origin:  ['https://proyecto-2-2.onrender.com/' ,'http://localhost:3000'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true
+    origin: [
+      'https://proyecto-2-2.onrender.com',
+      'http://localhost:3000',
+      'https://proyecto-2-2.onrender.com/',
+      'http://localhost:3000/'
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   }
 
 
@@ -28,7 +34,17 @@ const yaml = require('js-yaml');
 const swaggerDocument = yaml.load(fs.readFileSync(__dirname + '/swagger/swagger.yaml', 'utf8'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://proyecto-2-2.onrender.com',
+    'http://localhost:3000',
+    'https://proyecto-2-2.onrender.com/',
+    'http://localhost:3000/'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 app.use(express.json());
 
 app.use('/api/users', require('./routes/users'));
