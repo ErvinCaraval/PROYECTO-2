@@ -10,8 +10,9 @@ services:
     rewrites:
       - source: /*
         destination: /index.html
-    # Alternative configuration for SPA routing
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache
+    # Environment variables for production
+    envVars:
+      - key: VITE_API_URL
+        value: https://proyecto-2-olvb.onrender.com
+      - key: VITE_SOCKET_URL
+        value: https://proyecto-2-olvb.onrender.com
