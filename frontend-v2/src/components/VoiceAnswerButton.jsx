@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { useVoice } from '../VoiceContext';
 import Button from './ui/Button';
-import voiceService from '../services/voiceRecognitionService'; // Using our new AssemblyAI service
+import voiceRecognitionService from '../services/voiceRecognitionService'; // Using AssemblyAI service
 
 const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
   const { isVoiceModeEnabled } = useVoice();
@@ -12,7 +12,7 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const isHeldRef = useRef(false); // To prevent firing mouseup after touch end
 
-  if (!isVoiceModeEnabled || !voiceService.isAvailable()) {
+  if (!isVoiceModeEnabled || !voiceRecognitionService.isAvailable()) {
     return null;
   }
 
@@ -22,7 +22,7 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
     setError('');
     setSuccessMessage('');
     try {
-      await voiceService.start();
+      await voiceRecognitionService.start();
       setIsRecording(true);
     } catch (err) {
       console.error('Error starting recording:', err);
@@ -42,7 +42,7 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
 
     try {
       console.log('🎤 Deteniendo grabación y enviando audio...');
-      const result = await voiceService.stop();
+      const result = await voiceRecognitionService.stop();
       console.log('📝 Resultado recibido:', result);
       const { transcript, audioBase64, audioMimeType, assemblyAIResult } = result;
 
@@ -53,7 +53,7 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
       setSuccessMessage(`Transcrito: "${transcript}"`);
       console.log('🔍 Intentando matchear respuesta:', transcript);
       
-      const match = voiceService.matchAnswer(transcript, options);
+      const match = voiceRecognitionService.matchAnswer(transcript, options);
       console.log('✨ Resultado del match:', match);
 
       if (match.isValid) {
