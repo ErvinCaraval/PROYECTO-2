@@ -10,17 +10,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
-    // Asegurarse de que los assets se sirvan correctamente en producción
-    rollupOptions: {
-      output: {
-        manualChunks: undefined
-      }
-    }
+    sourcemap: true
   },
   define: {
     'process.env': {}
-  },
-  // Base URL para assets en producción
-  base: '/'
+  }
 })
