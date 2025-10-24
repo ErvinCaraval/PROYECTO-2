@@ -2,7 +2,7 @@ services:
   - type: web
     name: my-app
     env: static
-    staticPublishPath: dist
+    staticPublishPath: build
     routes:
       - src: /*
         dest: /index.html
