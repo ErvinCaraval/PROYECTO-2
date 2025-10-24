@@ -1,6 +1,6 @@
 ## Coverage
 
-Target: 95% statements, functions and lines; 90% branches. Configured in `vitest.config.js` using v8 provider. Reporters: text, html, lcov.
+Target: 95% statements, functions and lines; 90% branches.. Configured in `vitest.config.js` using v8 provider. Reporters: text, html, lcov.
 
 
 # Plan de Pruebas (QA) para brainblitz-frontend
