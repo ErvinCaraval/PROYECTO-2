@@ -206,18 +206,29 @@ export default function GameLobbyPage() {
   return (
     <div className="min-h-screen container px-4 py-8">
       {!connected && !connectionTimeout && (
+        <span className="sr-only" aria-live="polite">
+          {`Conectando a la sala ${timeRemaining > 0 ? `(${timeRemaining}s)` : ''}`}
+        </span>
+      )}
+      {!connected && !connectionTimeout && (
         <LoadingOverlay 
           text={`Conectando a la sala… ${timeRemaining > 0 ? `(${timeRemaining}s)` : ''}`}
           mobileOnly 
         />
       )}
       {connectionTimeout && (
-        <div className="fixed inset-0 z-[3500] flex items-center justify-center px-6 md:hidden">
+        <div 
+          className="fixed inset-0 z-[3500] flex items-center justify-center px-6 md:hidden"
+          role="dialog" 
+          aria-modal="true" 
+          aria-labelledby="lobby-conn-title" 
+          aria-describedby="lobby-conn-desc"
+        >
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div className="relative flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-bb-bg-primary/90 px-6 py-4 shadow-xl">
             <div className="text-center">
-              <div className="text-lg font-semibold mb-2">⚠️ Problema de conexión</div>
-              <p className="text-sm text-white/80 mb-4">
+              <div id="lobby-conn-title" className="text-lg font-semibold mb-2">⚠️ Problema de conexión</div>
+              <p id="lobby-conn-desc" className="text-sm text-white/80 mb-4">
                 No se pudo conectar a la sala. Esto puede deberse a problemas de red o el servidor.
               </p>
               <div className="flex gap-2">
@@ -225,6 +236,7 @@ export default function GameLobbyPage() {
                   variant="secondary" 
                   size="sm" 
                   onClick={retryConnection}
+                  title="Reintentar conexión"
                 >
                   🔄 Reintentar
                 </Button>
@@ -232,6 +244,7 @@ export default function GameLobbyPage() {
                   variant="outline" 
                   size="sm" 
                   onClick={() => navigate('/dashboard')}
+                  title="Volver al inicio"
                 >
                   🏠 Volver
                 </Button>
@@ -259,6 +272,7 @@ export default function GameLobbyPage() {
                 speak(parts.join(' '), { action: 'page_guide', questionId: 'lobby', force: true })
               }}
               aria-label="Explicar la página"
+              title="Explicar la página"
             >
               🛈 Explicar página
             </Button>
@@ -276,6 +290,8 @@ export default function GameLobbyPage() {
               aria-label="Copiar código"
               onFocus={() => announce('Copiar código de la partida')}
               onMouseEnter={() => announce('Copiar código de la partida')}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bb-primary"
+              title="Copiar código"
             >
               📋 Copiar
             </Button>
@@ -289,10 +305,10 @@ export default function GameLobbyPage() {
             <h3 className="text-2xl font-semibold">👥 Jugadores ({players.length})</h3>
           </CardHeader>
           <CardBody>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2" role="list" aria-label="Lista de jugadores">
               <AnimatePresence>
                 {(players && players.length > 0 ? players : connected ? [] : Array.from({ length: 4 }).map((_, i) => ({ uid: `sk-${i}`, _sk: true }))).map((player) => (
-                  <motion.div key={player.uid} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ type: 'spring', stiffness: 140, damping: 16 }} className={`flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition-transform duration-150 hover:-translate-y-0.5 ${player.uid === hostId ? 'ring-1 ring-bb-primary/50' : ''}`}>
+                  <motion.div key={player.uid} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ type: 'spring', stiffness: 140, damping: 16 }} className={`flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition-transform duration-150 hover:-translate-y-0.5 ${player.uid === hostId ? 'ring-1 ring-bb-primary/50' : ''}`} role="listitem" aria-label={player._sk ? 'Cargando jugador' : `${player.displayName || player.email}${player.uid === hostId ? ' (Anfitrión)' : ''}`}>
                     {player._sk ? (
                       <>
                         <Skeleton className="h-8 w-8 rounded-full" />
@@ -328,15 +344,18 @@ export default function GameLobbyPage() {
                   size="lg"
                   onFocus={() => announce('Iniciar la partida')}
                   onMouseEnter={() => announce('Iniciar la partida')}
+                  aria-disabled={players.length < 1}
+                  title={players.length < 1 ? 'Esperando jugadores' : 'Iniciar partida'}
+                  aria-describedby={players.length < 1 ? 'players-waiting-hint' : undefined}
                 >
                   🚀 Iniciar partida
                 </Button>
                 {players.length < 1 && (
-                  <p className="text-sm text-white/70">Esperando a que se unan jugadores...</p>
+                  <p id="players-waiting-hint" className="text-sm text-white/70">Esperando a que se unan jugadores...</p>
                 )}
               </>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3" aria-live="polite">
                 <span>⏳</span>
                 <p className="text-sm text-white/80">Esperando a que el anfitrión inicie la partida…</p>
               </div>
