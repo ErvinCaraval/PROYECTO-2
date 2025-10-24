@@ -2,7 +2,9 @@ services:
   - type: web
     name: my-app
     env: static
-    staticPublishPath: build
+  # Vite outputs to `dist` by default (configured in `vite.config.js`).
+  # Use `dist` so Render sirve la build correcta después de `npm run build`.
+  - staticPublishPath: dist
     routes:
       - src: /*
         dest: /index.html
