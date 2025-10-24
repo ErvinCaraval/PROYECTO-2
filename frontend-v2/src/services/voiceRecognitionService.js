@@ -81,7 +81,17 @@ class AssemblyAIVoiceRecognitionService {
 
             if (response.success) {
               console.log('AssemblyAI: Transcripción recibida:', response.text);
-              resolve({ transcript: response.text || '' });
+              resolve({ 
+                transcript: response.text || '',
+                audioBase64: base64Audio,
+                audioMimeType: 'audio/webm',
+                assemblyAIResult: {
+                  success: true,
+                  text: response.text,
+                  confidence: response.confidence,
+                  language: response.language
+                }
+              });
             } else {
               console.error('AssemblyAI: Error en la transcripción:', response.error);
               reject(new Error(response.error || 'Error en el servidor al transcribir el audio.'));
