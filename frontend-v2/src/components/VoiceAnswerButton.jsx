@@ -1,193 +1,121 @@
+
 import React, { useState, useRef } from 'react';
 import { useVoice } from '../VoiceContext';
 import Button from './ui/Button';
-import voiceRecognitionService from '../services/voiceRecognitionService';
-import voiceInteractionsService from '../services/voiceInteractionsService';
+import voiceService from '../services/voiceRecognitionService'; // Using our new AssemblyAI service
 
 const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
   const { isVoiceModeEnabled } = useVoice();
-  const [isListening, setIsListening] = useState(false);
-  const [recognitionError, setRecognitionError] = useState('');
-  const [lastRecognized, setLastRecognized] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
+  const isHeldRef = useRef(false); // To prevent firing mouseup after touch end
 
-  // Utilidad para convertir Blob a base64
-  const blobToBase64 = (blob) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  };
-
-  const startListening = async () => {
-    if (!isVoiceModeEnabled || disabled) return;
-
-    setIsListening(true);
-    setRecognitionError('');
-    setLastRecognized('');
-    setSuccessMessage('');
-
-    // --- INICIO GRABACIÓN AUDIO ---
-    let stream = null;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunksRef.current = [];
-      mediaRecorderRef.current = new window.MediaRecorder(stream);
-      mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-      mediaRecorderRef.current.start();
-    } catch (err) {
-      setRecognitionError('No se pudo acceder al micrófono.');
-      setIsListening(false);
-      return;
-    }
-    // --- INICIO RECONOCIMIENTO TEXTO ---
-    try {
-      const result = await voiceRecognitionService.recognizeAnswer(options);
-
-      // Parar grabación
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        await new Promise((resolve) => {
-          mediaRecorderRef.current.onstop = resolve;
-          mediaRecorderRef.current.stop();
-        });
-      }
-      stream.getTracks().forEach((t) => t.stop());
-
-      // Unir audio y convertir a base64 (intentar 'audio/wav' para AssemblyAI)
-      let audioBlob;
-      try {
-        audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        // Si el navegador no soporta 'audio/wav', fallback a 'audio/webm'
-        if (audioBlob.size === 0) {
-          audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        }
-      } catch (e) {
-        audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-      }
-      const audioBase64 = await blobToBase64(audioBlob);
-      const audioMimeType = audioBlob.type || 'audio/webm';
-
-      setLastRecognized(result.transcript);
-
-      // Enviar el audio al backend para que AssemblyAI determine la respuesta final
-      const assemblyResult = await voiceInteractionsService.processAudioWithAssemblyAI(audioBase64, options, audioMimeType);
-
-      if (assemblyResult && assemblyResult.success && assemblyResult.validation && assemblyResult.validation.isValid && typeof assemblyResult.validation.answerIndex === 'number') {
-        const idx = assemblyResult.validation.answerIndex;
-        setSuccessMessage('✅ Respuesta reconocida (AssemblyAI): ' + options[idx]);
-        onAnswer(idx, audioBase64, assemblyResult, audioMimeType);
-      } else if (result.isValid && result.matchedIndex !== -1) {
-        // Fallback: si AssemblyAI falla, usar coincidencia local
-        setSuccessMessage('✅ Respuesta reconocida: ' + options[result.matchedIndex]);
-        onAnswer(result.matchedIndex, audioBase64, assemblyResult, audioMimeType);
-      } else {
-        const suggestions = assemblyResult && assemblyResult.suggestions ? ` Sugerencias: ${assemblyResult.suggestions.join(', ')}` : '';
-        setRecognitionError('No pude entender tu respuesta.' + suggestions);
-      }
-    } catch (error) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      if (stream) stream.getTracks().forEach((t) => t.stop());
-      console.error('Voice recognition error:', error);
-      setRecognitionError(error?.message || 'Error en el reconocimiento de voz. Intenta de nuevo.');
-    } finally {
-      setIsListening(false);
-    }
-  };
-
-  const findMatchingOption = (spokenText, options) => {
-    const text = spokenText.toLowerCase().trim();
-    
-    // Try to match with option text
-    for (let i = 0; i < options.length; i++) {
-      const optionText = options[i].toLowerCase();
-      
-      // Direct match
-      if (text.includes(optionText) || optionText.includes(text)) {
-        return i;
-      }
-      
-      // Match with option letters (A, B, C, D)
-      const optionLetter = String.fromCharCode(65 + i); // A, B, C, D
-      if (text.includes(optionLetter.toLowerCase()) || text.includes(optionLetter)) {
-        return i;
-      }
-      
-      // Match with numbers (1, 2, 3, 4)
-      if (text.includes((i + 1).toString())) {
-        return i;
-      }
-    }
-    
-    // Try to match with common words
-    const commonMatches = {
-      'primera': 0,
-      'segunda': 1,
-      'tercera': 2,
-      'cuarta': 3,
-      'uno': 0,
-      'dos': 1,
-      'tres': 2,
-      'cuatro': 3
-    };
-    
-    for (const [word, index] of Object.entries(commonMatches)) {
-      if (text.includes(word) && index < options.length) {
-        return index;
-      }
-    }
-    
-    return -1;
-  };
-
-  const stopListening = () => {
-    voiceRecognitionService.stopRecognition();
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    setIsListening(false);
-  };
-
-  if (!isVoiceModeEnabled) {
+  if (!isVoiceModeEnabled || !voiceService.isAvailable()) {
     return null;
   }
 
+  const handleRecordingStart = async () => {
+    if (disabled || isRecording || isProcessing) return;
+    isHeldRef.current = true;
+    setError('');
+    setSuccessMessage('');
+    try {
+      await voiceService.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Error starting recording:', err);
+      setError(err.message || 'No se pudo iniciar la grabación.');
+      isHeldRef.current = false;
+    }
+  };
+
+  const handleRecordingStop = async () => {
+    if (!isHeldRef.current) return; // Prevent accidental triggers
+    isHeldRef.current = false;
+    if (!isRecording) return;
+
+    setIsRecording(false);
+    setIsProcessing(true);
+    setError('');
+
+    try {
+      console.log('🎤 Deteniendo grabación y enviando audio...');
+      const result = await voiceService.stop();
+      console.log('📝 Resultado recibido:', result);
+      const { transcript } = result;
+
+      if (!transcript) {
+        throw new Error('No se detectó ninguna voz.');
+      }
+      
+      setSuccessMessage(`Transcrito: "${transcript}"`);
+      console.log('🔍 Intentando matchear respuesta:', transcript);
+      
+      const match = voiceService.matchAnswer(transcript, options);
+      console.log('✨ Resultado del match:', match);
+
+      if (match.isValid) {
+        console.log('✅ Respuesta válida, llamando onAnswer con índice:', match.index);
+        onAnswer(match.index);
+        setSuccessMessage(`✅ Respuesta reconocida: ${options[match.index]}`);
+      } else {
+        console.log('❌ No se pudo matchear la respuesta');
+        setError('No pude entender tu respuesta. Inténtalo de nuevo.');
+      }
+
+    } catch (err) {
+      console.error('Error stopping recording or processing:', err);
+      setError(err.message || 'Error al procesar el audio.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  // Combine mouse and touch events
+  const buttonEventHandlers = {
+    onMouseDown: handleRecordingStart,
+    onMouseUp: handleRecordingStop,
+    onMouseLeave: handleRecordingStop, // Stop if mouse leaves button area while pressed
+    onTouchStart: handleRecordingStart,
+    onTouchEnd: handleRecordingStop,
+  };
+
+  let buttonText = "🎤 Mantén presionado para hablar";
+  let buttonVariant = "primary";
+  let isPulsing = false;
+
+  if (isRecording) {
+    buttonText = "🎤 Escuchando...";
+    buttonVariant = "secondary";
+    isPulsing = true;
+  } else if (isProcessing) {
+    buttonText = "🔄 Procesando...";
+    buttonVariant = "secondary";
+    isPulsing = true;
+  }
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 w-full">
       <Button
-        onClick={isListening ? stopListening : startListening}
-        disabled={disabled}
-        variant={isListening ? "secondary" : "primary"}
-        className={`w-full ${isListening ? 'animate-pulse' : ''}`}
-      >
-        {isListening ? (
-          <>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-              🎤 Escuchando...
-            </div>
-          </>
-        ) : (
-          <>
-            🎤 Responder con Voz
-          </>
-        )}
+        {...buttonEventHandlers}
+        disabled={disabled || !isVoiceModeEnabled}
+        variant={buttonVariant}
+        className={`w-full touch-none ${isPulsing ? 'animate-pulse' : ''}`}>
+        <div className="flex items-center justify-center gap-2">
+          {isRecording && <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>}
+          {buttonText}
+        </div>
       </Button>
       {successMessage && (
         <div className="text-sm text-green-500 bg-green-500/10 border border-green-500/30 rounded p-2 text-center font-semibold animate-fade-in">
           {successMessage}
         </div>
       )}
-      {recognitionError && (
+      {error && (
         <div className="text-sm text-red-400 bg-red-500/20 p-2 rounded text-center font-semibold">
-          {recognitionError}
+          {error}
         </div>
       )}
     </div>

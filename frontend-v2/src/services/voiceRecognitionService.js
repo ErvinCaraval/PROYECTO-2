@@ -1,188 +1,167 @@
-// Voice Recognition Service - Speech-to-Text functionality
-class VoiceRecognitionService {
+
+import { fetchWithRetry } from './api';
+
+class AssemblyAIVoiceRecognitionService {
   constructor() {
-    this.isWebSpeechRecognitionAvailable = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-    this.recognition = null;
-    this.isListening = false;
-    this.settings = {
-      language: 'es-ES',
-      continuous: false,
-      interimResults: false,
-      maxAlternatives: 1
-    };
-    
-    // Lazy initialization to avoid constructing outside of a user gesture
-    // Some browsers are picky about initialization timing
+    this.isRecording = false;
+    this.mediaRecorder = null;
+    this.audioChunks = [];
+    this.apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    this.stream = null;
   }
 
-  initializeRecognition() {
-    if (!this.isWebSpeechRecognitionAvailable) {
-      console.warn('Web Speech Recognition API not available');
+  isAvailable() {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+  }
+
+  isListening() {
+    return this.isRecording;
+  }
+
+  async start() {
+    if (!this.isAvailable()) {
+      throw new Error('La grabación de audio no está soportada en este navegador.');
+    }
+
+    if (this.isRecording) {
+      console.warn('AssemblyAI: La grabación ya está en progreso.');
       return;
     }
 
     try {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      this.recognition = new SpeechRecognition();
-      
-      // Configure recognition
-      this.recognition.lang = this.settings.language;
-      this.recognition.continuous = this.settings.continuous;
-      this.recognition.interimResults = this.settings.interimResults;
-      this.recognition.maxAlternatives = this.settings.maxAlternatives;
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaRecorder = new MediaRecorder(this.stream);
+      this.audioChunks = [];
+
+      this.mediaRecorder.ondataavailable = (event) => {
+        this.audioChunks.push(event.data);
+      };
+
+      this.mediaRecorder.onstart = () => {
+        this.isRecording = true;
+        console.log('AssemblyAI: Grabación iniciada.');
+      };
+
+      this.mediaRecorder.start();
     } catch (error) {
-      console.error('Failed to initialize SpeechRecognition:', error);
-      this.recognition = null;
+      console.error('AssemblyAI: Error al iniciar la grabación:', error);
+      throw new Error('No se pudo acceder al micrófono. Por favor, verifica los permisos.');
     }
   }
 
-  ensureInitialized() {
-    if (!this.recognition) {
-      this.initializeRecognition();
-    }
-    return this.recognition != null;
-  }
-
-  async recognizeAnswer(questionOptions = []) {
-    if (!this.isWebSpeechRecognitionAvailable) {
-      throw new Error('Reconocimiento de voz no disponible en este navegador');
-    }
-
-    // Must be secure context for mic permissions on most browsers
-    const isSecure = window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (!isSecure) {
-      throw new Error('Se requiere sitio seguro (https) para usar el micrófono');
-    }
-
-    if (this.isListening) {
-      throw new Error('Recognition already in progress');
-    }
-
-    // Lazily (re)create recognizer
-    if (!this.ensureInitialized()) {
-      throw new Error('No se pudo inicializar el reconocimiento de voz');
-    }
-
+  stop() {
     return new Promise((resolve, reject) => {
-      this.isListening = true;
+      if (!this.mediaRecorder || !this.isRecording) {
+        return reject('No hay ninguna grabación en progreso.');
+      }
 
-      this.recognition.onstart = () => {
-        console.log('Voice recognition started');
-      };
+      this.mediaRecorder.onstop = async () => {
+        this.isRecording = false;
+        console.log('AssemblyAI: Grabación detenida.');
 
-      this.recognition.onresult = (event) => {
-        try {
-          const transcript = event.results[0][0].transcript.toLowerCase().trim();
-          const confidence = event.results[0][0].confidence;
-          console.log('Recognized:', transcript, 'Confidence:', confidence);
+        const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
 
-          // Palabras clave para detener
-          const stopWords = ['parar', 'detener', 'cancelar', 'stop', 'terminar'];
-          if (stopWords.some(word => transcript.includes(word))) {
-            this.stopRecognition();
-            resolve({ transcript, confidence, matchedOption: null, matchedIndex: -1, isValid: false, stopped: true });
-            return;
-          }
-
-          // Match the transcript with question options
-          const matchedResult = this.matchAnswer(transcript, questionOptions);
-
-          // Si solo hay una opción y la reconoce, selecciona automáticamente
-          if (questionOptions.length === 1 && matchedResult.isValid) {
-            this.stopRecognition();
-            resolve({ transcript, confidence, matchedOption: matchedResult.option, matchedIndex: matchedResult.index, isValid: true, autoSelected: true });
-            return;
-          }
-
-          // Si reconoce una respuesta válida, detener reconocimiento
-          if (matchedResult.isValid) {
-            this.stopRecognition();
-            resolve({ transcript, confidence, matchedOption: matchedResult.option, matchedIndex: matchedResult.index, isValid: true });
-            return;
-          }
-
-          resolve({ transcript, confidence, matchedOption: matchedResult.option, matchedIndex: matchedResult.index, isValid: false });
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      this.recognition.onerror = (event) => {
-        this.isListening = false;
-        console.error('Recognition error:', event.error);
-        
-        let errorMessage = 'Error en el reconocimiento de voz';
-        switch (event.error) {
-          case 'no-speech':
-            errorMessage = 'No se detectó voz. Intenta hablar más fuerte.';
-            break;
-          case 'audio-capture':
-            errorMessage = 'No se pudo acceder al micrófono. Verifica los permisos.';
-            break;
-          case 'not-allowed':
-            errorMessage = 'Permisos de micrófono denegados. Permite el acceso al micrófono.';
-            break;
-          case 'network':
-            errorMessage = 'Error de red. Verifica tu conexión a internet.';
-            break;
-          case 'aborted':
-            errorMessage = 'Reconocimiento cancelado.';
-            break;
-          default:
-            errorMessage = `Error de reconocimiento: ${event.error}`;
-        }
-        
-        reject(new Error(errorMessage));
-      };
-
-      this.recognition.onend = () => {
-        this.isListening = false;
-        console.log('Voice recognition ended');
-      };
-
-      // Start recognition
-      try {
-        // Prompt for mic permission proactively when possible
-        if (navigator?.mediaDevices?.getUserMedia) {
-          navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-              stream.getTracks().forEach(t => t.stop());
-              this.recognition.start();
-            })
-            .catch(() => {
-              this.isListening = false;
-              reject(new Error('Permiso de micrófono denegado o no disponible'));
+        reader.onloadend = async () => {
+          const base64Audio = reader.result.split(',')[1];
+          
+          try {
+            console.log('AssemblyAI: Enviando audio al backend para transcripción (voice-interactions)...');
+            // Use the voice-interactions public endpoint which proxies to AssemblyAI.
+            // This avoids requiring an auth token here (the assemblyai route is authenticated).
+            console.log('🚀 Enviando petición al backend...');
+            const response = await fetchWithRetry(`${this.apiBase}/api/voice-interactions/process-audio`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ audioBase64: base64Audio, mimeType: 'audio/webm' })
             });
-        } else {
-          this.recognition.start();
-        }
-      } catch (error) {
-        this.isListening = false;
-        reject(new Error('No se pudo iniciar el reconocimiento de voz'));
+            console.log('📦 Respuesta completa del backend:', response);
+
+            if (response.success) {
+              console.log('AssemblyAI: Transcripción recibida:', response.text);
+              resolve({ transcript: response.text || '' });
+            } else {
+              console.error('AssemblyAI: Error en la transcripción:', response.error);
+              reject(new Error(response.error || 'Error en el servidor al transcribir el audio.'));
+            }
+          } catch (error) {
+            console.error('AssemblyAI: Error al enviar el audio al backend:', error);
+            reject(new Error('No se pudo conectar con el servidor para la transcripción.'));
+          }
+        };
+
+        reader.onerror = (error) => {
+            console.error('AssemblyAI: Error al convertir el audio a Base64:', error);
+            reject(new Error('Hubo un problema al procesar el audio grabado.'));
+        };
+
+        reader.readAsDataURL(audioBlob);
+      };
+      
+      this.mediaRecorder.stop();
+      if (this.stream) {
+        this.stream.getTracks().forEach(track => track.stop());
+        this.stream = null;
       }
     });
   }
 
+  // This method is kept for compatibility with the old interface, but the flow will need to be adapted
+  // in the UI components (e.g., press and hold button to record).
+  async recognizeAnswer(questionOptions = []) {
+    if (this.isListening()) {
+      return this.stop();
+    } else {
+      await this.start();
+      // Indicate that listening has started. The UI will need to call stop() later.
+      return { isListening: true };
+    }
+  }
+
+  // Matcher function moved here from the old service to keep it consistent.
   matchAnswer(transcript, questionOptions) {
     if (!questionOptions || questionOptions.length === 0) {
       return { option: transcript, index: -1, isValid: false };
     }
 
-    // Direct letter matches: "a", "b", "c", "d"
-    const letterMatch = transcript.match(/^([a-d])$/);
-    if (letterMatch) {
-      const letter = letterMatch[1].toUpperCase();
-      const index = letter.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3
+    // Normalize and clean transcript: lowercase, trim, remove common punctuation
+    let cleanTranscript = transcript.toLowerCase().trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+    // Remove accents to more easily match words like "opción" -> "opcion"
+    try {
+      cleanTranscript = cleanTranscript.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    } catch (e) {
+      // normalize may not be supported in some very old environments; ignore if it fails
+    }
+    
+    // Remove common speech-to-text artifacts
+    cleanTranscript = cleanTranscript
+      .replace(/\bah\b/gi, 'a')    // "ah" -> "a"
+      .replace(/\beh\b/gi, 'e')    // "eh" -> "e"
+      .replace(/\bbe\b/gi, 'b')    // "be" -> "b"
+      .replace(/\bce\b/gi, 'c')    // "ce" -> "c"
+      .replace(/\bde\b/gi, 'd');   // "de" -> "d"
+
+    console.log('🧹 Transcript limpio para matching:', cleanTranscript);
+
+    // 1) Detect single-letter answers appearing anywhere ("a", "b", etc.) or after the word "opcion/opción"
+    // More flexible pattern that catches single letters even if they're part of small words
+    const letterAnywhere = cleanTranscript.match(/(?:\bopcion\b\s*)?([a-d])(?:\b|$)/);
+    if (letterAnywhere) {
+      const letter = letterAnywhere[1].toUpperCase();
+      const index = letter.charCodeAt(0) - 65;
       if (index >= 0 && index < questionOptions.length) {
+        console.log('📌 Detectada letra de opción:', letter, 'índice:', index);
         return {
           option: questionOptions[index],
-          index: index,
+          index,
           isValid: true
         };
       }
     }
 
-    // Position matches: "primera", "segunda", "tercera", "cuarta"
+    // 2) Position matches: "primera", "segunda", "tercera", "cuarta" and numeric words
     const positionPatterns = [
       /primera|primero|uno|1/,
       /segunda|segundo|dos|2/,
@@ -191,7 +170,7 @@ class VoiceRecognitionService {
     ];
 
     for (let i = 0; i < positionPatterns.length && i < questionOptions.length; i++) {
-      if (positionPatterns[i].test(transcript)) {
+      if (positionPatterns[i].test(cleanTranscript)) {
         return {
           option: questionOptions[i],
           index: i,
@@ -200,17 +179,11 @@ class VoiceRecognitionService {
       }
     }
 
-    // Partial text matches
+    // 3) Partial text matches (if the transcript contains a chunk of the option text)
     for (let i = 0; i < questionOptions.length; i++) {
-      const option = questionOptions[i].toLowerCase();
-      const words = option.split(' ');
-      
-      // Check if transcript contains key words from the option
-      const matchingWords = words.filter(word => 
-        word.length > 3 && transcript.includes(word)
-      );
-      
-      if (matchingWords.length >= Math.min(2, words.length / 2)) {
+      const optionText = questionOptions[i].toLowerCase();
+      const normalizedOption = optionText.normalize ? optionText.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : optionText;
+      if (cleanTranscript.includes(normalizedOption)) {
         return {
           option: questionOptions[i],
           index: i,
@@ -226,74 +199,7 @@ class VoiceRecognitionService {
       isValid: false
     };
   }
-
-  stopRecognition() {
-    if (this.recognition && this.isListening) {
-      this.recognition.stop();
-      this.isListening = false;
-    }
-  }
-
-  updateSettings(newSettings) {
-    this.settings = { ...this.settings, ...newSettings };
-    
-    if (this.recognition) {
-      this.recognition.lang = this.settings.language;
-      this.recognition.continuous = this.settings.continuous;
-      this.recognition.interimResults = this.settings.interimResults;
-      this.recognition.maxAlternatives = this.settings.maxAlternatives;
-    }
-  }
-
-  getSettings() {
-    return { ...this.settings };
-  }
-
-  isAvailable() {
-    // Must have API and be in a secure context for mic
-    const isSecure = (typeof window !== 'undefined') && (window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    return this.isWebSpeechRecognitionAvailable && isSecure;
-  }
-
-  getStatus() {
-    return {
-      isAvailable: this.isWebSpeechRecognitionAvailable,
-      isListening: this.isListening,
-      language: this.settings.language,
-      settings: this.settings
-    };
-  }
-
-  // Helper method to validate microphone permissions
-  async checkMicrophonePermission() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      return true;
-    } catch (error) {
-      console.error('Microphone permission error:', error);
-      return false;
-    }
-  }
-
-  // Helper method to get available languages
-  getAvailableLanguages() {
-    // This is a simplified list - in a real implementation, you might want to
-    // get this from the browser's supported languages
-    return [
-      { code: 'es-ES', name: 'Español (España)' },
-      { code: 'es-MX', name: 'Español (México)' },
-      { code: 'en-US', name: 'English (US)' },
-      { code: 'en-GB', name: 'English (UK)' },
-      { code: 'fr-FR', name: 'Français' },
-      { code: 'de-DE', name: 'Deutsch' },
-      { code: 'it-IT', name: 'Italiano' },
-      { code: 'pt-BR', name: 'Português (Brasil)' }
-    ];
-  }
 }
 
-// Create singleton instance
-const voiceRecognitionService = new VoiceRecognitionService();
-
-export default voiceRecognitionService;
+const assemblyAIVoiceService = new AssemblyAIVoiceRecognitionService();
+export default assemblyAIVoiceService;
