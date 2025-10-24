@@ -108,7 +108,7 @@ export default function DashboardPage() {
       
       // Temporizador de seguridad - más largo para dispositivos móviles
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const timeoutDuration = isMobile ? 20000 : 10000; // 20s para móviles, 10s para desktop
+      const timeoutDuration = isMobile ? 30000 : 15000; // 30s para móviles, 15s para desktop
       
       timeoutId = setTimeout(() => {
         setLoading(false);
@@ -155,8 +155,20 @@ export default function DashboardPage() {
     } catch (err) {
       clearTimeout(timeoutId);
       setLoading(false);
-      setErrorMessage('No se pudo conectar con el servidor. Intenta de nuevo.');
-      setTimeout(() => setErrorMessage(''), 5000);
+      console.error('Error creating game:', err);
+      
+      // Mensajes de error más específicos para móviles
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      let errorMessage = 'No se pudo conectar con el servidor. ';
+      
+      if (isMobile) {
+        errorMessage += 'En dispositivos móviles, verifica que tengas una conexión estable y que no estés en modo ahorro de datos.';
+      } else {
+        errorMessage += 'Intenta de nuevo.';
+      }
+      
+      setErrorMessage(errorMessage);
+      setTimeout(() => setErrorMessage(''), 8000);
     }
   };
 
