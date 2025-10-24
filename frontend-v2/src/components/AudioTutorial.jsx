@@ -255,11 +255,11 @@ export default function AudioTutorial({ onComplete, onSkip }) {
   if (!isVoiceModeEnabled) {
     return (
       <Card>
-        <CardBody>
+        <CardBody className="p-6">
           <Alert intent="info">
-            <div className="space-y-3">
-              <p>Activa el modo de voz para acceder al tutorial de accesibilidad.</p>
-              <Button onClick={() => window.location.reload()}>
+            <div className="space-y-4 p-4">
+              <p className="text-base leading-relaxed">Activa el modo de voz para acceder al tutorial de accesibilidad.</p>
+              <Button onClick={() => window.location.reload()} className="mt-2">
                 Activar Modo de Voz
               </Button>
             </div>

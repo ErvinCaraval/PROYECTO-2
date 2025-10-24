@@ -69,26 +69,26 @@ function ProfilePage() {
       <div className="mx-auto max-w-4xl space-y-6">
         {/* User Profile Header */}
         <Card>
-          <CardHeader className="flex items-center gap-4">
+          <CardHeader className="flex items-center gap-6 p-6">
             <img
               src={`https://api.dicebear.com/7.x/identicon/svg?seed=${user?.uid || 'user'}`}
               alt="avatar"
-              className="bg-white/10 rounded-full w-16 h-16"
+              className="bg-white/10 rounded-full w-16 h-16 flex-shrink-0"
               loading="lazy"
               decoding="async"
             />
-            <div className="flex-1">
-              <h2 className="font-bold text-2xl">{user?.displayName || user?.email}</h2>
-              <div className="flex items-center gap-4 mt-2">
+            <div className="flex-1 min-w-0">
+              <h2 className="font-bold text-2xl mb-3">{user?.displayName || user?.email}</h2>
+              <div className="flex items-center gap-4 flex-wrap">
                 <span className="text-white/70 text-sm">UID: ******</span>
                 {userHasVisualDifficulty && (
-                  <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">
+                  <span className="px-3 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">
                     ♿ Accesibilidad habilitada
                   </span>
                 )}
                 <button
                   onClick={toggleVoiceMode}
-                  className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 ${isVoiceModeEnabled ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400 hover:bg-green-500/20 hover:text-green-400'}`}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 ${isVoiceModeEnabled ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400 hover:bg-green-500/20 hover:text-green-400'}`}
                   aria-pressed={isVoiceModeEnabled}
                   type="button"
                 >
