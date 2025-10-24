@@ -5,6 +5,7 @@ services:
     # Vite outputs to `dist` by default (configured in `vite.config.js`).
     # Use `dist` so Render sirve la build correcta después de `npm run build`.
     staticPublishPath: frontend-v2/dist
+    # SPA routing configuration - all routes should serve index.html
     rewrites:
       - source: /*
         destination: /index.html
