@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { motion } from 'framer-motion';
 import { useVoice } from '../VoiceContext';
@@ -18,6 +18,7 @@ export default function Question({ text, question, options, onSelect, selected, 
   const [autoReadError, setAutoReadError] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [recognitionError, setRecognitionError] = useState('');
+  const readOptionTimeoutRef = useRef(null);
 
 
   // Reiniciar hasReadQuestion cada vez que cambie la pregunta o el índice
@@ -59,9 +60,29 @@ export default function Question({ text, question, options, onSelect, selected, 
     if (!isVoiceModeEnabled || !options[index]) return;
     
     try {
+      // Stop any previous speaking to avoid overlap, then speak this option
+      stopSpeaking();
       await speak(`Opción ${String.fromCharCode(65 + index)}: ${options[index]}`);
     } catch (error) {
       console.error('Error reading option:', error);
+    }
+  };
+
+  const scheduleReadOption = (index) => {
+    // Debounce quick focus/mouse movements to avoid triggering many speaks
+    if (readOptionTimeoutRef.current) {
+      clearTimeout(readOptionTimeoutRef.current);
+    }
+    readOptionTimeoutRef.current = setTimeout(() => {
+      readOption(index);
+      readOptionTimeoutRef.current = null;
+    }, 120);
+  };
+
+  const cancelScheduledRead = () => {
+    if (readOptionTimeoutRef.current) {
+      clearTimeout(readOptionTimeoutRef.current);
+      readOptionTimeoutRef.current = null;
     }
   };
 
@@ -233,9 +254,16 @@ export default function Question({ text, question, options, onSelect, selected, 
             className={`col-span-1 text-left w-full rounded-xl border px-4 py-3 text-sm md:text-base transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bb-primary break-words ${getOptionClasses(idx)}`}
             aria-pressed={selected === idx}
             onFocus={() => {
-              if (isVoiceModeEnabled && !isSpeaking) {
-                readOption(idx);
+              if (isVoiceModeEnabled) {
+                scheduleReadOption(idx);
               }
+            }}
+            onMouseEnter={() => {
+              if (isVoiceModeEnabled) scheduleReadOption(idx);
+            }}
+            onMouseLeave={() => {
+              // Cancel any scheduled read when leaving quickly
+              cancelScheduledRead();
             }}
           >
             <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-md bg-white/10 text-sm font-semibold">{String.fromCharCode(65 + idx)}</span>

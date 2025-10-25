@@ -7,6 +7,20 @@ const { Server } = require('socket.io');
 const { db, auth } = require('./firebase');
 
 const app = express();
+
+// Configure CORS for Express
+app.use(cors({
+  origin: [
+    'https://proyecto-2-2.onrender.com',
+    'http://localhost:3000',
+    'https://proyecto-2-2.onrender.com/',
+    'http://localhost:3000/'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
 const server = http.createServer(app);
 const io = new Server(server, {
 
@@ -34,6 +48,9 @@ const yaml = require('js-yaml');
 const swaggerDocument = yaml.load(fs.readFileSync(__dirname + '/swagger/swagger.yaml', 'utf8'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 app.use(cors({
   origin: [
     'https://proyecto-2-2.onrender.com',
@@ -45,7 +62,6 @@ app.use(cors({
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-app.use(express.json());
 
 app.use('/api/users', require('./routes/users'));
 app.use('/api/games', require('./routes/games'));
@@ -56,6 +72,7 @@ app.use('/api/voice-interactions', require('./routes/voiceInteractions'));
 app.use('/api/voice-responses', require('./routes/voiceResponses'));
 
 app.use('/api/assemblyai', require('./routes/assemblyAI'));
+app.use('/api/azure', require('./routes/azureTTS'));
 
 io.on('connection', (socket) => {
   // Listener para enviar la primera pregunta al socket que lo solicita

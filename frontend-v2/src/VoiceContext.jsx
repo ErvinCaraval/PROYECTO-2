@@ -73,6 +73,20 @@ export function VoiceProvider({ children }) {
     const timer = voiceInteractionsService.createTimer();
     
     try {
+      // If we have an authenticated user, pass the token so backend endpoints requiring auth work
+      if (user && user.getIdToken) {
+        try {
+          const token = await user.getIdToken();
+          options = { ...options, token };
+        } catch (err) {
+          console.warn('Failed to obtain id token for TTS request', err);
+        }
+      }
+
+      // If not forced, stop any current playback before speaking to avoid queued/overlapping messages
+      if (!options.force) {
+        try { await voiceService.stop(); } catch (e) { /* ignore */ }
+      }
       await voiceService.speak(text, options);
       
       // Log the interaction if user is available and not forced silent
@@ -121,6 +135,10 @@ export function VoiceProvider({ children }) {
     return voiceService.getSettings();
   };
 
+  const getAvailableVoices = () => {
+    return voiceService.getAvailableVoices();
+  };
+
   const getVoiceStatus = () => {
     return voiceService.getStatus();
   };
@@ -141,8 +159,9 @@ export function VoiceProvider({ children }) {
     stopSpeaking,
     pauseSpeaking,
     resumeSpeaking,
-    updateVoiceSettings,
+    updateVoiceSettings: updateVoiceSettings,
     getVoiceSettings,
+    getAvailableVoices,
     getVoiceStatus,
     
     // Service availability
