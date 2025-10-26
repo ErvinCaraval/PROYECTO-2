@@ -14,10 +14,22 @@ class VoiceService {
       role: 'default'
     };
     
-    // Configurar la URL base del backend
-    this.baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://proyecto-2-2.onrender.com'
-      : 'http://localhost:5000';
+    // Configurar la URL base del backend.
+    // Preferir la variable de entorno de Vite (VITE_API_URL). Mantener un
+    // fallback para entornos de build/localhost.
+    let viteApiUrl = null;
+    try {
+      // import.meta.env está disponible con Vite en tiempo de build/runtime
+      viteApiUrl = (typeof import.meta !== 'undefined' && import.meta.env)
+        ? import.meta.env.VITE_API_URL
+        : null;
+    } catch (e) {
+      viteApiUrl = null;
+    }
+
+    this.baseUrl = viteApiUrl || (process.env && process.env.NODE_ENV === 'production'
+      ? 'https://proyecto-2-olvb.onrender.com'
+      : 'http://localhost:5000');
     
     // Load settings from localStorage
     this.loadSettings();
