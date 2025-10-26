@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
@@ -47,7 +46,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Rutas API
 app.use('/api/users', require('./routes/users'));
+app.use('/api/tts', require('./routes/tts'));
+
+// Ruta de prueba para verificar que el servidor está funcionando
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', services: ['tts', 'users'] });
+});
 app.use('/api/games', require('./routes/games'));
 app.use('/api/questions', require('./routes/questions'));
 app.use('/api/ai', require('./routes/ai'));
