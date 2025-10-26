@@ -65,10 +65,30 @@ class TTSController {
     async getVoices(req, res) {
         try {
             const voices = await azureTTSService.getAvailableVoices();
+            
+            if (!Array.isArray(voices)) {
+                throw new Error('Invalid voices data received');
+            }
+
+            // Agrupar voces por idioma
+            const voicesByLocale = voices.reduce((acc, voice) => {
+                if (!acc[voice.locale]) {
+                    acc[voice.locale] = [];
+                }
+                acc[voice.locale].push(voice);
+                return acc;
+            }, {});
+
+            // Enviar respuesta
             res.json(voices);
+
         } catch (error) {
             console.error('Error getting voices:', error);
-            res.status(500).json({ error: 'Failed to get available voices' });
+            res.status(500).json({ 
+                error: 'Failed to get available voices',
+                details: error.message,
+                timestamp: new Date().toISOString()
+            });
         }
     }
 }

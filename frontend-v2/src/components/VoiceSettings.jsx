@@ -4,6 +4,24 @@ import Button from './ui/Button';
 import Input from './ui/Input';
 import Alert from './ui/Alert';
 import { Card, CardBody, CardHeader } from './ui/Card';
+import voiceService from '../services/voiceService';
+
+// Función para obtener nombres de idiomas amigables
+const getLangName = (locale) => {
+  const langNames = {
+    'es-ES': 'Español (España)',
+    'es-MX': 'Español (México)',
+    'es-AR': 'Español (Argentina)',
+    'es-CO': 'Español (Colombia)',
+    'en-US': 'Inglés (Estados Unidos)',
+    'en-GB': 'Inglés (Reino Unido)',
+    'pt-BR': 'Portugués (Brasil)',
+    'fr-FR': 'Francés',
+    'de-DE': 'Alemán',
+    'it-IT': 'Italiano'
+  };
+  return langNames[locale] || locale;
+};
 
 export default function VoiceSettings() {
   const { 
@@ -19,39 +37,106 @@ export default function VoiceSettings() {
     rate: 1.0,
     volume: 1.0,
     pitch: 1.0,
-    voice: null,
-    language: 'es-ES'
+    voiceName: null,
+    language: 'es-ES',
+    style: 'general', // Estilo de habla para Azure
+    role: 'default' // Rol de la voz para Azure
   });
   
   const [availableVoices, setAvailableVoices] = useState([]);
   const [status, setStatus] = useState({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [languages, setLanguages] = useState([]);
 
   useEffect(() => {
-    loadSettings();
-    loadStatus();
-    
-    // Load voices when they become available
-    const loadVoices = () => {
-      if (typeof speechSynthesis !== 'undefined' && speechSynthesis.getVoices) {
-        const voices = speechSynthesis.getVoices();
-        setAvailableVoices(voices || []);
+    const initializeVoiceSettings = async () => {
+      setLoading(true);
+      setMessage('');
+      
+      try {
+        // Load saved settings first
+        loadSettings();
+        
+        // Get current status including voice availability
+        let status = getVoiceStatus();
+        setStatus(status);
+
+        // Attempt to get available voices
+        let voicesArray = [];
+        
+        // Try to get voices from the service first
+        try {
+          await voiceService.loadVoices();
+          voicesArray = voiceService.getAvailableVoices();
+          
+          // Refresh status after loading voices
+          status = getVoiceStatus();
+          setStatus(status);
+        } catch (err) {
+          console.error('Error loading voices from service:', err);
+          setMessage('Error al cargar las voces desde el servicio');
+        }
+
+        // If we have voices, update the component state
+        if (Array.isArray(voicesArray) && voicesArray.length > 0) {
+          console.log('Available voices:', voicesArray);
+          setAvailableVoices(voicesArray);
+
+          // Extract and sort unique languages
+          const uniqueLanguages = [...new Set(voicesArray
+            .map(voice => voice.locale)
+            .filter(locale => typeof locale === 'string' && locale.trim().length > 0)
+          )].sort();
+          
+          console.log('Unique languages:', uniqueLanguages);
+          setLanguages(uniqueLanguages);
+
+          // Validate current voice selection
+          const currentSettings = getVoiceSettings();
+          if (currentSettings.voiceName) {
+            const voiceExists = voicesArray.some(v => v.name === currentSettings.voiceName);
+            if (!voiceExists) {
+              // Select a default voice for the current language
+              const voicesForLanguage = voicesArray.filter(v => v.locale === currentSettings.language);
+              if (voicesForLanguage.length > 0) {
+                handleVoiceChange(voicesForLanguage[0].name);
+              }
+            }
+          }
+        } else {
+          console.warn('No voices available');
+          setMessage('No hay voces disponibles');
+        }
+      } catch (error) {
+        console.error('Error initializing voice settings:', error);
+        setMessage('Error al inicializar la configuración de voz');
+      } finally {
+        setLoading(false);
       }
     };
     
-    // Load voices immediately
-    loadVoices();
-    
-    // Also load when voices change
-    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-      speechSynthesis.onvoiceschanged = loadVoices;
-    }
+    initializeVoiceSettings();
   }, []);
 
   const loadSettings = () => {
     const currentSettings = getVoiceSettings();
+    
+    // Validar que el idioma actual tenga voces disponibles
+    if (currentSettings.language) {
+      const hasVoicesForLanguage = availableVoices.some(
+        voice => voice.locale === currentSettings.language
+      );
+      
+      if (!hasVoicesForLanguage) {
+        // Si no hay voces para el idioma actual, usar español por defecto
+        currentSettings.language = 'es-ES';
+        console.log('Resetting to default language: es-ES');
+      }
+    }
+    
     setSettings(currentSettings);
+    console.log('Loaded settings:', currentSettings);
   };
 
   const loadStatus = () => {
@@ -67,16 +152,82 @@ export default function VoiceSettings() {
     }
   };
 
-  const handleSettingChange = (key, value) => {
-    const newSettings = { ...settings, [key]: value };
-    setSettings(newSettings);
-    updateVoiceSettings(newSettings);
+  const handleSettingChange = async (key, value) => {
+    try {
+      // Validar el cambio antes de aplicarlo
+      if (key === 'language') {
+        // Verificar que el idioma exista en las voces disponibles
+        const isValidLanguage = availableVoices.some(voice => voice.locale === value);
+        if (!isValidLanguage) {
+          console.error('Invalid language selected:', value);
+          setMessage('Error: Idioma no válido');
+          return;
+        }
+
+        // Encontrar voces disponibles para el nuevo idioma
+        const voicesForLanguage = availableVoices.filter(voice => voice.locale === value);
+        
+        // Crear nuevas configuraciones
+        const newSettings = { 
+          ...settings, 
+          language: value 
+        };
+
+        // Si la voz actual no es válida para el nuevo idioma, seleccionar una nueva
+        const currentVoice = availableVoices.find(v => v.name === settings.voiceName);
+        if (!currentVoice || currentVoice.locale !== value) {
+          if (voicesForLanguage.length > 0) {
+            newSettings.voiceName = voicesForLanguage[0].name;
+            console.log('Selecting new voice for language:', newSettings.voiceName);
+          }
+        }
+
+        // Actualizar estado local
+        setSettings(newSettings);
+        
+        // Actualizar servicio de voz
+        await updateVoiceSettings(newSettings);
+        
+        setMessage(`Idioma cambiado a ${getLangName(value)}`);
+      } else {
+        // Para otros cambios de configuración
+        const newSettings = { ...settings, [key]: value };
+        setSettings(newSettings);
+        await updateVoiceSettings(newSettings);
+      }
+    } catch (err) {
+      console.error('Error updating settings:', err);
+      setMessage('Error al guardar la configuración');
+    }
   };
 
   const handleVoiceChange = (voiceName) => {
+    console.log('handleVoiceChange called with', voiceName);
+    
     const selectedVoice = availableVoices.find(voice => voice.name === voiceName);
     if (selectedVoice) {
-      handleSettingChange('voice', selectedVoice);
+      console.log('selectedVoice:', selectedVoice);
+      
+      // Create a settings update with both voice and language
+      const newSettings = {
+        ...settings,
+        voiceName: selectedVoice.name,
+        language: selectedVoice.locale
+      };
+      
+      // Update local state
+      setSettings(newSettings);
+      
+      // Update shared service/context
+      try {
+        updateVoiceSettings(newSettings);
+      } catch (err) {
+        console.error('Error updating voice settings:', err);
+        setMessage('Error al guardar la voz seleccionada');
+      }
+    } else {
+      console.warn('No matching voice found for', voiceName, 'availableVoices:', availableVoices);
+      setMessage('Error: No se encontró la voz seleccionada');
     }
   };
 
@@ -138,21 +289,51 @@ export default function VoiceSettings() {
           </p>
         </CardHeader>
         <CardBody className="space-y-6">
+          {/* Language Selection */}
+          <div>
+            <label className="block mb-2 text-sm font-medium text-white/80">
+              Idioma {loading ? '(Cargando...)' : `(${languages.length} disponibles)`}
+            </label>
+            <select
+              value={settings.language}
+              onChange={(e) => handleSettingChange('language', e.target.value)}
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {languages.length === 0 ? (
+                <option value="">Cargando idiomas...</option>
+              ) : (
+                languages.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {getLangName(lang)}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+          
+          {message && (
+            <div className="text-sm text-yellow-400">
+              {message}
+            </div>
+          )}
+
           {/* Voice Selection */}
           <div>
             <label className="block mb-2 text-sm font-medium text-white/80">
               Voz
             </label>
             <select
-              value={settings.voice?.name || ''}
+              value={settings.voiceName || ''}
               onChange={(e) => handleVoiceChange(e.target.value)}
               className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Voz por defecto</option>
-              {availableVoices.map((voice, index) => (
-                <option key={index} value={voice.name}>
-                  {voice.name} ({voice.lang})
-                </option>
+              <option value="">Selecciona una voz</option>
+              {availableVoices
+                .filter(voice => voice.locale === settings.language)
+                .map((voice, index) => (
+                  <option key={index} value={voice.name}>
+                    {voice.displayName ? `${voice.displayName} ${voice.gender ? `(${voice.gender === 'Female' ? 'Femenina' : 'Masculina'})` : ''}` : `${voice.name} ${voice.gender ? `(${voice.gender === 'Female' ? 'Femenina' : 'Masculina'})` : ''}`}
+                  </option>
               ))}
             </select>
           </div>
@@ -220,22 +401,7 @@ export default function VoiceSettings() {
             </div>
           </div>
 
-          {/* Language */}
-          <div>
-            <label className="block mb-2 text-sm font-medium text-white/80">
-              Idioma
-            </label>
-            <select
-              value={settings.language}
-              onChange={(e) => handleSettingChange('language', e.target.value)}
-              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="es-ES">Español (España)</option>
-              <option value="es-MX">Español (México)</option>
-              <option value="en-US">English (US)</option>
-              <option value="en-GB">English (UK)</option>
-            </select>
-          </div>
+          {/* single Language selector is above; removed duplicate below */}
 
           {/* Status Info */}
           <div className="p-4 bg-white/5 rounded-lg">
@@ -243,7 +409,7 @@ export default function VoiceSettings() {
             <div className="text-xs text-white/60 space-y-1">
               <div>Disponible: {status.isAvailable ? '✅ Sí' : '❌ No'}</div>
               <div>Reproduciendo: {status.isSpeaking ? '🔊 Sí' : '🔇 No'}</div>
-              <div>Voces disponibles: {status.availableVoices || 0}</div>
+              <div>Voces disponibles: {Array.isArray(status.availableVoices) ? status.availableVoices.length : (status.availableVoices || 0)}</div>
             </div>
           </div>
 

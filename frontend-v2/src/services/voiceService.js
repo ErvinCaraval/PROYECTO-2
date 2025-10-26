@@ -9,7 +9,9 @@ class VoiceService {
       volume: 1.0,
       pitch: 1.0,
       voiceName: null,
-      language: 'es-ES'
+      language: 'es-ES',
+      style: 'general',
+      role: 'default'
     };
     
     // Configurar la URL base del backend
@@ -129,14 +131,11 @@ class VoiceService {
 
   async loadVoices() {
     try {
-      // Verificar que tenemos token antes de hacer la petición
-      if (!localStorage.getItem('token')) {
-        console.warn('No authentication token available, skipping voice loading');
-        return;
-      }
-
+      const headers = await this.getAuthHeaders();
+      
+      console.log('Fetching voices from:', `${this.baseUrl}/api/tts/voices`);
       const response = await fetch(`${this.baseUrl}/api/tts/voices`, {
-        headers: this.getAuthHeaders()
+        headers
       });
       
       if (!response.ok) {
@@ -146,6 +145,13 @@ class VoiceService {
       
       const voices = await response.json();
       console.log('Loaded voices:', voices);
+      
+      // Asegurarse de que voices es un array
+      if (!Array.isArray(voices)) {
+        console.error('Received invalid voices data:', voices);
+        this.availableVoices = [];
+        return;
+      }
       
       this.availableVoices = voices;
       
@@ -193,17 +199,24 @@ class VoiceService {
         }
 
         const apiUrl = `${this.baseUrl}/api/tts/synthesize`;
+        // Get the selected voice details from available voices
+        const selectedVoice = this.availableVoices.find(v => 
+          v.name === (options.voiceName || this.settings.voiceName)
+        );
+
         const requestBody = {
           text,
           options: {
             voiceName: options.voiceName || this.settings.voiceName,
-            language: options.language || this.settings.language
+            language: options.language || this.settings.language,
+            gender: selectedVoice?.gender || 'Female' // Explicitly pass the voice gender
           }
         };
 
         console.log('TTS Request:', {
           url: apiUrl,
           body: requestBody,
+          selectedVoice,
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer: [REDACTED]'
@@ -298,13 +311,31 @@ class VoiceService {
   }
 
   updateSettings(newSettings) {
-    // Si viene un objeto de voz, solo guardar el nombre
+    // Validar y procesar las nuevas configuraciones
     const settingsToSave = { ...newSettings };
+    
+    // Si viene un objeto de voz, solo guardar el nombre
     if (settingsToSave.voice && settingsToSave.voice.name) {
       settingsToSave.voiceName = settingsToSave.voice.name;
       delete settingsToSave.voice;
     }
+
+    // Asegurarse de que el idioma sea válido
+    if (settingsToSave.language) {
+      const isValidLanguage = this.availableVoices.some(
+        voice => voice.locale === settingsToSave.language
+      );
+      if (!isValidLanguage) {
+        console.warn('Invalid language selected:', settingsToSave.language);
+        delete settingsToSave.language;
+      }
+    }
+
+    // Actualizar configuraciones
     this.settings = { ...this.settings, ...settingsToSave };
+    console.log('Updated voice settings:', this.settings);
+    
+    // Guardar en localStorage
     this.saveSettings();
   }
 
