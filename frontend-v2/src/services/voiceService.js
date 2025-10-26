@@ -1,22 +1,145 @@
-// Voice Service - Text-to-Speech functionality
+// Voice Service - Azure Text-to-Speech functionality
 class VoiceService {
   constructor() {
-    this.isWebSpeechAvailable = 'speechSynthesis' in window;
-    this.currentUtterance = null;
+    this.isWebSpeechAvailable = true; // Siempre disponible ya que usamos Azure
+    this.audioElement = null;
     this.isSpeaking = false;
     this.settings = {
       rate: 1.0,
       volume: 1.0,
       pitch: 1.0,
-      voiceName: null, // Solo el nombre de la voz
-      language: 'es-ES'
+      voiceName: null,
+      language: 'es-ES',
+      style: 'general',
+      role: 'default'
     };
+    
+    // Configurar la URL base del backend
+    this.baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://proyecto-2-2.onrender.com'
+      : 'http://localhost:5000';
     
     // Load settings from localStorage
     this.loadSettings();
     
-    // Load available voices
-    this.loadVoices();
+    // Initialize audio element
+    this.initAudioElement();
+    
+    // Load available voices (después de un pequeño delay para asegurar que la autenticación esté lista)
+    setTimeout(() => {
+      this.loadVoices();
+    }, 1000);
+  }
+
+  async getAuthToken() {
+    // Intentar obtener el token de Firebase
+    try {
+      const { auth } = await import('./firebase');
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        return await currentUser.getIdToken();
+      }
+    } catch (error) {
+      console.error('Error getting Firebase token:', error);
+    }
+
+    // Si no se pudo obtener el token de Firebase, intentar obtenerlo del localStorage
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("No authentication token available");
+    }
+    return token;
+  }
+
+  async getAuthHeaders() {
+    const token = await this.getAuthToken();
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    };
+  }
+
+  // Fallback to the browser's SpeechSynthesis API when backend or auth
+  // is not available. This lets the app still speak short messages
+  // (like confirmations) even if the TTS backend or auth token is missing.
+  async localSpeak(text, options = {}) {
+    return new Promise((resolve, reject) => {
+      try {
+        if (typeof window === 'undefined' || !window.speechSynthesis) {
+          return reject(new Error('Browser speechSynthesis not available'));
+        }
+
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = options.language || this.settings.language || 'es-ES';
+        utter.volume = options.volume || this.settings.volume || 1.0;
+        utter.rate = options.rate || this.settings.rate || 1.0;
+        utter.pitch = options.pitch || this.settings.pitch || 1.0;
+
+        // Try to pick a voice name if available
+        const voices = window.speechSynthesis.getVoices();
+        const preferred = voices.find(v => v.name === (options.voiceName || this.settings.voiceName));
+        if (preferred) utter.voice = preferred;
+
+        utter.onend = () => resolve();
+        utter.onerror = (e) => reject(e.error || new Error('SpeechSynthesis error'));
+
+        window.speechSynthesis.cancel(); // stop any existing
+        window.speechSynthesis.speak(utter);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  async checkBackendConnection() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/health`);
+      const data = await response.json();
+      console.log('Backend connection status:', data);
+      if (!data.services.includes('tts')) {
+        console.warn('TTS service not available in backend');
+      }
+    } catch (error) {
+      console.error('Failed to connect to backend:', error);
+    }
+  }
+
+  initAudioElement() {
+    this.audioElement = new Audio();
+    
+    this.audioElement.onplay = () => {
+      console.log('Audio playback started');
+      this.isSpeaking = true;
+    };
+    
+    this.audioElement.onended = () => {
+      console.log('Audio playback completed');
+      this.isSpeaking = false;
+    };
+    
+    this.audioElement.onerror = (e) => {
+      this.isSpeaking = false;
+      const error = e.target.error;
+      console.error('Audio playback error:', {
+        code: error.code,
+        message: error.message,
+        name: error.name,
+        details: {
+          currentSrc: this.audioElement.currentSrc,
+          readyState: this.audioElement.readyState,
+          networkState: this.audioElement.networkState
+        }
+      });
+    };
+
+    // Monitorear el estado de buffering
+    this.audioElement.onwaiting = () => {
+      console.log('Audio is buffering...');
+    };
+
+    this.audioElement.oncanplaythrough = () => {
+      console.log('Audio can play through without buffering');
+    };
   }
 
   loadSettings() {
@@ -38,94 +161,157 @@ class VoiceService {
     }
   }
 
-  loadVoices() {
-    if (!this.isWebSpeechAvailable) return;
-    
-    // Load voices when they become available
-    const loadVoices = () => {
-      const voices = speechSynthesis.getVoices();
-      this.availableVoices = voices;
-      // Buscar la voz específica de Google Español de Estados Unidos (es-US)
-      const googleEsUsVoice = voices.find(
-        (voice) =>
-          (voice.name === 'Google Español de Estados Unidos' || voice.name === 'Google US Spanish' || (voice.name.includes('Google') && voice.lang === 'es-US'))
-      );
-      if (googleEsUsVoice && !this.settings.voiceName) {
-        this.settings.voiceName = googleEsUsVoice.name;
-        this.saveSettings();
+  async loadVoices() {
+    try {
+      const headers = await this.getAuthHeaders();
+      
+      console.log('Fetching voices from:', `${this.baseUrl}/api/tts/voices`);
+      const response = await fetch(`${this.baseUrl}/api/tts/voices`, {
+        headers
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Failed to load voices: ${response.status} ${response.statusText}\n${errorData.error || ''}`);
+      }
+      
+      const voices = await response.json();
+      console.log('Loaded voices:', voices);
+      
+      // Asegurarse de que voices es un array
+      if (!Array.isArray(voices)) {
+        console.error('Received invalid voices data:', voices);
+        this.availableVoices = [];
         return;
       }
-      // Si no está, buscar cualquier voz en español
+      
+      this.availableVoices = voices;
+      
+      // Buscar una voz en español
       const spanishVoice = voices.find(voice => 
-        voice.lang.includes('es') || voice.lang.includes('ES')
+        voice.locale?.includes('es-ES') || voice.locale?.includes('es-MX')
       );
+      
       if (spanishVoice && !this.settings.voiceName) {
+        console.log('Selected Spanish voice:', spanishVoice);
         this.settings.voiceName = spanishVoice.name;
         this.saveSettings();
       }
-    };
-
-    // Load voices immediately if available
-    loadVoices();
-    
-    // Also load when voices change
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-      speechSynthesis.onvoiceschanged = loadVoices;
+    } catch (error) {
+      console.error('Error loading voices:', error);
+      this.availableVoices = [];
+      // No lanzar el error para evitar que rompa la inicialización
     }
   }
 
-  speak(text, options = {}) {
+  async speak(text, options = {}) {
     if (!this.isWebSpeechAvailable) {
-      console.warn('Web Speech API not available');
-      return Promise.reject(new Error('Web Speech API not available'));
+      console.warn('Speech service not available');
+      return Promise.reject(new Error('Speech service not available'));
+    }
+
+    // Validación del texto
+    if (!text || typeof text !== 'string') {
+      const error = new Error('Invalid text input');
+      console.error('Speech synthesis error:', error);
+      return Promise.reject(error);
     }
 
     // Si el mensaje es feedback de respuesta, esperar a que termine el anterior antes de hablar
     const isFeedback = options && options.action === 'answer_result';
-    const speakPromise = () => new Promise((resolve, reject) => {
-      // Stop any current speech SOLO si no es feedback, o si no hay nada hablando
-      if (!isFeedback || !this.isSpeaking) {
-        this.stop();
+    
+    const speakPromise = async () => {
+      try {
+        // Verificar autenticación primero. Si no hay token o el backend no
+        // está accesible, hacemos un fallback a la API Web Speech del
+        // navegador para no romper pequeñas confirmaciones.
+        let headers;
+        try {
+          headers = await this.getAuthHeaders();
+        } catch (authErr) {
+          console.warn('Auth or backend unavailable, falling back to browser TTS:', authErr);
+          return this.localSpeak(text, options);
+        }
+
+        // Stop any current speech SOLO si no es feedback, o si no hay nada hablando
+        if (!isFeedback || !this.isSpeaking) {
+          this.stop();
+        }
+
+        const apiUrl = `${this.baseUrl}/api/tts/synthesize`;
+        // Get the selected voice details from available voices
+        const selectedVoice = this.availableVoices.find(v => 
+          v.name === (options.voiceName || this.settings.voiceName)
+        );
+
+        const requestBody = {
+          text,
+          options: {
+            voiceName: options.voiceName || this.settings.voiceName,
+            language: options.language || this.settings.language,
+            gender: selectedVoice?.gender || 'Female' // Explicitly pass the voice gender
+          }
+        };
+
+        console.log('TTS Request:', {
+          url: apiUrl,
+          body: requestBody,
+          selectedVoice,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer: [REDACTED]'
+          }
+        });
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(requestBody)
+        });
+
+        console.log('TTS Response status:', {
+          status: response.status,
+          statusText: response.statusText
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            `TTS API responded with ${response.status}: ${response.statusText}\n` +
+            `Details: ${errorData.details || errorData.error || 'Unknown error'}`
+          );
+        }
+
+        const contentType = response.headers.get('content-type');
+        console.log('Response Content-Type:', contentType);
+
+        const audioBlob = await response.blob();
+        console.log('Audio blob size:', audioBlob.size, 'bytes');
+        
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        this.audioElement.src = audioUrl;
+        this.audioElement.volume = options.volume || this.settings.volume;
+
+        console.log('Playing audio...');
+        await this.audioElement.play();
+
+        return new Promise((resolve, reject) => {
+          this.audioElement.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            resolve();
+          };
+          this.audioElement.onerror = (error) => {
+            console.error('Audio playback error:', error);
+            URL.revokeObjectURL(audioUrl);
+            reject(new Error('Error playing audio'));
+          };
+        });
+      } catch (error) {
+        console.error('Speech synthesis error:', error);
+        throw error;
       }
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      // Apply settings
-      utterance.rate = options.rate || this.settings.rate;
-      utterance.volume = options.volume || this.settings.volume;
-      utterance.pitch = options.pitch || this.settings.pitch;
-      utterance.lang = options.language || this.settings.language;
-
-      // Set voice if available
-      let voiceToUse = null;
-      const voices = this.getAvailableVoices();
-      if (options.voiceName) {
-        voiceToUse = voices.find(v => v.name === options.voiceName);
-      } else if (this.settings.voiceName) {
-        voiceToUse = voices.find(v => v.name === this.settings.voiceName);
-      }
-      if (voiceToUse) {
-        utterance.voice = voiceToUse;
-      }
-
-      utterance.onstart = () => {
-        this.isSpeaking = true;
-        this.currentUtterance = utterance;
-      };
-
-      utterance.onend = () => {
-        this.isSpeaking = false;
-        this.currentUtterance = null;
-        resolve();
-      };
-
-      utterance.onerror = (event) => {
-        this.isSpeaking = false;
-        this.currentUtterance = null;
-        reject(new Error(`Speech synthesis error: ${event.error}`));
-      };
-
-      speechSynthesis.speak(utterance);
-    });
+    };
 
     if (isFeedback && this.isSpeaking) {
       // Esperar a que termine la locución actual antes de hablar feedback
@@ -145,33 +331,51 @@ class VoiceService {
   }
 
   stop() {
-    if (this.isWebSpeechAvailable && speechSynthesis.speaking) {
-      speechSynthesis.cancel();
+    if (this.audioElement) {
+      this.audioElement.pause();
+      this.audioElement.currentTime = 0;
       this.isSpeaking = false;
-      this.currentUtterance = null;
     }
   }
 
   pause() {
-    if (this.isWebSpeechAvailable && speechSynthesis.speaking) {
-      speechSynthesis.pause();
+    if (this.audioElement && !this.audioElement.paused) {
+      this.audioElement.pause();
     }
   }
 
   resume() {
-    if (this.isWebSpeechAvailable && speechSynthesis.paused) {
-      speechSynthesis.resume();
+    if (this.audioElement && this.audioElement.paused) {
+      this.audioElement.play();
     }
   }
 
   updateSettings(newSettings) {
-    // Si viene un objeto de voz, solo guardar el nombre
+    // Validar y procesar las nuevas configuraciones
     const settingsToSave = { ...newSettings };
+    
+    // Si viene un objeto de voz, solo guardar el nombre
     if (settingsToSave.voice && settingsToSave.voice.name) {
       settingsToSave.voiceName = settingsToSave.voice.name;
       delete settingsToSave.voice;
     }
+
+    // Asegurarse de que el idioma sea válido
+    if (settingsToSave.language) {
+      const isValidLanguage = this.availableVoices.some(
+        voice => voice.locale === settingsToSave.language
+      );
+      if (!isValidLanguage) {
+        console.warn('Invalid language selected:', settingsToSave.language);
+        delete settingsToSave.language;
+      }
+    }
+
+    // Actualizar configuraciones
     this.settings = { ...this.settings, ...settingsToSave };
+    console.log('Updated voice settings:', this.settings);
+    
+    // Guardar en localStorage
     this.saveSettings();
   }
 
