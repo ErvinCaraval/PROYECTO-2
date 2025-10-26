@@ -59,6 +59,38 @@ class VoiceService {
     };
   }
 
+  // Fallback to the browser's SpeechSynthesis API when backend or auth
+  // is not available. This lets the app still speak short messages
+  // (like confirmations) even if the TTS backend or auth token is missing.
+  async localSpeak(text, options = {}) {
+    return new Promise((resolve, reject) => {
+      try {
+        if (typeof window === 'undefined' || !window.speechSynthesis) {
+          return reject(new Error('Browser speechSynthesis not available'));
+        }
+
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = options.language || this.settings.language || 'es-ES';
+        utter.volume = options.volume || this.settings.volume || 1.0;
+        utter.rate = options.rate || this.settings.rate || 1.0;
+        utter.pitch = options.pitch || this.settings.pitch || 1.0;
+
+        // Try to pick a voice name if available
+        const voices = window.speechSynthesis.getVoices();
+        const preferred = voices.find(v => v.name === (options.voiceName || this.settings.voiceName));
+        if (preferred) utter.voice = preferred;
+
+        utter.onend = () => resolve();
+        utter.onerror = (e) => reject(e.error || new Error('SpeechSynthesis error'));
+
+        window.speechSynthesis.cancel(); // stop any existing
+        window.speechSynthesis.speak(utter);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
   async checkBackendConnection() {
     try {
       const response = await fetch(`${this.baseUrl}/api/health`);
@@ -190,8 +222,16 @@ class VoiceService {
     
     const speakPromise = async () => {
       try {
-        // Verificar autenticación primero
-        const headers = await this.getAuthHeaders();
+        // Verificar autenticación primero. Si no hay token o el backend no
+        // está accesible, hacemos un fallback a la API Web Speech del
+        // navegador para no romper pequeñas confirmaciones.
+        let headers;
+        try {
+          headers = await this.getAuthHeaders();
+        } catch (authErr) {
+          console.warn('Auth or backend unavailable, falling back to browser TTS:', authErr);
+          return this.localSpeak(text, options);
+        }
 
         // Stop any current speech SOLO si no es feedback, o si no hay nada hablando
         if (!isFeedback || !this.isSpeaking) {
