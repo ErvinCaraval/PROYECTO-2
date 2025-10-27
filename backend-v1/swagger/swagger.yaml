@@ -45,6 +45,10 @@ tags:
     description: Procesamiento y validación de respuestas por voz.
   - name: AdminAccessibility
     description: Controles administrativos para funcionalidades de accesibilidad.
+  - name: TTS
+    description: Endpoints de Text-to-Speech y gestión de voces (Azure/AssemblyAI).
+  - name: AssemblyAI
+    description: Endpoints para integración directa con AssemblyAI (STT/TTS/Procesamiento).
 
 paths:
 
@@ -1615,6 +1619,369 @@ paths:
                     label: "Intermedio"
                   - value: "hard"
                     label: "Difícil"
+
+  /api/ai/generate-game-questions:
+    post:
+      tags: [AI]
+      summary: Generar preguntas IA para una partida específica
+      description: |
+        Genera preguntas usando IA y las devuelve asociadas a un gameId. Usado para poblar partidas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [gameId, topic, count]
+              properties:
+                gameId:
+                  type: string
+                  example: "123456"
+                topic:
+                  type: string
+                  example: "Historia"
+                difficulty:
+                  type: string
+                  example: "medium"
+                count:
+                  type: integer
+                  example: 10
+            example:
+              gameId: "123456"
+              topic: "Historia"
+              difficulty: "medium"
+              count: 10
+      responses:
+        200:
+          description: Preguntas generadas para la partida
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  gameId:
+                    type: string
+                    example: "123456"
+                  questions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Question'
+        400:
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "gameId y topic son requeridos"
+
+  /api/games/{gameId}:
+    delete:
+      tags: [Games]
+      summary: Eliminar una partida pública (solo creador)
+      description: Elimina una partida pública por su ID. Requiere autenticación y que el usuario sea el creador.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID de la partida a eliminar
+      responses:
+        200:
+          description: Partida eliminada correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Game deleted successfully"
+        403:
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "You are not authorized to delete this game"
+        404:
+          description: Partida no encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Game not found"
+
+  /api/tts/synthesize:
+    post:
+      tags: [TTS]
+      summary: Sintetizar texto a audio (TTS)
+      description: |
+        Convierte texto en audio usando el servicio de TTS configurado (Azure/AssemblyAI).
+        Requiere autenticación en las rutas del controlador (ruta `/api/tts` la aplica).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  example: "Hola, bienvenido a BrainBlitz"
+                options:
+                  type: object
+                  description: Opciones para síntesis (voice, speed, format)
+            example:
+              text: "Hola, bienvenido a BrainBlitz"
+              options: { voice: "es-ES-EnriqueNeural", speed: 1.0 }
+      responses:
+        200:
+          description: Audio sintetizado (respuesta binaria o metadata)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        500:
+          description: Error interno del servidor
+
+  /api/tts/voices:
+    get:
+      tags: [TTS]
+      summary: Obtener voces disponibles para TTS
+      description: Devuelve la lista de voces soportadas por el servicio TTS configurado.
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Lista de voces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    locale:
+                      type: string
+        500:
+          description: Error al obtener voces
+
+  /api/assemblyai/tts:
+    post:
+      tags: [AssemblyAI]
+      summary: Text-to-Speech (AssemblyAI)
+      description: Sintetiza texto usando AssemblyAI (o servicio configurado).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                voice:
+                  type: string
+                speed:
+                  type: number
+                format:
+                  type: string
+            example:
+              text: "Hola"
+              voice: "es-ES-EnriqueNeural"
+      responses:
+        200:
+          description: Audio devuelto o metadata
+        400:
+          description: Parametros inválidos
+
+  /api/assemblyai/stt:
+    post:
+      tags: [AssemblyAI]
+      summary: Speech-to-Text (AssemblyAI)
+      description: Transcribe audio desde una URL pública usando AssemblyAI.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audioUrl]
+              properties:
+                audioUrl:
+                  type: string
+                language:
+                  type: string
+            example:
+              audioUrl: "https://.../audio.wav"
+              language: "es"
+      responses:
+        200:
+          description: Transcripción devuelta
+        400:
+          description: Parametros inválidos
+
+  /api/assemblyai/process-audio:
+    post:
+      tags: [AssemblyAI]
+      summary: Procesar audio en base64 con AssemblyAI
+      description: Procesa audio en base64 para transcripción y validación.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audioBase64]
+              properties:
+                audioBase64:
+                  type: string
+                mimeType:
+                  type: string
+                questionOptions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        200:
+          description: Resultado de transcripción y validación
+        400:
+          description: Entrada inválida
+        413:
+          description: Audio demasiado grande
+
+  /api/assemblyai/voices:
+    get:
+      tags: [AssemblyAI]
+      summary: Obtener voces disponibles en AssemblyAI
+      responses:
+        200:
+          description: Lista de voces
+        500:
+          description: Error al obtener voces
+
+  /api/assemblyai/status:
+    get:
+      tags: [AssemblyAI]
+      summary: Verificar estado de AssemblyAI
+      responses:
+        200:
+          description: Estado del servicio
+        500:
+          description: Error al verificar el servicio
+
+  /api/admin/accessibility-settings:
+    get:
+      tags: [AdminAccessibility]
+      summary: Obtener configuración global de accesibilidad (ADMIN)
+      description: Devuelve la configuración global de accesibilidad del sistema.
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Configuración global devuelta
+        401:
+          description: No autenticado
+
+    put:
+      tags: [AdminAccessibility]
+      summary: Actualizar configuración global de accesibilidad (ADMIN)
+      description: Actualiza la configuración global de accesibilidad.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                voiceModeEnabled:
+                  type: boolean
+                maxAudioSize:
+                  type: number
+      responses:
+        200:
+          description: Configuración actualizada
+        400:
+          description: Datos inválidos
+
+  /api/admin/accessibility-report:
+    get:
+      tags: [AdminAccessibility]
+      summary: Generar reporte de accesibilidad (ADMIN)
+      description: Devuelve un reporte de uso y accesibilidad para un rango de fechas opcional.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+      responses:
+        200:
+          description: Reporte generado
+        400:
+          description: Parámetros inválidos
+
+  /api/health:
+    get:
+      tags: [TTS]
+      summary: Estado de salud del servidor
+      description: Endpoint de prueba para verificar que el servidor está activo.
+      responses:
+        200:
+          description: Estado OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  services:
+                    type: array
+                    items:
+                      type: string
 
 components:
   securitySchemes:
