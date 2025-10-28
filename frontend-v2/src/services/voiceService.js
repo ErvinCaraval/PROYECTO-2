@@ -259,9 +259,15 @@ class VoiceService {
         const requestBody = {
           text,
           options: {
+            ...this.settings,
+            ...options,
             voiceName: options.voiceName || this.settings.voiceName,
             language: options.language || this.settings.language,
-            gender: selectedVoice?.gender || 'Female' // Explicitly pass the voice gender
+            gender: selectedVoice?.gender || 'Female',
+            // Asegurar que los valores numéricos sean válidos
+            rate: parseFloat(options.rate || this.settings.rate || 1.0),
+            pitch: parseFloat(options.pitch || this.settings.pitch || 1.0),
+            volume: parseFloat(options.volume || this.settings.volume || 1.0)
           }
         };
 
