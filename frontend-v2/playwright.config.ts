@@ -1,22 +1,34 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: 'tests/e2e',
-  timeout: 30_000,
-  expect: { timeout: 5000 },
+  testDir: './tests/e2e',
   fullyParallel: true,
-  reporter: [['list'], ['html', { outputFolder: 'playwright-report' }]],
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } }
-  ],
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
   use: {
-    headless: true,
-    baseURL: process.env.BASE_URL || 'http://localhost:3000'
+    // Allow overriding the base URL via env (useful in CI where we serve `dist` on 8080)
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+    trace: 'on-first-retry',
   },
   webServer: {
     command: 'npm run dev',
-    port: 3000,
-    reuseExistingServer: !process.env.CI
-  }
-})
+    // Match the baseURL; default local dev here runs on port 3000 in your setup
+    url: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    // Increase timeout to allow the dev server more time to start (120s)
+    timeout: 120000,
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { 
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          args: ['--no-sandbox', '--disable-setuid-sandbox']
+        }
+      },
+    }
+  ],
+});

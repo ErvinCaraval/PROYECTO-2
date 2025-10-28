@@ -11,6 +11,11 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const isHeldRef = useRef(false); // To prevent firing mouseup after touch end
+    const cleanup = () => {
+      isHeldRef.current = false;
+      setIsRecording(false);
+      setIsProcessing(false);
+    };
 
   if (!isVoiceModeEnabled || !voiceRecognitionService.isAvailable()) {
     return null;
@@ -22,23 +27,28 @@ const VoiceAnswerButton = ({ options, onAnswer, disabled = false }) => {
     setError('');
     setSuccessMessage('');
     try {
+        // Check for permission first
+        const permission = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (!permission) {
+          cleanup();
+          throw new Error('Se requiere permiso para usar el micrófono.');
+        }
       await voiceRecognitionService.start();
       setIsRecording(true);
     } catch (err) {
       console.error('Error starting recording:', err);
+        cleanup();
       setError(err.message || 'No se pudo iniciar la grabación.');
-      isHeldRef.current = false;
     }
   };
 
   const handleRecordingStop = async () => {
     if (!isHeldRef.current) return; // Prevent accidental triggers
-    isHeldRef.current = false;
     if (!isRecording) return;
 
-    setIsRecording(false);
-    setIsProcessing(true);
+      cleanup();
     setError('');
+      setIsProcessing(true);
 
     try {
       console.log('🎤 Deteniendo grabación y enviando audio...');

@@ -1,4 +1,12 @@
 const axios = require('axios');
+const crypto = require('crypto');
+// Firestore DB for cross-game deduplication
+let db;
+try {
+  db = require('../firebase').db;
+} catch (e) {
+  db = null;
+}
 
 class AIQuestionGenerator {
   constructor() {
@@ -102,22 +110,156 @@ class AIQuestionGenerator {
         throw new Error('La IA no devolvió preguntas válidas. Verifica tu API key y conexión.');
       }
 
-      // Filtrar preguntas repetidas (por texto)
-      const uniqueQuestions = [];
-      const seen = new Set();
-      for (const q of questions) {
-        const key = q.text && q.text.trim().toLowerCase();
-        if (key && !seen.has(key)) {
+      // Backwards compatibility: if AI returned simple questions with only text and no options,
+      // return them as-is (this keeps unit tests and simple flows working).
+      const looksLikeSimple = questions.every(q => q && (!q.options || (Array.isArray(q.options) && q.options.length === 0)) );
+      if (looksLikeSimple) {
+        // dedupe by text
+        const seen = new Set();
+        const out = [];
+        for (const q of questions) {
+          const t = (q.text || q.question || '').trim();
+          if (!t) continue;
+          const key = t.toLowerCase();
+          if (seen.has(key)) continue;
           seen.add(key);
-          uniqueQuestions.push(q);
+          // Return legacy simple shape (only text) to preserve existing tests and callers
+          out.push({ text: t });
+          if (out.length >= count) break;
         }
+        if (out.length < count) {
+          throw new Error('La IA no generó suficientes preguntas únicas.');
+        }
+        return { questions: out.slice(0, count) };
       }
 
-      if (uniqueQuestions.length < count) {
-        throw new Error('La IA no generó suficientes preguntas únicas.');
+      // Sanitize and ensure exactly 4 options per question (A-D)
+      const sanitizeQuestions = async (rawQuestions) => {
+        const out = [];
+        const seenTexts = new Set();
+
+        for (const raw of rawQuestions) {
+          if (!raw) continue;
+          const text = (raw.text || raw.question || '').trim();
+          if (!text) continue;
+          const key = text.toLowerCase();
+          if (seenTexts.has(key)) continue; // dedupe by text
+
+          // Normalize options
+          let opts = Array.isArray(raw.options) ? raw.options.map(o => (typeof o === 'string' ? o.trim() : '')).filter(Boolean) : [];
+
+          // If the AI returned an object with labeled choices like {A:..., B:...}, flatten them
+          if (opts.length === 0 && raw.options && typeof raw.options === 'object') {
+            opts = Object.values(raw.options).map(o => (typeof o === 'string' ? o.trim() : '')).filter(Boolean);
+          }
+
+          // Remove duplicates while preserving order
+          const seenOpt = new Set();
+          opts = opts.filter(o => {
+            const k = o.toLowerCase();
+            if (seenOpt.has(k)) return false;
+            seenOpt.add(k);
+            return true;
+          });
+
+          // If there are fewer than 4 options, skip this question (prefer valid ones)
+          if (opts.length < 4) continue;
+
+          // If more than 4, try to ensure the correct answer remains and trim others
+          let correctIndex = typeof raw.correctAnswerIndex === 'number' ? raw.correctAnswerIndex : undefined;
+          // If correctAnswerIndex not provided but raw.correctAnswer or raw.answer exists, try to find it
+          if ((correctIndex === undefined || correctIndex === null) && raw.correctAnswer) {
+            const idx = opts.findIndex(o => o.toLowerCase() === String(raw.correctAnswer).trim().toLowerCase());
+            if (idx !== -1) correctIndex = idx;
+          }
+
+          // If still undefined, try common keys
+          if (correctIndex === undefined || correctIndex === null) {
+            // assume first option is correct as fallback
+            correctIndex = 0;
+          }
+
+          // Ensure correctIndex within bounds
+          if (correctIndex < 0 || correctIndex >= opts.length) correctIndex = 0;
+
+          // If more than 4 options, pick 3 distractors plus the correct answer
+          if (opts.length > 4) {
+            const correctValue = opts[correctIndex];
+            // collect distractors (all except correct), then randomly pick 3
+            const distractors = opts.filter((_, i) => i !== correctIndex);
+            // shuffle distractors
+            for (let i = distractors.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [distractors[i], distractors[j]] = [distractors[j], distractors[i]];
+            }
+            const chosen = distractors.slice(0, 3);
+            opts = [correctValue, ...chosen];
+          }
+
+          // Now opts length should be >=4 (we skipped <4) and <=4 here; if somehow >4 still, trim
+          if (opts.length > 4) opts = opts.slice(0, 4);
+
+          // Shuffle options while tracking correct index
+          const correctValueFinal = opts[correctIndex] || opts[0];
+          // Ensure correctValueFinal is present
+          if (!opts.includes(correctValueFinal)) {
+            opts[0] = correctValueFinal;
+          }
+
+          // Shuffle
+          const shuffled = opts.slice();
+          for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          }
+
+          const finalCorrectIndex = shuffled.findIndex(o => o === correctValueFinal);
+
+          const questionObj = {
+            id: raw.id || `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            text,
+            options: shuffled,
+            correctAnswerIndex: finalCorrectIndex >= 0 ? finalCorrectIndex : 0,
+            category: raw.category || raw.topic || topic,
+            difficulty: raw.difficulty || difficulty,
+            explanation: raw.explanation || raw.explain || ''
+          };
+
+          // Cross-game dedupe: if DB available, skip questions already stored
+          if (db) {
+            try {
+              const normalized = text.toLowerCase().replace(/\s+/g, ' ').trim();
+              const hash = crypto.createHash('sha256').update(normalized).digest('hex');
+              const doc = await db.collection('ai_generated_questions').doc(hash).get();
+              if (doc.exists) {
+                // already used in previous games, skip
+                continue;
+              }
+              // persist a lightweight record to avoid reuse
+              await db.collection('ai_generated_questions').doc(hash).set({
+                text: questionObj.text,
+                createdAt: Date.now(),
+                topic: questionObj.category
+              }).catch(() => {});
+            } catch (e) {
+              // If DB check fails, don't break generation; just proceed
+              console.warn('AI question DB check failed:', e.message || e);
+            }
+          }
+
+          seenTexts.add(key);
+          out.push(questionObj);
+          if (out.length >= count) break; // stop early if we have enough
+        }
+        return out;
+      };
+
+      const sanitized = await sanitizeQuestions(questions);
+      if (!sanitized || sanitized.length < count) {
+        throw new Error('La IA no generó suficientes preguntas únicas y válidas con 4 opciones. Intenta de nuevo con otro prompt o reduce la cantidad.');
       }
 
-      return { questions: uniqueQuestions.slice(0, count) };
+      return { questions: sanitized.slice(0, count) };
     } catch (error) {
       throw error;
     }

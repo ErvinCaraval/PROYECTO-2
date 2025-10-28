@@ -17,7 +17,9 @@ export function VoiceProvider({ children }) {
 
   // Check if user has visual difficulty and auto-enable voice mode
   useEffect(() => {
-    const checkUserAccessibility = async () => {
+    // Subscribe to the user's Firestore doc so we react immediately when it's created/updated.
+    let unsubscribe = null;
+    const subscribeToUserDoc = async () => {
       if (!user) {
         setIsVoiceModeEnabled(false);
         setUserHasVisualDifficulty(false);
@@ -26,30 +28,45 @@ export function VoiceProvider({ children }) {
       }
 
       try {
-        // Get user data from Firebase to check visualDifficulty
         const { db } = await import('./services/firebase');
-        const { doc, getDoc } = await import('firebase/firestore');
-        
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const hasVisualDifficulty = userData.visualDifficulty || false;
-          
-          setUserHasVisualDifficulty(hasVisualDifficulty);
-          
-          // Auto-enable voice mode if user has visual difficulty
-          if (hasVisualDifficulty) {
-            setIsVoiceModeEnabled(true);
+        const { doc, onSnapshot } = await import('firebase/firestore');
+
+        const userRef = doc(db, 'users', user.uid);
+        unsubscribe = onSnapshot(userRef, (snap) => {
+          try {
+            if (!snap.exists()) {
+              // doc not yet created - keep default states but stop loading
+              setUserHasVisualDifficulty(false);
+              setLoading(false);
+              return;
+            }
+
+            const data = snap.data() || {};
+            const hasVisualDifficulty = data.visualDifficulty || false;
+            setUserHasVisualDifficulty(hasVisualDifficulty);
+
+            // Auto-enable voice mode for users with visual difficulty, but don't force-disable
+            // if user already intentionally turned voice off.
+            setIsVoiceModeEnabled(prev => (hasVisualDifficulty ? true : prev));
+            setLoading(false);
+          } catch (e) {
+            console.error('Error processing user snapshot:', e);
           }
-        }
+        }, (err) => {
+          console.error('Error subscribing to user doc:', err);
+          setLoading(false);
+        });
       } catch (error) {
-        console.error('Error checking user accessibility:', error);
-      } finally {
+        console.error('Error setting up user doc subscription:', error);
         setLoading(false);
       }
     };
 
-    checkUserAccessibility();
+    subscribeToUserDoc();
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, [user]);
 
   const toggleVoiceMode = () => {
