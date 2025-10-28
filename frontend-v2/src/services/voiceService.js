@@ -31,11 +31,19 @@ class VoiceService {
       ? 'https://proyecto-2-olvb.onrender.com'
       : 'http://localhost:5000');
     
-    // Load settings from localStorage
-    this.loadSettings();
+    // Load settings from localStorage if available
+    if (typeof localStorage !== 'undefined') {
+      this.loadSettings();
+    } else {
+      console.log('localStorage not available, using default settings');
+    }
     
-    // Initialize audio element
-    this.initAudioElement();
+    // Initialize audio element if available
+    if (typeof Audio !== 'undefined') {
+      this.initAudioElement();
+    } else {
+      console.log('Audio API not available, skipping audio initialization');
+    }
     
     // Load available voices (después de un pequeño delay para asegurar que la autenticación esté lista)
     setTimeout(() => {
@@ -259,9 +267,15 @@ class VoiceService {
         const requestBody = {
           text,
           options: {
+            ...this.settings,
+            ...options,
             voiceName: options.voiceName || this.settings.voiceName,
             language: options.language || this.settings.language,
-            gender: selectedVoice?.gender || 'Female' // Explicitly pass the voice gender
+            gender: selectedVoice?.gender || 'Female',
+            // Asegurar que los valores numéricos sean válidos
+            rate: parseFloat(options.rate || this.settings.rate || 1.0),
+            pitch: parseFloat(options.pitch || this.settings.pitch || 1.0),
+            volume: parseFloat(options.volume || this.settings.volume || 1.0)
           }
         };
 

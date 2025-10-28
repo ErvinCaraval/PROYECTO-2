@@ -5,6 +5,21 @@ class AzureTTSService {
         if (!process.env.AZURE_API_KEY || !process.env.AZURE_TTS_REGION) {
             throw new Error('Azure credentials not properly configured');
         }
+        
+        // Función auxiliar para generar SSML
+        this.generateSSML = (text, options = {}) => {
+            const rate = options.rate || 1.0;
+            const pitch = options.pitch || 1.0;
+            const volume = options.volume || 1.0;
+            
+            return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${options.language || 'es-ES'}">
+                <voice name="${options.voiceName || 'es-ES-ElviraNeural'}">
+                    <prosody rate="${rate}" pitch="${pitch*100-100}%" volume="${volume*100}%">
+                        ${text}
+                    </prosody>
+                </voice>
+            </speak>`;
+        };
 
         this.speechConfig = sdk.SpeechConfig.fromSubscription(
             process.env.AZURE_API_KEY,
@@ -30,6 +45,29 @@ class AzureTTSService {
             'de-DE': 'de-DE-KatjaNeural',
             'it-IT': 'it-IT-ElsaNeural'
         };
+        // Lista de voces predefinidas usada por defecto (evita llamadas adicionales al SDK)
+        this.predefinedVoices = [
+            { name: 'es-ES-ElviraNeural', locale: 'es-ES', gender: 'Female', voiceType: 'Neural' },
+            { name: 'es-ES-AlvaroNeural', locale: 'es-ES', gender: 'Male', voiceType: 'Neural' },
+            { name: 'es-MX-DaliaNeural', locale: 'es-MX', gender: 'Female', voiceType: 'Neural' },
+            { name: 'es-MX-JorgeNeural', locale: 'es-MX', gender: 'Male', voiceType: 'Neural' },
+            { name: 'es-AR-ElenaNeural', locale: 'es-AR', gender: 'Female', voiceType: 'Neural' },
+            { name: 'es-AR-TomasNeural', locale: 'es-AR', gender: 'Male', voiceType: 'Neural' },
+            { name: 'es-CO-SalomeNeural', locale: 'es-CO', gender: 'Female', voiceType: 'Neural' },
+            { name: 'es-CO-GonzaloNeural', locale: 'es-CO', gender: 'Male', voiceType: 'Neural' },
+            { name: 'en-US-JennyNeural', locale: 'en-US', gender: 'Female', voiceType: 'Neural' },
+            { name: 'en-US-GuyNeural', locale: 'en-US', gender: 'Male', voiceType: 'Neural' },
+            { name: 'en-GB-SoniaNeural', locale: 'en-GB', gender: 'Female', voiceType: 'Neural' },
+            { name: 'en-GB-RyanNeural', locale: 'en-GB', gender: 'Male', voiceType: 'Neural' },
+            { name: 'pt-BR-FranciscaNeural', locale: 'pt-BR', gender: 'Female', voiceType: 'Neural' },
+            { name: 'pt-BR-AntonioNeural', locale: 'pt-BR', gender: 'Male', voiceType: 'Neural' },
+            { name: 'fr-FR-DeniseNeural', locale: 'fr-FR', gender: 'Female', voiceType: 'Neural' },
+            { name: 'fr-FR-HenriNeural', locale: 'fr-FR', gender: 'Male', voiceType: 'Neural' },
+            { name: 'de-DE-KatjaNeural', locale: 'de-DE', gender: 'Female', voiceType: 'Neural' },
+            { name: 'de-DE-KillianNeural', locale: 'de-DE', gender: 'Male', voiceType: 'Neural' },
+            { name: 'it-IT-ElsaNeural', locale: 'it-IT', gender: 'Female', voiceType: 'Neural' },
+            { name: 'it-IT-DiegoNeural', locale: 'it-IT', gender: 'Male', voiceType: 'Neural' }
+        ];
     }
 
     async synthesizeSpeech(text, options = {}) {
@@ -39,13 +77,16 @@ class AzureTTSService {
 
         return new Promise((resolve, reject) => {
             try {
-                // Aplicar opciones de voz
+                // Aplicar opciones de voz y SSML
+                const ssml = this.generateSSML(text, options);
+                console.log('Generated SSML:', ssml);
+
+                // Aplicar nombre de voz si se especifica
                 if (options.voiceName) {
-                    // Si se especifica un nombre de voz, usarlo directamente
                     this.speechConfig.speechSynthesisVoiceName = options.voiceName;
                 } else if (options.language && options.gender) {
                     // Si no hay voz específica pero tenemos idioma y género, buscar una voz apropiada
-                    const matchingVoice = predefinedVoices.find(v => 
+                    const matchingVoice = (this.predefinedVoices || []).find(v => 
                         v.locale === options.language && 
                         v.gender.toLowerCase() === options.gender.toLowerCase()
                     );
@@ -61,9 +102,9 @@ class AzureTTSService {
                 // Crear sintetizador
                 const synthesizer = new sdk.SpeechSynthesizer(this.speechConfig);
 
-                // Sintetizar el texto
-                synthesizer.speakTextAsync(
-                    text,
+                // Sintetizar el texto usando SSML para control preciso
+                synthesizer.speakSsmlAsync(
+                    ssml,
                     result => {
                         synthesizer.close();
                         
@@ -88,31 +129,8 @@ class AzureTTSService {
     async getAvailableVoices() {
         return new Promise((resolve, reject) => {
             try {
-                // Usar voces predefinidas para evitar problemas con el SDK
-                const predefinedVoices = [
-                    { name: 'es-ES-ElviraNeural', locale: 'es-ES', gender: 'Female', voiceType: 'Neural' },
-                    { name: 'es-ES-AlvaroNeural', locale: 'es-ES', gender: 'Male', voiceType: 'Neural' },
-                    { name: 'es-MX-DaliaNeural', locale: 'es-MX', gender: 'Female', voiceType: 'Neural' },
-                    { name: 'es-MX-JorgeNeural', locale: 'es-MX', gender: 'Male', voiceType: 'Neural' },
-                    { name: 'es-AR-ElenaNeural', locale: 'es-AR', gender: 'Female', voiceType: 'Neural' },
-                    { name: 'es-AR-TomasNeural', locale: 'es-AR', gender: 'Male', voiceType: 'Neural' },
-                    { name: 'es-CO-SalomeNeural', locale: 'es-CO', gender: 'Female', voiceType: 'Neural' },
-                    { name: 'es-CO-GonzaloNeural', locale: 'es-CO', gender: 'Male', voiceType: 'Neural' },
-                    { name: 'en-US-JennyNeural', locale: 'en-US', gender: 'Female', voiceType: 'Neural' },
-                    { name: 'en-US-GuyNeural', locale: 'en-US', gender: 'Male', voiceType: 'Neural' },
-                    { name: 'en-GB-SoniaNeural', locale: 'en-GB', gender: 'Female', voiceType: 'Neural' },
-                    { name: 'en-GB-RyanNeural', locale: 'en-GB', gender: 'Male', voiceType: 'Neural' },
-                    { name: 'pt-BR-FranciscaNeural', locale: 'pt-BR', gender: 'Female', voiceType: 'Neural' },
-                    { name: 'pt-BR-AntonioNeural', locale: 'pt-BR', gender: 'Male', voiceType: 'Neural' },
-                    { name: 'fr-FR-DeniseNeural', locale: 'fr-FR', gender: 'Female', voiceType: 'Neural' },
-                    { name: 'fr-FR-HenriNeural', locale: 'fr-FR', gender: 'Male', voiceType: 'Neural' },
-                    { name: 'de-DE-KatjaNeural', locale: 'de-DE', gender: 'Female', voiceType: 'Neural' },
-                    { name: 'de-DE-KillianNeural', locale: 'de-DE', gender: 'Male', voiceType: 'Neural' },
-                    { name: 'it-IT-ElsaNeural', locale: 'it-IT', gender: 'Female', voiceType: 'Neural' },
-                    { name: 'it-IT-DiegoNeural', locale: 'it-IT', gender: 'Male', voiceType: 'Neural' }
-                ];
-
-                const voices = predefinedVoices.map(voice => ({
+                // Usar la lista predefinida inicializada en el constructor
+                const voices = (this.predefinedVoices || []).map(voice => ({
                     name: voice.name,
                     locale: voice.locale,
                     gender: voice.gender,
