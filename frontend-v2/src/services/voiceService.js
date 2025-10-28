@@ -31,11 +31,19 @@ class VoiceService {
       ? 'https://proyecto-2-olvb.onrender.com'
       : 'http://localhost:5000');
     
-    // Load settings from localStorage
-    this.loadSettings();
+    // Load settings from localStorage if available
+    if (typeof localStorage !== 'undefined') {
+      this.loadSettings();
+    } else {
+      console.log('localStorage not available, using default settings');
+    }
     
-    // Initialize audio element
-    this.initAudioElement();
+    // Initialize audio element if available
+    if (typeof Audio !== 'undefined') {
+      this.initAudioElement();
+    } else {
+      console.log('Audio API not available, skipping audio initialization');
+    }
     
     // Load available voices (después de un pequeño delay para asegurar que la autenticación esté lista)
     setTimeout(() => {
