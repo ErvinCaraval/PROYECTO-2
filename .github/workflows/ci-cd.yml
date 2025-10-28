@@ -43,10 +43,17 @@ jobs:
             xvfb \
             fonts-liberation \
             jq \
-            # If you need more GUI or audio support for integration tests, add here intentionally
+            chromium-browser \
+            libgbm1 \
+            libxss1 \
+            # Required for running Chrome headless and Playwright tests
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
         timeout-minutes: 10
+        
+      - name: Install Playwright browsers
+        working-directory: frontend-v2
+        run: npx playwright install chromium --with-deps
 
       - name: Install dependencies
         run: |
@@ -184,7 +191,11 @@ jobs:
           npx -y @lhci/cli@0.8 autorun --collect.url=http://localhost:8080 --upload.target=temporary-public-storage || (echo "LHCI failed - printing environment" && env)
 
       - name: Run Playwright E2E tests
-        run: npm run test:e2e
+        run: |
+          # Ensure test setup directory exists
+          mkdir -p src/test
+          # Run e2e tests with specific environment variables
+          NODE_ENV=test PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm run test:e2e
 
       - name: Run visual tests
         run: npm run test:visual
