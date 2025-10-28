@@ -1,0 +1,46 @@
+RÚBRICA DE EVALUACIÓN
+TALLER 2: Desarrollo de un MVP usando Reconocimiento del habla
+
+
+Definición del Problema (5%)
+• Claridad y relevancia del problema identificado.
+• Justificación del impacto del problema en la audiencia objetivo.
+
+Propuesta de Solución (5%)
+• Originalidad, viabilidad y escalabilidad de la solución propuesta.
+• Relación directa de la solución con el problema identificado.
+
+Conceptualización y Planificación del Proyecto (10%)
+• Presentación clara de los objetivos del MVP.
+• Precisión en la definición de herramientas de IA.
+• Creación adecuada del Smart BPM que represente el flujo del proceso.
+• Definición clara del Product Backlog y sus historias priorizadas.
+
+Diseño y Creación de Historias de Usuario (10%)
+• Redacción clara y precisa de las HU siguiendo el formato Connextra.
+• Identificación adecuada de las HU que serán implementadas con IA.
+• Estimación, priorización y clasificación efectiva de las HU.
+
+Uso de IA para Mejorar la Planificación y el Desarrollo (25%)
+
+• Generación efectiva de prompts para refinar las HU y sugerir tareas técnicas.
+• Registro detallado de cada prompt, respuesta obtenida.
+• Uso de librerías o servicios de reconocimiento del habla.
+• Aprovechamiento eficiente de herramientas de IA para la generación de código, prototipado de interfaces, pruebas automatizadas y despliegue.
+Desarrollo del MVP (25%)
+• Implementación efectiva de las HU planificadas para cada Sprint.
+• Cumplimiento de buenas prácticas en la codificación, modularidad y escalabilidad del MVP.
+• Uso adecuado del control de versiones (ej. GitHub) para gestionar el código fuente. Se debe enviar URL del GitHub conde se coloque el proyecto.
+
+Presentación del MVP (15%)
+• Presentación clara del MVP implementado.
+
+Evaluación Global del Proyecto (5%)
+• Creatividad e innovación del MVP.
+• Uso efectivo de la metodología Scrum.
+• Integración eficiente de reconocimiento del habla (para preguntas y respuestas).
+• Documentación organizada y detallada del proyecto.
+
+Material Entregable:
+• MVP funcional con referencia a su repositorio.
+• Documentación del proyecto que incluya prompts utilizados, tiempos de respuesta de la IA y lecciones aprendidas.
