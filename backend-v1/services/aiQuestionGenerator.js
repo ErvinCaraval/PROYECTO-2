@@ -110,6 +110,29 @@ class AIQuestionGenerator {
         throw new Error('La IA no devolvió preguntas válidas. Verifica tu API key y conexión.');
       }
 
+      // Backwards compatibility: if AI returned simple questions with only text and no options,
+      // return them as-is (this keeps unit tests and simple flows working).
+      const looksLikeSimple = questions.every(q => q && (!q.options || (Array.isArray(q.options) && q.options.length === 0)) );
+      if (looksLikeSimple) {
+        // dedupe by text
+        const seen = new Set();
+        const out = [];
+        for (const q of questions) {
+          const t = (q.text || q.question || '').trim();
+          if (!t) continue;
+          const key = t.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          // Return legacy simple shape (only text) to preserve existing tests and callers
+          out.push({ text: t });
+          if (out.length >= count) break;
+        }
+        if (out.length < count) {
+          throw new Error('La IA no generó suficientes preguntas únicas.');
+        }
+        return { questions: out.slice(0, count) };
+      }
+
       // Sanitize and ensure exactly 4 options per question (A-D)
       const sanitizeQuestions = async (rawQuestions) => {
         const out = [];
