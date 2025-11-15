@@ -68,15 +68,13 @@ def register():
         
         try:
             # Verificar que la imagen contiene una cara
-            # DeepFace puede detectar si hay una cara en la imagen
             result = DeepFace.analyze(
                 img_path=image_path,
                 actions=['age', 'gender', 'race', 'emotion'],
                 enforce_detection=True
             )
             
-            # Si llegamos aquí, hay una cara válida
-            # Generar embeddings para almacenamiento
+            # Generar embeddings
             embedding = DeepFace.represent(
                 img_path=image_path,
                 model_name='VGG-Face',
@@ -94,8 +92,7 @@ def register():
                 'face_detected': True
             }), 200
             
-        except ValueError as e:
-            # DeepFace lanza ValueError si no detecta una cara
+        except ValueError:
             os.unlink(image_path)
             return jsonify({
                 'success': False,
@@ -104,7 +101,6 @@ def register():
             }), 400
             
     except Exception as e:
-        # Limpiar archivo temporal si existe
         if 'image_path' in locals() and os.path.exists(image_path):
             os.unlink(image_path)
         
@@ -133,12 +129,10 @@ def verify():
         img1_base64 = data['img1']
         img2_base64 = data['img2']
         
-        # Convertir ambas imágenes Base64 a archivos temporales
         img1_path = base64_to_image(img1_base64)
         img2_path = base64_to_image(img2_base64)
         
         try:
-            # Verificar si las dos imágenes corresponden a la misma persona
             result = DeepFace.verify(
                 img1_path=img1_path,
                 img2_path=img2_path,
@@ -147,11 +141,9 @@ def verify():
                 enforce_detection=True
             )
             
-            # Limpiar archivos temporales
             os.unlink(img1_path)
             os.unlink(img2_path)
             
-            # DeepFace retorna un diccionario con 'verified' (bool) y 'distance' (float)
             verified = result.get('verified', False)
             distance = result.get('distance', 1.0)
             threshold = result.get('threshold', 0.4)
@@ -164,9 +156,7 @@ def verify():
                 'confidence': float(1 - min(distance / threshold, 1.0)) if verified else 0.0
             }), 200
             
-        except ValueError as e:
-            # DeepFace lanza ValueError si no detecta una cara
-            # Limpiar archivos temporales
+        except ValueError:
             if os.path.exists(img1_path):
                 os.unlink(img1_path)
             if os.path.exists(img2_path):
@@ -175,12 +165,11 @@ def verify():
             return jsonify({
                 'success': False,
                 'verified': False,
-                'error': 'No se detectó una cara en una o ambas imágenes. Por favor, asegúrate de que tu rostro sea claramente visible.',
+                'error': 'No se detectó una cara en una o ambas imágenes.',
                 'face_detected': False
             }), 400
             
     except Exception as e:
-        # Limpiar archivos temporales si existen
         if 'img1_path' in locals() and os.path.exists(img1_path):
             os.unlink(img1_path)
         if 'img2_path' in locals() and os.path.exists(img2_path):
@@ -194,8 +183,5 @@ def verify():
         }), 500
 
 if __name__ == '__main__':
-    # Ejecutar en modo debug solo en desarrollo
-    # Aumentar timeout para permitir procesamiento largo de DeepFace
-    # threaded=True permite manejar múltiples requests
-    app.run(host='0.0.0.0', port=5001, debug=False, threaded=True, request_timeout=120)
-
+    # No usar request_timeout: Flask no lo soporta
+    app.run(host='0.0.0.0', port=5001, debug=False, threaded=True)
