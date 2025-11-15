@@ -1,483 +1,288 @@
 name: 🚀 Crear Backlog y Sprints - BrainBlitz Vision Computacional
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Permite ejecutar este workflow manualmente desde la pestaña Actions
 
+# Define el token con permisos de escritura
 permissions:
-  contents: write
+  contents: write # ⚠️ Se cambió a 'write' para poder crear ramas
   issues: write
+  # Es necesario añadir permisos para 'pull-requests: write' para que pueda crear etiquetas
   pull-requests: write
 
 jobs:
-  setup-vision-backlog:
+  setup-project-backlog:
     runs-on: ubuntu-latest
     steps:
-      # PASO 1: Checkout y configuración
+      # PASO 1: Descarga el código del repositorio
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # PASO 2: Verificar autenticación y permisos
-      - name: Verificar configuración de GitHub CLI
+      # PASO 2: Crea el proyecto si no existe y obtiene su número automáticamente
+      - name: Crear Proyecto de GitHub si no existe
+        id: project_setup # Le damos un ID a este paso para usar sus resultados
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-        run: |
-          echo "🔍 Verificando autenticación..."
-          gh auth status
-          echo "📊 Verificando permisos del token..."
-          gh api user
-
-      # PASO 3: Crear proyecto con método mejorado
-      - name: Crear Proyecto GitHub
-        id: create_project
-        env:
+          # ⚠️ MODIFICACIÓN AÑADIDA: Usa el Token de Acceso Personal para tener permisos
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           PROJECT_NAME="BrainBlitz - Computer Vision Backlog"
-          echo "🔄 Buscando proyecto existente: $PROJECT_NAME"
+          # ⚠️ MODIFICACIÓN AÑADIDA: Comando corregido para buscar el proyecto
+          PROJECT_NUMBER=$(gh project list --owner "@me" --format json | jq -r ".projects[] | select(.title == \"$PROJECT_NAME\") | .number")
           
-          # Método 1: Buscar proyecto existente usando API directa
-          PROJECTS_JSON=$(gh api -X GET /user/projects?per_page=20)
-          
-          echo "📋 Proyectos existentes del usuario:"
-          echo "$PROJECTS_JSON" | jq -r '.[] | "\(.number): \(.name)"' || echo "No se pudieron listar proyectos"
-          
-          PROJECT_NUMBER=$(echo "$PROJECTS_JSON" | jq -r ".[] | select(.name == \"$PROJECT_NAME\") | .number")
-          
-          if [ -n "$PROJECT_NUMBER" ] && [ "$PROJECT_NUMBER" != "null" ]; then
-            echo "✅ Proyecto '$PROJECT_NAME' ya existe con número: $PROJECT_NUMBER"
-            echo "PROJECT_NUMBER=$PROJECT_NUMBER" >> $GITHUB_OUTPUT
+          if [ -z "$PROJECT_NUMBER" ]; then
+            echo "Proyecto '$PROJECT_NAME' no encontrado. Creándolo ahora..."
+            # Crea el proyecto y extrae su número de la URL resultante
+            PROJECT_URL=$(gh project create --owner "@me" --title "$PROJECT_NAME")
+            PROJECT_NUMBER=$(echo "$PROJECT_URL" | rev | cut -d'/' -f1 | rev)
+            echo "Proyecto creado con el número: $PROJECT_NUMBER"
           else
-            echo "🆕 Proyecto '$PROJECT_NAME' no encontrado. Creándolo..."
-            
-            # Método 2: Crear proyecto simple sin flags adicionales
-              echo "🔧 Intentando crear proyecto con método simple..."
-              CREATE_OUTPUT=$(gh project create --owner "@me" --title "$PROJECT_NAME" --format json 2>&1)
-              
-              if echo "$CREATE_OUTPUT" | grep -q "number"; then
-                NEW_PROJECT_NUMBER=$(echo "$CREATE_OUTPUT" | jq -r '.number')
-                echo "🎉 Proyecto creado exitosamente con número: $NEW_PROJECT_NUMBER"
-                echo "PROJECT_NUMBER=$NEW_PROJECT_NUMBER" >> $GITHUB_OUTPUT
-              else
-                echo "❌ No se pudo crear el proyecto. Output: $CREATE_OUTPUT"
-                echo "⚠️ Continuando sin proyecto - las issues se crearán pero no se añadirán al proyecto"
-                echo "PROJECT_NUMBER=0" >> $GITHUB_OUTPUT
-              fi
+            echo "Proyecto '$PROJECT_NAME' ya existe con el número: $PROJECT_NUMBER"
           fi
+          # Guarda el número del proyecto para que otros pasos puedan usarlo
+          echo "PROJECT_NUMBER=$PROJECT_NUMBER" >> $GITHUB_OUTPUT
 
-      # PASO 4: Crear etiquetas
-      - name: Crear Etiquetas
+      # PASO 3: Crea las Etiquetas de Prioridad y Tecnología si no existen
+      - name: Crear Etiquetas si no existen
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
         run: |
-          echo "🏷️ Creando etiquetas..."
+          echo "Creando etiquetas de prioridad..."
+          gh label create "Prioridad: Alta" --color "D93F0B" --description "Tarea crítica y bloqueante." || echo "La etiqueta 'Prioridad: Alta' ya existe."
+          gh label create "Prioridad: Media" --color "FBCA04" --description "Tarea importante pero no urgente." || echo "La etiqueta 'Prioridad: Media' ya existe."
+          gh label create "Prioridad: Baja" --color "0E8A16" --description "Tarea menor o mejora deseable." || echo "La etiqueta 'Prioridad: Baja' ya existe."
           
-          # Función para crear etiquetas con manejo de errores
-          create_label() {
-            local name="$1"
-            local color="$2"
-            local description="$3"
-            
-            echo "🔍 Verificando etiqueta: $name"
-            if gh label list | grep -q "$name"; then
-              echo "✅ Etiqueta '$name' ya existe"
-            else
-              echo "🆕 Creando etiqueta: $name"
-              gh label create "$name" --color "$color" --description "$description" \
-                && echo "✅ Etiqueta '$name' creada" \
-                || echo "⚠️ No se pudo crear etiqueta '$name'"
-            fi
-          }
+          echo "Creando etiquetas de tecnología..."
+          gh label create "Tecnología: Azure" --color "0078D4" --description "Usa servicios de Azure" || echo "La etiqueta 'Tecnología: Azure' ya existe."
+          gh label create "Tecnología: DeepFace" --color "6F42C1" --description "Usa DeepFace para reconocimiento facial" || echo "La etiqueta 'Tecnología: DeepFace' ya existe."
+          gh label create "Tecnología: Firebase" --color "FF6D01" --description "Integración con Firebase" || echo "La etiqueta 'Tecnología: Firebase' ya existe."
+          gh label create "IA: Visión Computacional" --color "00B294" --description "Implementa visión computacional" || echo "La etiqueta 'IA: Visión Computacional' ya existe."
 
-          # Etiquetas de prioridad
-          create_label "Prioridad: Alta" "D93F0B" "Tarea crítica y bloqueante"
-          create_label "Prioridad: Media" "FBCA04" "Tarea importante pero no urgente"
-          create_label "Prioridad: Baja" "0E8A16" "Tarea menor o mejora deseable"
-          
-          # Etiquetas de tecnología
-          create_label "Tecnología: Azure" "0078D4" "Usa servicios de Azure"
-          create_label "Tecnología: DeepFace" "6F42C1" "Usa DeepFace para reconocimiento facial"
-          create_label "Tecnología: Firebase" "FF6D01" "Integración con Firebase"
-          create_label "IA: Visión Computacional" "00B294" "Implementa visión computacional"
-          
-          echo "✅ Proceso de etiquetas completado"
-
-      # PASO 5: Crear milestones
-      - name: Crear Milestones
+      # PASO 4: Crea los Milestones (Sprints) solo si no existen
+      - name: Crear Milestones si no existen
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
           GH_REPO: ${{ github.repository }}
         run: |
-          echo "📅 Creando milestones..."
-          
-          create_milestone() {
-            local title="$1"
-            local description="$2"
-            local due_date="$3"
-            
-            echo "🔍 Verificando milestone: $title"
-            EXISTING_MILESTONE=$(gh milestone list --state all --json title,number | jq -r ".[] | select(.title == \"$title\") | .number" 2>/dev/null || echo "")
-            
-            if [ -n "$EXISTING_MILESTONE" ]; then
-              echo "✅ Milestone '$title' ya existe (Número: $EXISTING_MILESTONE)"
-            else
-              echo "🆕 Creando milestone: $title"
-              gh api --method POST \
-                -H "Accept: application/vnd.github+json" \
-                "/repos/${GH_REPO}/milestones" \
-                -f title="$title" \
-                -f description="$description" \
-                -f due_on="$due_date" \
-                && echo "✅ Milestone creado: $title" \
-                || echo "❌ Error creando milestone: $title"
-            fi
-          }
+          # --- Sprint 1: Autenticación y Extracción ---
+          MILESTONE_SPRINT1_TITLE="Sprint 1: Autenticación y Extracción (17-19 Noviembre)"
+          if gh api /repos/${GH_REPO}/milestones --paginate -q ".[] | select(.title == \"$MILESTONE_SPRINT1_TITLE\")" | grep -qF "$MILESTONE_SPRINT1_TITLE"; then
+            echo "Milestone '$MILESTONE_SPRINT1_TITLE' ya existe. Omitiendo."
+          else
+            echo "Creando milestone '$MILESTONE_SPRINT1_TITLE'..."
+            gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${GH_REPO}/milestones" \
+              -f title="$MILESTONE_SPRINT1_TITLE" \
+              -f description='Implementar OCR y Reconocimiento Facial. Total: 21 Story Points' \
+              -f due_on='2025-11-19T23:59:59Z'
+          fi
 
-          create_milestone \
-            "Sprint 1: Autenticación y Extracción (17-19 Noviembre)" \
-            "Implementar OCR y Reconocimiento Facial. Total: 21 Story Points" \
-            "2025-11-19T23:59:59Z"
+          # --- Sprint 2: Análisis Visual Avanzado ---
+          MILESTONE_SPRINT2_TITLE="Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)"
+          if gh api /repos/${GH_REPO}/milestones --paginate -q ".[] | select(.title == \"$MILESTONE_SPRINT2_TITLE\")" | grep -qF "$MILESTONE_SPRINT2_TITLE"; then
+            echo "Milestone '$MILESTONE_SPRINT2_TITLE' ya existe. Omitiendo."
+          else
+            echo "Creando milestone '$MILESTONE_SPRINT2_TITLE'..."
+            gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${GH_REPO}/milestones" \
+              -f title="$MILESTONE_SPRINT2_TITLE" \
+              -f description='Implementar análisis de imágenes y detección de objetos. Total: 20 Story Points' \
+              -f due_on='2025-11-24T23:59:59Z'
+          fi
 
-          create_milestone \
-            "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)" \
-            "Implementar análisis de imágenes y detección de objetos. Total: 20 Story Points" \
-            "2025-11-24T23:59:59Z"
-
-          create_milestone \
-            "Release 1.0: Computer Vision Foundation (24 Noviembre)" \
-            "Lanzamiento con todas las funcionalidades de visión computacional" \
-            "2025-11-24T23:59:59Z"
-
-      # PASO 6: Crear issues (funciona con o sin proyecto)
-      - name: Crear Issues de Visión Computacional
+      # PASO 5: Crea todos los Issues, los añade al proyecto y solo si no existen
+      - name: Crear Issues y añadirlas al Proyecto
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
+          PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
         run: |
-          echo "📝 Creando issues de visión computacional..."
-          
-          create_issue() {
+          # La función ahora también añade la issue al proyecto.
+          create_and_add_to_project() {
             local title="$1"
             local body="$2"
-            local labels="$3"
+            local label="$3"
             local milestone="$4"
             
-            echo "🔍 Verificando issue: $title"
-            EXISTING_ISSUE=$(gh issue list --state all --search "in:title \"$title\"" --json number -q ".[0].number" 2>/dev/null || echo "")
-            
-            if [ -n "$EXISTING_ISSUE" ] && [ "$EXISTING_ISSUE" != "null" ]; then
-              echo "✅ Issue '$title' ya existe (Número: $EXISTING_ISSUE)"
+            ISSUE_URL=$(gh issue list --state all --search "in:title \"$title\"" --json url -q ".[0].url")
+
+            if [ -n "$ISSUE_URL" ]; then
+              echo "Issue '$title' ya existe. Omitiendo creación."
             else
-              echo "🆕 Creando issue: $title"
-              gh issue create \
-                --title "$title" \
-                --body "$body" \
-                --label "$labels" \
-                --milestone "$milestone" \
-                && echo "✅ Issue creada: $title" \
-                || echo "❌ Error creando issue: $title"
+              echo "Creando issue '$title'..."
+              ISSUE_URL=$(gh issue create --title "$title" --body "$body" --label "$label" --milestone "$milestone")
+            fi
+
+            if [ -n "$ISSUE_URL" ]; then
+                echo "Añadiendo issue $ISSUE_URL al proyecto ${{ env.PROJECT_NUMBER }}..."
+                PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
+                CONTENT_ID=$(gh issue view $ISSUE_URL --json id | jq -r '.id')
+
+                # Añade la issue al proyecto y obtiene el ID del item
+                ITEM_ID=$(gh api graphql -f query='
+                  mutation($project:ID!, $content:ID!) {
+                    addProjectV2ItemById(input: {projectId: $project, contentId: $content}) {
+                      item { id }
+                    }
+                  }
+                ' -f project="$PROJECT_ID" -f content="$CONTENT_ID" | jq -r '.data.addProjectV2ItemById.item.id')
+
+                # === MOVER LA ISSUE A LA COLUMNA 'Todo' ===
+                TODO_COLUMN_ID="f75ad846"
+                STATUS_FIELD_ID="PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM"
+                # Actualiza el campo Status del item usando una query más simple
+                echo "Moviendo issue a Todo con IDs: PROJECT=$PROJECT_ID, ITEM=$ITEM_ID, FIELD=$STATUS_FIELD_ID, OPTION=$TODO_COLUMN_ID"
+                
+                # Usar una query GraphQL más simple sin variables complejas
+                gh api graphql -f query="
+                  mutation {
+                    updateProjectV2ItemFieldValue(input: {
+                      projectId: \"$PROJECT_ID\",
+                      itemId: \"$ITEM_ID\",
+                      fieldId: \"$STATUS_FIELD_ID\",
+                      value: {singleSelectOptionId: \"$TODO_COLUMN_ID\"}
+                    }) {
+                      projectV2Item { id }
+                    }
+                  }
+                " || echo "No se pudo mover la issue a la columna 'Todo'. Revisa el ID."
             fi
           }
 
-          # HU-VC2: OCR
-          create_issue \
+          # ===============================================
+          # ==         ISSUES SPRINT 1                  ==
+          # ===============================================
+
+          create_and_add_to_project \
             "HU-VC2: [BE] OCR - Extracción de Texto de Imágenes" \
-            "**📅 Fecha Objetivo:** Lunes 17 Noviembre 2025  
-            **🔢 Estimación:** 8 Story Points  
-            **🎯 Prioridad:** Media  
-            **🤖 Requiere IA:** ✅ Sí (Azure Computer Vision OCR)
+            "**Como** usuario o administrador de BrainBlitz, **Quiero** poder extraer texto automáticamente de imágenes, **Para que** pueda generar preguntas de forma más eficiente.
 
-            ### Contexto
-            Los usuarios y administradores de BrainBlitz necesitan una forma de convertir imágenes con texto (pantallas, documentos, carteles, capturas) en texto editable para generar preguntas automáticamente o procesar contenido visual.
+            ---
+            ### **Puntos de Estimación:** 8
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Configurar Azure Computer Vision con API Key y Endpoint
+            - ✅ Crear endpoint POST /api/vision/extract-text
+            - ✅ Integrar con Azure OCR v3.2 para procesamiento asíncrono
+            - ✅ Desarrollar componente OCRQuestionCreator.jsx en frontend
+            - ✅ Permitir subida de imágenes y preview
+            - ✅ Mostrar texto extraído en textarea editable
+            - ✅ Integrar con AIQuestionGenerator.jsx
+            - ✅ Realizar pruebas con JPG, PNG, PDF
 
-            ### Objetivo
-            Implementar un sistema de reconocimiento óptico de caracteres (OCR) que permita extraer texto de imágenes subidas por usuarios o administradores, facilitando la creación de preguntas y el procesamiento de contenido visual.
-
-            ### Criterios de Aceptación
-
-            **1. Configuración de Azure:**
-            - ✅ Cuenta Azure con Computer Vision habilitado
-            - ✅ API Key de Azure Computer Vision disponible
-            - ✅ Variables de entorno configuradas en .env
-
-            **2. Endpoint Backend:**
-            - ✅ Ruta \`POST /api/vision/extract-text\` en \`backend-v1/routes/vision.routes.js\`
-            - ✅ Controlador \`visionController.js\` con método \`extractText\`
-            - ✅ Middleware de autenticación \`authenticate.js\`
-            - ✅ Validación de imagen en Base64 o archivo
-
-            **3. Integración con Azure OCR:**
-            - ✅ POST a \`https://{endpoint}/vision/v3.2/read/analyze\`
-            - ✅ Manejo de procesamiento asíncrono de Azure (analyze → get results)
-            - ✅ Extracción de todas las líneas de texto de la respuesta
-
-            **4. Frontend:**
-            - ✅ Componente \`OCRQuestionCreator.jsx\` con subida de imagen
-            - ✅ Preview de imagen subida
-            - ✅ Botón \"Extraer Texto\" → llamada a \`/api/vision/extract-text\`
-            - ✅ Textarea editable con texto extraído
-            - ✅ Integración con \`AIQuestionGenerator.jsx\`
-
-            **5. Pruebas:**
-            - ✅ Prueba unitaria de función de extracción
-            - ✅ Prueba de integración del endpoint completo
-            - ✅ Prueba manual con JPG, PNG, PDF
-
-            ### Tecnologías
+            ### **Tecnologías:**
             - Azure Computer Vision OCR
-            - Node.js
-            - Express
-            - React
+            - Node.js, Express, React
             - Base64 encoding
 
-            ### Dependencias
+            ### **Dependencias:**
             - Configuración de Azure Computer Vision
-            - Variables: \`AZURE_COMPUTER_VISION_KEY\`, \`AZURE_COMPUTER_VISION_ENDPOINT\`" \
-            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" \
-            "Sprint 1: Autenticación y Extracción (17-19 Noviembre)"
+            - Variables: AZURE_COMPUTER_VISION_KEY, AZURE_COMPUTER_VISION_ENDPOINT" \
+            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 1: Autenticación y Extracción (17-19 Noviembre)"
 
-          # HU-VC1: Reconocimiento Facial
-          create_issue \
+          create_and_add_to_project \
             "HU-VC1: [BE] Reconocimiento Facial para Login y Registro" \
-            "**📅 Fecha Objetivo:** Martes 18 Noviembre 2025  
-            **🔢 Estimación:** 13 Story Points  
-            **🎯 Prioridad:** Alta  
-            **🤖 Requiere IA:** ✅ Sí (DeepFace + VGG-Face)
+            "**Como** usuario de BrainBlitz, **Quiero** poder autenticarme usando reconocimiento facial, **Para que** tenga una experiencia más segura y moderna.
 
-            ### Contexto
-            Los usuarios de BrainBlitz necesitan una forma segura y moderna de autenticarse sin depender únicamente de contraseñas. Se requiere implementar autenticación biométrica mediante reconocimiento facial.
+            ---
+            ### **Puntos de Estimación:** 13
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Crear endpoints POST /api/face/register y POST /api/face/login
+            - ✅ Implementar validación de rostros con DeepFace
+            - ✅ Generar embeddings faciales con modelo VGG-Face
+            - ✅ Almacenar embeddings en Firestore asociados a userId
+            - ✅ Desarrollar componentes FaceRegister.jsx y FaceLogin.jsx
+            - ✅ Integrar vista previa de cámara en tiempo real
+            - ✅ Configurar microservicio facial en Azure Container Instances
+            - ✅ Implementar rate limiting y seguridad
+            - ✅ Realizar pruebas de autenticación biométrica
 
-            ### Objetivo
-            Permitir que los usuarios se registren e inicien sesión usando reconocimiento facial como método de autenticación alternativo o principal, mejorando la seguridad y la experiencia de usuario.
-
-            ### Criterios de Aceptación
-
-            **1. Registro Facial:**
-            - ✅ Endpoint \`POST /api/face/register\` que acepta imagen Base64 y token Firebase
-            - ✅ Validación de rostro visible usando DeepFace
-            - ✅ Generación de embeddings faciales con modelo VGG-Face
-            - ✅ Almacenamiento de embeddings en Firestore asociados al userId
-            - ✅ Prevención de duplicados (un usuario = un registro facial)
-
-            **2. Login Facial:**
-            - ✅ Endpoint \`POST /api/face/login\` que acepta imagen Base64 y email
-            - ✅ Búsqueda de usuario por email en Firebase Auth
-            - ✅ Comparación facial con embedding almacenado
-            - ✅ Umbral de confianza mínimo (ej: 0.7)
-            - ✅ Generación de token personalizado de Firebase si verificación exitosa
-
-            **3. Frontend - Registro Facial:**
-            - ✅ Componente \`FaceRegister.jsx\` con vista previa de cámara en tiempo real
-            - ✅ Captura de foto del rostro
-            - ✅ Conversión a Base64
-            - ✅ Envío al endpoint \`/api/face/register\`
-            - ✅ Indicador visual cuando se detecta un rostro
-
-            **4. Frontend - Login Facial:**
-            - ✅ Componente \`FaceLogin.jsx\` con campo de email y vista previa de cámara
-            - ✅ Captura de foto y envío al endpoint \`/api/face/login\`
-            - ✅ Integración con \`AuthContext\`
-            - ✅ Redirección a página principal después de login exitoso
-
-            **5. Microservicio Facial:**
-            - ✅ Servicio \`facial-service\` con DeepFace desplegado en Azure Container Instances
-            - ✅ Health check: \`GET /health\` responde correctamente
-            - ✅ Configuración de URL en \`.env\` como \`DEEPFACE_SERVICE_URL\`
-
-            **6. Seguridad:**
-            - ✅ Registro facial requiere token Firebase válido
-            - ✅ Rate limiting en endpoints para prevenir ataques
-            - ✅ Almacenamiento seguro de embeddings en Firestore
-
-            ### Tecnologías
-            - DeepFace
-            - VGG-Face (modelo de embeddings)
+            ### **Tecnologías:**
+            - DeepFace, VGG-Face
             - Azure Container Instances
             - Firebase Auth
-            - React
-            - getUserMedia API
+            - React, getUserMedia API
 
-            ### Dependencias
+            ### **Dependencias:**
             - Microservicio facial desplegado
             - Firebase Auth configurado
             - Azure Container Instances" \
-            "Prioridad: Alta,IA: Visión Computacional,Tecnología: DeepFace,Tecnología: Firebase" \
-            "Sprint 1: Autenticación y Extracción (17-19 Noviembre)"
+            "Prioridad: Alta,IA: Visión Computacional,Tecnología: DeepFace,Tecnología: Firebase" "Sprint 1: Autenticación y Extracción (17-19 Noviembre)"
 
-          # HU-VC3: Análisis de Imágenes
-          create_issue \
+          # ===============================================
+          # ==         ISSUES SPRINT 2                  ==
+          # ===============================================
+
+          create_and_add_to_project \
             "HU-VC3: [BE] Análisis Inteligente de Imágenes" \
-            "**📅 Fecha Objetivo:** Jueves 20 Noviembre 2025  
-            **🔢 Estimación:** 10 Story Points  
-            **🎯 Prioridad:** Media  
-            **🤖 Requiere IA:** ✅ Sí (Azure Computer Vision Analyze)
+            "**Como** usuario o administrador de BrainBlitz, **Quiero** analizar imágenes automáticamente, **Para que** pueda generar preguntas basadas en contenido visual.
 
-            ### Contexto
-            Los usuarios y administradores de BrainBlitz necesitan generar preguntas automáticamente a partir de imágenes. Se requiere un sistema que analice imágenes y genere descripciones, tags y categorías automáticamente.
+            ---
+            ### **Puntos de Estimación:** 10
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Crear endpoint POST /api/vision/analyze-image
+            - ✅ Integrar con Azure Analyze Image API
+            - ✅ Extraer descripción, tags, categorías, objetos y colores
+            - ✅ Ordenar resultados por confianza descendente
+            - ✅ Desarrollar componente ImageAnalysisQuestionCreator.jsx
+            - ✅ Mostrar resultados en secciones organizadas
+            - ✅ Implementar generación automática de preguntas
+            - ✅ Pre-llenar formularios con sugerencias
+            - ✅ Realizar pruebas con diferentes tipos de imágenes
 
-            ### Objetivo
-            Implementar un sistema de análisis inteligente de imágenes que genere descripciones automáticas, tags, categorías y metadatos de imágenes, permitiendo crear preguntas de trivia basadas en contenido visual de forma automática.
-
-            ### Criterios de Aceptación
-
-            **1. Endpoint Backend:**
-            - ✅ Ruta \`POST /api/vision/analyze-image\` en \`backend-v1/routes/vision.routes.js\`
-            - ✅ Método \`analyzeImage\` en \`visionController.js\`
-            - ✅ Autenticación requerida
-            - ✅ Validación de imagen en Base64 o archivo, máximo 4MB
-
-            **2. Integración con Azure Analyze Image:**
-            - ✅ POST a \`https://{endpoint}/vision/v3.2/analyze?visualFeatures=Description,Tags,Categories,Objects,Color\`
-            - ✅ Procesamiento correcto de respuesta JSON
-            - ✅ Extracción de: descripción, tags, categorías, objetos y colores
-
-            **3. Respuesta del Endpoint:**
-            - ✅ Objeto JSON estructurado con descripción, tags, categorías, objetos y colores
-            - ✅ Niveles de confianza incluidos
-            - ✅ Tags y categorías ordenados por confianza descendente
-
-            **4. Frontend:**
-            - ✅ Componente \`ImageAnalysisQuestionCreator.jsx\` con subida de imagen
-            - ✅ Preview de imagen
-            - ✅ Botón \"Analizar Imagen\" → llamada a \`/api/vision/analyze-image\`
-            - ✅ Resultados en secciones: Descripción, Tags, Categorías, Objetos
-            - ✅ Botón \"Generar Pregunta desde Análisis\"
-
-            **5. Generación Automática de Preguntas:**
-            - ✅ Usa descripción como base para pregunta
-            - ✅ Usa tags para sugerir categoría
-            - ✅ Pre-llena campo: \"¿Qué se muestra en esta imagen?\"
-            - ✅ Sugiere opciones basadas en tags y objetos
-
-            **6. Pruebas:**
-            - ✅ Prueba unitaria con imagen de prueba
-            - ✅ Prueba de integración del endpoint
-            - ✅ Prueba con imágenes de arte, geografía, objetos, personas
-
-            ### Tecnologías
+            ### **Tecnologías:**
             - Azure Computer Vision Analyze Image
-            - Node.js
-            - Express
-            - React
+            - Node.js, Express, React
 
-            ### Dependencias
+            ### **Dependencias:**
             - Azure Computer Vision configurado
-            - Variables: \`AZURE_COMPUTER_VISION_KEY\`, \`AZURE_COMPUTER_VISION_ENDPOINT\`" \
-            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" \
-            "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)"
+            - Variables: AZURE_COMPUTER_VISION_KEY, AZURE_COMPUTER_VISION_ENDPOINT" \
+            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)"
 
-          # HU-VC4: Detección de Objetos
-          create_issue \
+          create_and_add_to_project \
             "HU-VC4: [BE] Detección de Objetos en Imágenes" \
-            "**📅 Fecha Objetivo:** Viernes 21 Noviembre 2025  
-            **🔢 Estimación:** 10 Story Points  
-            **🎯 Prioridad:** Media  
-            **🤖 Requiere IA:** ✅ Sí (Azure Computer Vision Object Detection)
+            "**Como** usuario de BrainBlitz, **Quiero** detectar objetos en imágenes, **Para que** pueda crear preguntas visuales interactivas.
 
-            ### Contexto
-            Los usuarios de BrainBlitz necesitan crear preguntas visuales donde se identifiquen objetos específicos en imágenes. Actualmente, no existe funcionalidad para detectar y localizar objetos en imágenes.
+            ---
+            ### **Puntos de Estimación:** 10
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Crear endpoint POST /api/vision/detect-objects
+            - ✅ Integrar con Azure Object Detection API
+            - ✅ Procesar bounding boxes y niveles de confianza
+            - ✅ Desarrollar componente ObjectDetectionQuestionCreator.jsx
+            - ✅ Mostrar bounding boxes sobre imágenes
+            - ✅ Implementar funcionalidades interactivas (hover, filtros)
+            - ✅ Generar preguntas de identificación y conteo automáticamente
+            - ✅ Usar Canvas API para visualización
+            - ✅ Realizar pruebas de precisión y múltiples objetos
 
-            ### Objetivo
-            Implementar un sistema de detección de objetos que identifique y localice objetos específicos dentro de imágenes, permitiendo crear preguntas interactivas basadas en la detección de objetos.
-
-            ### Criterios de Aceptación
-
-            **1. Endpoint Backend:**
-            - ✅ Ruta \`POST /api/vision/detect-objects\` en \`backend-v1/routes/vision.routes.js\`
-            - ✅ Método \`detectObjects\` en \`visionController.js\`
-            - ✅ Autenticación requerida
-            - ✅ Validación de imagen en Base64 o archivo, máximo 4MB
-
-            **2. Integración con Azure Object Detection:**
-            - ✅ POST a \`https://{endpoint}/vision/v3.2/detect\`
-            - ✅ Procesamiento de respuesta JSON con objetos detectados
-            - ✅ Lista de objetos con nombre, confianza, bounding box y área
-
-            **3. Frontend - Visualización:**
-            - ✅ Componente \`ObjectDetectionQuestionCreator.jsx\` con subida de imagen
-            - ✅ Preview de imagen con bounding boxes dibujados sobre objetos
-            - ✅ Lista de objetos con nombre y nivel de confianza
-            - ✅ Funcionalidades interactivas (hover sobre objeto → resalta bounding box)
-
-            **4. Frontend - Generación de Preguntas:**
-            - ✅ Botón \"Crear Pregunta de Objetos\"
-            - ✅ Genera: \"¿Qué objeto aparece en esta imagen?\" o \"¿Cuántos [objeto] hay?\"
-            - ✅ Usa objetos detectados como opciones
-            - ✅ Marca objeto con mayor confianza como correcto
-
-            **5. Tipos de Preguntas:**
-            - ✅ Preguntas de identificación: \"¿Qué objeto es este?\"
-            - ✅ Preguntas de conteo: \"¿Cuántos [objeto] hay en la imagen?\"
-            - ✅ Sistema cuenta objetos del mismo tipo
-            - ✅ Genera opciones numéricas (0, 1, 2, 3, 4+)
-
-            **6. Pruebas:**
-            - ✅ Prueba unitaria con imagen de prueba
-            - ✅ Prueba de integración del endpoint
-            - ✅ Verificación de detección de múltiples objetos
-            - ✅ Verificación de precisión en bounding boxes
-
-            ### Tecnologías
+            ### **Tecnologías:**
             - Azure Computer Vision Object Detection
-            - Node.js
-            - Express
-            - React
-            - Canvas API (para dibujar bounding boxes)
+            - Node.js, Express, React
+            - Canvas API
 
-            ### Dependencias
+            ### **Dependencias:**
             - Azure Computer Vision configurado
-            - Variables: \`AZURE_COMPUTER_VISION_KEY\`, \`AZURE_COMPUTER_VISION_ENDPOINT\`" \
-            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" \
-            "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)"
+            - Variables: AZURE_COMPUTER_VISION_KEY, AZURE_COMPUTER_VISION_ENDPOINT" \
+            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)"
 
-      # PASO 7: Crear ramas para las issues
-      - name: Crear Ramas para Issues
+      # PASO 6: Crea y Vincula las Ramas para cada Issue
+      - name: Crear Ramas y Vincularlas a las Issues
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
         run: |
-          echo "🌿 Creando ramas para issues..."
+          MAIN_BRANCH_SHA=$(git rev-parse main)
           gh issue list --state open --json number,title | jq -c '.[]' | while read issue; do
             ISSUE_NUMBER=$(echo $issue | jq -r '.number')
             ISSUE_TITLE=$(echo $issue | jq -r '.title')
-            
-            # Limpiar título para nombre de rama
-            BRANCH_NAME="hu-vc${ISSUE_NUMBER}-$(echo "$ISSUE_TITLE" | \
-              sed -E 's/\[(BE|FE)\] //g' | \
-              sed -E 's/HU-VC[0-9]+: //g' | \
-              sed -E 's/[^a-zA-Z0-9]+/-/g' | \
-              tr '[:upper:]' '[:lower:]' | \
-              cut -c1-50)"
-            
-            echo "🔍 Verificando rama: $BRANCH_NAME"
+            BRANCH_TITLE=$(echo "$ISSUE_TITLE" | iconv -t ascii//TRANSLIT | sed -E 's/\[(BE|FE)\] //g' | sed -E 's/HU-VC[0-9]+: //g' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+\|-+$//g' | tr '[:upper:]' '[:lower:]')
+            BRANCH_NAME="hu-vc${ISSUE_NUMBER}-${BRANCH_TITLE}"
+
             if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
-              echo "✅ Rama '$BRANCH_NAME' ya existe."
+              echo "La rama '$BRANCH_NAME' ya existe."
             else
-              echo "🆕 Creando rama: $BRANCH_NAME"
-              git fetch origin
-              MAIN_SHA=$(git rev-parse origin/main)
-              
-              gh api repos/${{ github.repository }}/git/refs \
-                --method POST \
-                -f ref="refs/heads/${BRANCH_NAME}" \
-                -f sha="$MAIN_SHA" \
-                && echo "✅ Rama creada: $BRANCH_NAME" \
-                || echo "⚠️ No se pudo crear rama: $BRANCH_NAME"
+              echo "Creando rama '$BRANCH_NAME'..."
+              gh api repos/${{ github.repository }}/git/refs --method POST -f ref="refs/heads/${BRANCH_NAME}" -f sha="$MAIN_BRANCH_SHA"
+              # Comenta en la issue para vincular la rama
+              gh issue comment $ISSUE_NUMBER --body "Se ha creado la rama de trabajo para esta HU de Visión Computacional: \`$BRANCH_NAME\`"
             fi
           done
-
-      # PASO 8: Resumen final
-      - name: Mostrar resumen
-        run: |
-          echo "🎉 RESUMEN DE LA EJECUCIÓN"
-          echo "=========================="
-          echo "✅ Etiquetas creadas/verificadas"
-          echo "✅ Milestones creados/verificados" 
-          echo "✅ Issues de visión computacional creadas/verificadas"
-          echo "✅ Ramas creadas/verificadas"
-          echo ""
-          echo "📋 Para ver las issues:"
-          echo "   https://github.com/${{ github.repository }}/issues"
-          echo ""
-          echo "📅 Para ver los milestones:"
-          echo "   https://github.com/${{ github.repository }}/milestones"
-          echo ""
-          echo "🌿 Para ver las ramas:"
-          echo "   https://github.com/${{ github.repository }}/branches"
