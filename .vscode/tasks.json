@@ -12,6 +12,21 @@
                 "group": "develop"
             }
         },
+
+        {
+            "label": "Start facial-service",
+            "type": "shell",
+            "command": "cd facial-service && docker compose up --build",
+            "isBackground": true,
+            "presentation": {
+                "reveal": "always",
+                "panel": "new",
+                "group": "develop"
+            }
+        },
+
+
+
         {
             "label": "Start Frontend",
             "type": "shell",
@@ -25,7 +40,7 @@
         },
         {
             "label": "Start Development Environment",
-            "dependsOn": ["Start Backend", "Start Frontend"],
+            "dependsOn": ["Start facial-service", "Start Backend", "Start Frontend"],
             "group": {
                 "kind": "test",
                 "isDefault": true

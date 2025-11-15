@@ -30,6 +30,13 @@ clean_install "frontend-v2"
 
 echo -e "${GREEN}🚀 Iniciando servicios...${NC}"
 
+# Crear terminal y ejecutar facial-service
+echo -e "${GREEN}🤖 Iniciando Facial Service (Docker)...${NC}"
+gnome-terminal --working-directory="$(pwd)/facial-service" -- bash -c "docker compose up; exec bash" &
+
+# Esperar un momento para que el servicio Docker inicie
+sleep 3
+
 # Crear terminal y ejecutar backend
 echo -e "${GREEN}📡 Iniciando Backend...${NC}"
 gnome-terminal --working-directory="$(pwd)/backend-v1" -- bash -c "node hybridServer.js; exec bash" &
