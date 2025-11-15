@@ -28,7 +28,8 @@ jobs:
           
           if [ -z "$PROJECT_NUMBER" ]; then
             echo "Proyecto '$PROJECT_NAME' no encontrado. Creándolo ahora..."
-            PROJECT_URL=$(gh project create --owner "@me" --title "$PROJECT_NAME" --description "Backlog para proyecto de visión computacional con Azure y DeepFace")
+            # Crear proyecto sin description (flag no soportado)
+            PROJECT_URL=$(gh project create --owner "@me" --title "$PROJECT_NAME")
             PROJECT_NUMBER=$(echo "$PROJECT_URL" | rev | cut -d'/' -f1 | rev)
             echo "Proyecto creado con el número: $PROJECT_NUMBER"
           else
@@ -128,9 +129,11 @@ jobs:
                   }
                 ' -f project="$PROJECT_ID" -f content="$CONTENT_ID" | jq -r '.data.addProjectV2ItemById.item.id')
 
+                # Intentar mover a la columna Todo (si existe)
                 TODO_COLUMN_ID="f75ad846"
                 STATUS_FIELD_ID="PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM"
                 
+                # Verificar si la columna existe antes de intentar mover
                 gh api graphql -f query="
                   mutation {
                     updateProjectV2ItemFieldValue(input: {
@@ -142,7 +145,7 @@ jobs:
                       projectV2Item { id }
                     }
                   }
-                " || echo "No se pudo mover la issue a la columna 'Todo'."
+                " || echo "No se pudo mover la issue a la columna 'Todo'. Puede que el campo no exista."
             fi
           }
 
