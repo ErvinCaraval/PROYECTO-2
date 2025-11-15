@@ -93,6 +93,68 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
           PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
         run: |
+          # Obtener los IDs del campo Status y opción Todo dinámicamente
+          echo "Obteniendo IDs del proyecto..."
+          PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
+          
+          # Obtener el campo Status del proyecto
+          STATUS_FIELD_ID=$(gh api graphql -f query='
+            query($projectId: ID!) {
+              node(id: $projectId) {
+                ... on ProjectV2 {
+                  fields(first: 20) {
+                    nodes {
+                      ... on ProjectV2Field {
+                        id
+                        name
+                      }
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ' -f projectId="$PROJECT_ID" | jq -r '.data.node.fields.nodes[] | select(.name == "Status") | .id')
+          
+          # Obtener el ID de la opción "Todo"
+          TODO_COLUMN_ID=$(gh api graphql -f query='
+            query($projectId: ID!) {
+              node(id: $projectId) {
+                ... on ProjectV2 {
+                  fields(first: 20) {
+                    nodes {
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ' -f projectId="$PROJECT_ID" | jq -r '.data.node.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Todo") | .id')
+          
+          echo "IDs obtenidos: PROJECT=$PROJECT_ID, STATUS_FIELD=$STATUS_FIELD_ID, TODO_OPTION=$TODO_COLUMN_ID"
+          
+          # Si no se encontró el campo Status o la opción Todo, continuar sin mover las issues
+          if [ -z "$STATUS_FIELD_ID" ] || [ -z "$TODO_COLUMN_ID" ]; then
+            echo "⚠️ No se pudo encontrar el campo Status o la opción Todo. Las issues se crearán pero no se moverán."
+            MOVE_TO_TODO=false
+          else
+            MOVE_TO_TODO=true
+          fi
+
           # La función ahora también añade la issue al proyecto.
           create_and_add_to_project() {
             local title="$1"
@@ -111,7 +173,6 @@ jobs:
 
             if [ -n "$ISSUE_URL" ]; then
                 echo "Añadiendo issue $ISSUE_URL al proyecto ${{ env.PROJECT_NUMBER }}..."
-                PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
                 CONTENT_ID=$(gh issue view $ISSUE_URL --json id | jq -r '.id')
 
                 # Añade la issue al proyecto y obtiene el ID del item
@@ -123,25 +184,25 @@ jobs:
                   }
                 ' -f project="$PROJECT_ID" -f content="$CONTENT_ID" | jq -r '.data.addProjectV2ItemById.item.id')
 
-                # === MOVER LA ISSUE A LA COLUMNA 'Todo' ===
-                TODO_COLUMN_ID="f75ad846"
-                STATUS_FIELD_ID="PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM"
-                # Actualiza el campo Status del item usando una query más simple
-                echo "Moviendo issue a Todo con IDs: PROJECT=$PROJECT_ID, ITEM=$ITEM_ID, FIELD=$STATUS_FIELD_ID, OPTION=$TODO_COLUMN_ID"
-                
-                # Usar una query GraphQL más simple sin variables complejas
-                gh api graphql -f query="
-                  mutation {
-                    updateProjectV2ItemFieldValue(input: {
-                      projectId: \"$PROJECT_ID\",
-                      itemId: \"$ITEM_ID\",
-                      fieldId: \"$STATUS_FIELD_ID\",
-                      value: {singleSelectOptionId: \"$TODO_COLUMN_ID\"}
-                    }) {
-                      projectV2Item { id }
+                # Mover a Todo solo si se encontraron los IDs
+                if [ "$MOVE_TO_TODO" = true ] && [ -n "$ITEM_ID" ]; then
+                  echo "Moviendo issue a Todo..."
+                  
+                  gh api graphql -f query="
+                    mutation {
+                      updateProjectV2ItemFieldValue(input: {
+                        projectId: \"$PROJECT_ID\",
+                        itemId: \"$ITEM_ID\",
+                        fieldId: \"$STATUS_FIELD_ID\",
+                        value: {singleSelectOptionId: \"$TODO_COLUMN_ID\"}
+                      }) {
+                        projectV2Item { id }
+                      }
                     }
-                  }
-                " || echo "No se pudo mover la issue a la columna 'Todo'. Revisa el ID."
+                  " && echo "✅ Issue movida a Todo" || echo "⚠️ No se pudo mover la issue a Todo"
+                else
+                  echo "⚠️ No se pudo mover la issue a Todo (IDs no encontrados)"
+                fi
             fi
           }
 
