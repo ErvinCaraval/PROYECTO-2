@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useAuth } from '../AuthContext'
 import { useVoice } from '../VoiceContext'
 
 function MenuIcon({ open }) {
@@ -16,6 +17,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false)
   const location = useLocation()
   const isHome = location.pathname === '/'
+  const { user } = useAuth()
   const { isVoiceModeEnabled, toggleVoiceMode, isVoiceAvailable, speak } = useVoice()
 
   const announce = (text) => {
@@ -102,6 +104,26 @@ export default function Navbar() {
           >
             Iniciar
           </Link>
+          <Link
+            to="/face-login"
+            className="bg-white/10 px-3 py-2 rounded-md text-sm border border-white/20 hover:bg-white/20"
+            onFocus={() => announce('Ir a Login Facial')}
+            onMouseEnter={() => announce('Ir a Login Facial')}
+            title="Iniciar sesión con reconocimiento facial"
+          >
+            🔐 Facial
+          </Link>
+          {user && (
+            <Link
+              to="/face-register"
+              className="bg-blue-500/20 px-3 py-2 rounded-md text-sm border border-blue-400/30 hover:bg-blue-500/30"
+              onFocus={() => announce('Ir a Registro Facial')}
+              onMouseEnter={() => announce('Ir a Registro Facial')}
+              title="Registrar tu cara para login facial"
+            >
+              📸 Registrar Cara
+            </Link>
+          )}
         </nav>
 
         <button
@@ -182,6 +204,26 @@ export default function Navbar() {
           >
             Iniciar
           </Link>
+          <Link
+            to="/face-login"
+            className="block bg-white/10 px-3 py-3 rounded-md text-white text-base border border-white/20 hover:bg-white/20"
+            onClick={() => setOpen(false)}
+            onFocus={() => announce('Ir a Login Facial')}
+            onMouseEnter={() => announce('Ir a Login Facial')}
+          >
+            🔐 Login Facial
+          </Link>
+          {user && (
+            <Link
+              to="/face-register"
+              className="block bg-blue-500/20 px-3 py-3 rounded-md text-white text-base border border-blue-400/30 hover:bg-blue-500/30"
+              onClick={() => setOpen(false)}
+              onFocus={() => announce('Ir a Registro Facial')}
+              onMouseEnter={() => announce('Ir a Registro Facial')}
+            >
+              📸 Registrar Cara
+            </Link>
+          )}
         </div>
       </div>
     </header>
