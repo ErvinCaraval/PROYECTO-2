@@ -1,88 +1,97 @@
-name: 🚀 Crear Backlog y Sprints del Proyecto - Visión Computacional
+name: 🚀 Crear Backlog y Sprints del Proyecto
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Permite ejecutar este workflow manualmente desde la pestaña Actions
 
+# Define el token con permisos de escritura
 permissions:
-  contents: write
+  contents: write # ⚠️ Se cambió a 'write' para poder crear ramas
   issues: write
+  # Es necesario añadir permisos para 'pull-requests: write' para que pueda crear etiquetas
   pull-requests: write
 
 jobs:
   setup-project-backlog:
     runs-on: ubuntu-latest
     steps:
+      # PASO 1: Descarga el código del repositorio
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # PASO 2 (MODIFICADO): Crea el proyecto si no existe y obtiene su número automáticamente
       - name: Crear Proyecto de GitHub si no existe
-        id: project_setup
+        id: project_setup # Le damos un ID a este paso para usar sus resultados
         env:
+          # ⚠️ MODIFICACIÓN AÑADIDA: Usa el Token de Acceso Personal para tener permisos
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          PROJECT_NAME="Product Backlog - Visión Computacional"
+          PROJECT_NAME="Product Backlog"
+          # ⚠️ MODIFICACIÓN AÑADIDA: Comando corregido para buscar el proyecto
           PROJECT_NUMBER=$(gh project list --owner "@me" --format json | jq -r ".projects[] | select(.title == \"$PROJECT_NAME\") | .number")
           
           if [ -z "$PROJECT_NUMBER" ]; then
             echo "Proyecto '$PROJECT_NAME' no encontrado. Creándolo ahora..."
+            # Crea el proyecto y extrae su número de la URL resultante
             PROJECT_URL=$(gh project create --owner "@me" --title "$PROJECT_NAME")
             PROJECT_NUMBER=$(echo "$PROJECT_URL" | rev | cut -d'/' -f1 | rev)
             echo "Proyecto creado con el número: $PROJECT_NUMBER"
           else
             echo "Proyecto '$PROJECT_NAME' ya existe con el número: $PROJECT_NUMBER"
           fi
+          # Guarda el número del proyecto para que otros pasos puedan usarlo
           echo "PROJECT_NUMBER=$PROJECT_NUMBER" >> $GITHUB_OUTPUT
 
+      # PASO 3: Crea las Etiquetas de Prioridad si no existen
       - name: Crear Etiquetas de Prioridad si no existen
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
         run: |
           echo "Creando etiquetas de prioridad..."
           gh label create "Prioridad: Alta" --color "D93F0B" --description "Esta tarea es crítica y bloquea otras." || echo "La etiqueta 'Prioridad: Alta' ya existe."
           gh label create "Prioridad: Media" --color "FBCA04" --description "Tarea importante pero no urgente." || echo "La etiqueta 'Prioridad: Media' ya existe."
           gh label create "Prioridad: Baja" --color "0E8A16" --description "Tarea menor o mejora deseable." || echo "La etiqueta 'Prioridad: Baja' ya existe."
-          
-          echo "Creando etiquetas de tipo..."
-          gh label create "Backend" --color "1D76DB" --description "Tareas de backend y APIs." || echo "La etiqueta 'Backend' ya existe."
-          gh label create "Frontend" --color "5319E7" --description "Tareas de frontend y UI." || echo "La etiqueta 'Frontend' ya existe."
-          gh label create "IA/ML" --color "FF6B6B" --description "Tareas relacionadas con Inteligencia Artificial." || echo "La etiqueta 'IA/ML' ya existe."
       
+      # PASO 4: Crea los Milestones (Sprints) solo si no existen
       - name: Crear Milestones si no existen
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
           GH_REPO: ${{ github.repository }}
         run: |
-          MILESTONE_W1_TITLE="Sprint Visión Computacional - Semana 1 (17-19 Nov 2025)"
-          if gh api /repos/${GH_REPO}/milestones --paginate -q ".[] | select(.title == \"$MILESTONE_W1_TITLE\")" | grep -qF "$MILESTONE_W1_TITLE"; then
-            echo "Milestone '$MILESTONE_W1_TITLE' ya existe. Omitiendo."
+          # --- Sprint Backend ---
+          MILESTONE_BE_TITLE="Sprint Backend (7-15 Octubre)"
+          if gh api /repos/${GH_REPO}/milestones --paginate -q ".[] | select(.title == \"$MILESTONE_BE_TITLE\")" | grep -qF "$MILESTONE_BE_TITLE"; then
+            echo "Milestone '$MILESTONE_BE_TITLE' ya existe. Omitiendo."
           else
-            echo "Creando milestone '$MILESTONE_W1_TITLE'..."
+            echo "Creando milestone '$MILESTONE_BE_TITLE'..."
             gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${GH_REPO}/milestones" \
-              -f title="$MILESTONE_W1_TITLE" \
-              -f description='Implementación de funcionalidades de visión computacional con Azure. Semana 1: OCR y Reconocimiento Facial.' \
-              -f due_on='2025-11-19T23:59:59Z'
+              -f title="$MILESTONE_BE_TITLE" \
+              -f description='Infraestructura completa. Todas las APIs y funcionalidades de backend deben estar listas.' \
+              -f due_on='2025-10-15T23:59:59Z'
           fi
 
-          MILESTONE_W2_TITLE="Sprint Visión Computacional - Semana 2 (20-24 Nov 2025)"
-          if gh api /repos/${GH_REPO}/milestones --paginate -q ".[] | select(.title == \"$MILESTONE_W2_TITLE\")" | grep -qF "$MILESTONE_W2_TITLE"; then
-            echo "Milestone '$MILESTONE_W2_TITLE' ya existe. Omitiendo."
+          # --- Sprint Frontend ---
+          MILESTONE_FE_TITLE="Sprint Frontend (16-21 Octubre)"
+          if gh api /repos/${GH_REPO}/milestones --paginate -q ".[] | select(.title == \"$MILESTONE_FE_TITLE\")" | grep -qF "$MILESTONE_FE_TITLE"; then
+            echo "Milestone '$MILESTONE_FE_TITLE' ya existe. Omitiendo."
           else
-            echo "Creando milestone '$MILESTONE_W2_TITLE'..."
+            echo "Creando milestone '$MILESTONE_FE_TITLE'..."
             gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${GH_REPO}/milestones" \
-              -f title="$MILESTONE_W2_TITLE" \
-              -f description='Implementación de funcionalidades de visión computacional con Azure. Semana 2: Análisis de Imágenes y Detección de Objetos.' \
-              -f due_on='2025-11-24T23:59:59Z'
+              -f title="$MILESTONE_FE_TITLE" \
+              -f description='Implementación de UI/UX usando las APIs del backend ya terminadas.' \
+              -f due_on='2025-10-21T23:59:59Z'
           fi
 
+      # PASO 5: Crea todos los Issues, los añade al proyecto y solo si no existen
       - name: Crear Issues y añadirlas al Proyecto
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
           PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
         run: |
+          # La función ahora también añade la issue al proyecto.
           create_and_add_to_project() {
             local title="$1"
             local body="$2"
-            local labels="$3"
+            local label="$3"
             local milestone="$4"
             
             ISSUE_URL=$(gh issue list --state all --search "in:title \"$title\"" --json url -q ".[0].url")
@@ -91,20 +100,15 @@ jobs:
               echo "Issue '$title' ya existe. Omitiendo creación."
             else
               echo "Creando issue '$title'..."
-              IFS=',' read -ra LABEL_ARRAY <<< "$labels"
-              LABEL_ARGS=""
-              for label in "${LABEL_ARRAY[@]}"; do
-                LABEL_ARGS="$LABEL_ARGS --label \"$label\""
-              done
-              
-              ISSUE_URL=$(eval "gh issue create --title \"$title\" --body \"$body\" $LABEL_ARGS --milestone \"$milestone\"")
+              ISSUE_URL=$(gh issue create --title "$title" --body "$body" --label "$label" --milestone "$milestone")
             fi
 
             if [ -n "$ISSUE_URL" ]; then
-                echo "Añadiendo issue $ISSUE_URL al proyecto..."
+                echo "Añadiendo issue $ISSUE_URL al proyecto ${{ env.PROJECT_NUMBER }}..."
                 PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
                 CONTENT_ID=$(gh issue view $ISSUE_URL --json id | jq -r '.id')
 
+                # Añade la issue al proyecto y obtiene el ID del item
                 ITEM_ID=$(gh api graphql -f query='
                   mutation($project:ID!, $content:ID!) {
                     addProjectV2ItemById(input: {projectId: $project, contentId: $content}) {
@@ -113,9 +117,13 @@ jobs:
                   }
                 ' -f project="$PROJECT_ID" -f content="$CONTENT_ID" | jq -r '.data.addProjectV2ItemById.item.id')
 
+                # === MOVER LA ISSUE A LA COLUMNA 'Todo' ===
                 TODO_COLUMN_ID="f75ad846"
                 STATUS_FIELD_ID="PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM"
+                # Actualiza el campo Status del item usando una query más simple
+                echo "Moviendo issue a Todo con IDs: PROJECT=$PROJECT_ID, ITEM=$ITEM_ID, FIELD=$STATUS_FIELD_ID, OPTION=$TODO_COLUMN_ID"
                 
+                # Usar una query GraphQL más simple sin variables complejas
                 gh api graphql -f query="
                   mutation {
                     updateProjectV2ItemFieldValue(input: {
@@ -127,265 +135,214 @@ jobs:
                       projectV2Item { id }
                     }
                   }
-                " || echo "No se pudo mover la issue a la columna Todo."
+                " || echo "No se pudo mover la issue a la columna 'Todo'. Revisa el ID."
             fi
           }
 
-          # HU-VC1: Reconocimiento Facial
+          # ===============================================
+          # ==         ISSUES SPRINT BACKEND             ==
+          # ===============================================
+
           create_and_add_to_project \
-            "[BE] HU-VC1: Reconocimiento Facial para Login y Registro" \
-            "$(cat << 'EOF'
-## 🎯 Historia de Usuario
+            "[BE] US1: Registro de preferencia de accesibilidad" \
+            "**Como** un nuevo jugador, **Quiero** poder indicar durante el registro si tengo dificultades visuales, **Para que** el juego pueda activar automáticamente las funcionalidades de accesibilidad para mí.
+            
+            ---
+            ### **Puntos de Estimación:** 3
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El formulario de registro debe incluir un checkbox.
+            - ✅ El backend debe poder almacenar esta preferencia en Firebase.
+            - ✅ El valor por defecto debe ser \`false\`." \
+            "Prioridad: Alta" "Sprint Backend (7-15 Octubre)"
 
-**Como** usuario de BrainBlitz  
-**Quiero** autenticarme usando reconocimiento facial  
-**Para que** pueda acceder de forma segura y rápida sin depender de contraseñas
-
----
-
-## 📋 Contexto
-
-Los usuarios necesitan una forma segura y moderna de autenticarse sin depender únicamente de contraseñas mediante reconocimiento facial biométrico.
-
-## 🎯 Objetivo
-
-Permitir que los usuarios se registren e inicien sesión usando reconocimiento facial, mejorando la seguridad y experiencia de usuario.
-
-## ✅ Criterios de Aceptación
-
-### 1. Registro Facial
-- Endpoint POST /api/face/register que acepta imagen Base64 y token Firebase
-- Validación de rostro visible usando DeepFace
-- Generación de embeddings faciales con modelo VGG-Face
-- Almacenamiento de embeddings en Firestore
-- Prevención de duplicados
-
-### 2. Login Facial
-- Endpoint POST /api/face/login que acepta imagen Base64 y email
-- Comparación facial con embedding almacenado
-- Umbral de confianza mínimo (0.7)
-- Generación de token personalizado Firebase
-
-### 3. Frontend
-- Componente FaceRegister.jsx con vista previa de cámara
-- Componente FaceLogin.jsx con captura de foto
-- Integración con AuthContext
-
-### 4. Seguridad
-- Autenticación requerida para registro
-- Almacenamiento seguro de embeddings
-- Rate limiting en endpoints
-
-### 5. Despliegue
-- Microservicio facial en Azure Container Instances
-- Health check funcional
-
-## 📊 Estimación: 13 Story Points
-## 🎯 Prioridad: Alta
-## 📅 Fecha: 18 Noviembre 2025
-## 🔧 Tecnologías: DeepFace, VGG-Face, Azure, Firebase, React
-EOF
-)" \
-            "Prioridad: Alta,Backend,IA/ML" \
-            "Sprint Visión Computacional - Semana 1 (17-19 Nov 2025)"
-
-          # HU-VC2: OCR
           create_and_add_to_project \
-            "[BE] HU-VC2: OCR - Extracción de Texto de Imágenes" \
-            "$(cat << 'EOF'
-## 🎯 Historia de Usuario
+            "[BE] US5: Almacenamiento del historial de interacciones de voz" \
+            "**Como** usuario del modo de voz, **Quiero** que mis interacciones se almacenen, **Para que** pueda revisar mi actividad.
 
-**Como** administrador o usuario  
-**Quiero** extraer texto de imágenes automáticamente  
-**Para que** pueda crear preguntas rápidamente desde capturas o documentos
+            ---
+            ### **Puntos de Estimación:** 6
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El backend debe registrar cada interacción.
+            - ✅ Cada registro debe incluir \`userId\`, \`questionId\`, etc.
+            - ✅ Se debe crear un endpoint seguro para recuperar el historial." \
+            "Prioridad: Media" "Sprint Backend (7-15 Octubre)"
 
----
-
-## 📋 Contexto
-
-Los usuarios necesitan convertir imágenes con texto en texto editable para generar preguntas automáticamente.
-
-## 🎯 Objetivo
-
-Implementar OCR que permita extraer texto de imágenes facilitando la creación de preguntas.
-
-## ✅ Criterios de Aceptación
-
-### 1. Configuración Azure
-- Variables AZURE_COMPUTER_VISION_KEY y ENDPOINT en .env
-- Instalación de dependencias Azure
-
-### 2. Endpoint Backend
-- Ruta POST /api/vision/extract-text
-- Controlador visionController.js con método extractText
-- Validación imagen Base64, límite 4MB
-
-### 3. Integración Azure OCR
-- POST a endpoint Azure Computer Vision v3.2
-- Manejo asíncrono (analyze → get results)
-- Extracción de líneas de texto
-
-### 4. Respuesta
-- JSON con texto completo, idioma, confianza, líneas
-
-### 5. Frontend
-- Componente OCRQuestionCreator.jsx
-- Preview imagen, botón extraer texto
-- Integración con AIQuestionGenerator
-
-### 6. Documentación
-- Endpoint en swagger.yaml
-- Instrucciones configuración Azure
-
-## 📊 Estimación: 8 Story Points
-## 🎯 Prioridad: Media
-## 📅 Fecha: 17 Noviembre 2025
-## 🔧 Tecnologías: Azure Computer Vision OCR, Node.js, React
-EOF
-)" \
-            "Prioridad: Media,Backend,IA/ML" \
-            "Sprint Visión Computacional - Semana 1 (17-19 Nov 2025)"
-
-          # HU-VC3: Análisis de Imágenes
           create_and_add_to_project \
-            "[BE] HU-VC3: Análisis Inteligente de Imágenes" \
-            "$(cat << 'EOF'
-## 🎯 Historia de Usuario
+            "[BE] US7: Configuración administrativa de accesibilidad" \
+            "**Como** administrador, **Quiero** tener un panel para configurar la accesibilidad, **Para que** pueda gestionar la funcionalidad.
 
-**Como** creador de contenido  
-**Quiero** analizar imágenes para obtener descripciones y tags  
-**Para que** pueda generar preguntas visuales automáticamente
+            ---
+            ### **Puntos de Estimación:** 4
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El panel debe tener una sección de Accesibilidad.
+            - ✅ Los admins deben poder habilitar/deshabilitar el modo de voz.
+            - ✅ El backend debe proveer un endpoint de estadísticas." \
+            "Prioridad: Baja" "Sprint Backend (7-15 Octubre)"
 
----
-
-## 📋 Contexto
-
-Los usuarios necesitan generar preguntas automáticamente a partir de análisis de imágenes con IA.
-
-## 🎯 Objetivo
-
-Implementar análisis inteligente que genere descripciones, tags, categorías y metadatos automáticamente.
-
-## ✅ Criterios de Aceptación
-
-### 1. Endpoint Backend
-- Ruta POST /api/vision/analyze-image
-- Método analyzeImage en visionController.js
-
-### 2. Integración Azure
-- POST con visualFeatures: Description, Tags, Categories, Objects, Color
-- Procesamiento respuesta JSON
-
-### 3. Extracción Datos
-- Descripción principal y alternativas
-- Tags con confianza
-- Categorías detectadas
-- Objetos con bounding boxes
-- Colores dominantes
-
-### 4. Frontend
-- Componente ImageAnalysisQuestionCreator.jsx
-- Mostrar resultados en secciones
-- Generación automática de preguntas
-- Integración con AIQuestionGenerator
-
-### 5. Documentación
-- Endpoint en Swagger
-- Ejemplos de uso
-
-## 📊 Estimación: 10 Story Points
-## 🎯 Prioridad: Media
-## 📅 Fecha: 20 Noviembre 2025
-## 🔧 Tecnologías: Azure Computer Vision Analyze, Node.js, React
-EOF
-)" \
-            "Prioridad: Media,Backend,IA/ML" \
-            "Sprint Visión Computacional - Semana 2 (20-24 Nov 2025)"
-
-          # HU-VC4: Detección de Objetos
           create_and_add_to_project \
-            "[BE] HU-VC4: Detección de Objetos en Imágenes" \
-            "$(cat << 'EOF'
-## 🎯 Historia de Usuario
+            "[BE] US8: Integración del modo de voz con el juego" \
+            "**Como** desarrollador, **Quiero** asegurar que el modo de voz se integre con WebSocket, **Para que** la experiencia de juego no se degrade.
 
-**Como** creador de preguntas visuales  
-**Quiero** detectar y localizar objetos automáticamente  
-**Para que** pueda crear preguntas sobre identificación y conteo
+            ---
+            ### **Puntos de Estimación:** 6
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El servidor de WebSocket debe procesar eventos de voz.
+            - ✅ Las pruebas de estrés no deben mostrar degradación." \
+            "Prioridad: Alta" "Sprint Backend (7-15 Octubre)"
 
----
+          create_and_add_to_project \
+            "[BE] US9: Procesamiento y validación de respuestas por voz" \
+            "**Como** usuario de voz, **Quiero** que el sistema valide mis respuestas habladas, **Para que** pueda participar usando mi voz.
 
-## 📋 Contexto
+            ---
+            ### **Puntos de Estimación:** 4
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Crear un endpoint \`POST /api/voice-responses/validate\`.
+            - ✅ El backend debe implementar la lógica de validación.
+            - ✅ La interacción debe registrarse en el historial." \
+            "Prioridad: Alta" "Sprint Backend (7-15 Octubre)"
 
-Los usuarios necesitan crear preguntas visuales donde se identifiquen objetos específicos en imágenes.
+          # ===============================================
+          # ==         ISSUES SPRINT FRONTEND            ==
+          # ===============================================
 
-## 🎯 Objetivo
+          create_and_add_to_project \
+            "[FE] US1: Integración frontend de preferencia de accesibilidad" \
+            "**Como** un nuevo jugador, **Quiero** ver y usar la opción de accesibilidad en el formulario de registro, **Para que** mi preferencia quede guardada desde el inicio.
 
-Implementar detección de objetos que identifique y localice objetos específicos.
+            ---
+            ### **Puntos de Estimación:** 2
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El componente de UI de registro incluye el checkbox de accesibilidad.
+            - ✅ Al enviar el formulario, el valor del checkbox se envía a la API del backend." \
+            "Prioridad: Alta" "Sprint Frontend (16-21 Octubre)"
 
-## ✅ Criterios de Aceptación
+          create_and_add_to_project \
+            "[FE] US2: Activación automática del modo de voz" \
+            "**Como** un usuario con dificultades visuales, **Quiero** que el modo de voz se active automáticamente, **Para que** no tenga que buscarlo manualmente.
 
-### 1. Endpoint Backend
-- Ruta POST /api/vision/detect-objects
-- Método detectObjects en visionController.js
+            ---
+            ### **Puntos de Estimación:** 5
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Al iniciar sesión, el frontend debe verificar la preferencia.
+            - ✅ Si es \`true\`, el modo de voz se activa.
+            - ✅ El usuario puede deshabilitarlo manualmente." \
+            "Prioridad: Alta" "Sprint Frontend (16-21 Octubre)"
 
-### 2. Integración Azure
-- POST a endpoint Object Detection
-- Procesamiento JSON con objetos detectados
+          create_and_add_to_project \
+            "[FE] US3: Lectura de preguntas mediante Text-to-Speech (TTS)" \
+            "**Como** usuario de voz, **Quiero** que el sistema lea las preguntas y opciones, **Para que** pueda entender el contenido sin verlo.
 
-### 3. Extracción Objetos
-- Lista con nombre, confianza, bounding box
-- Filtrado por confianza
-- Agrupación por tipo
+            ---
+            ### **Puntos de Estimación:** 8
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El texto y opciones deben leerse con la Web Speech API.
+            - ✅ El usuario puede pausar y reanudar la lectura." \
+            "Prioridad: Alta" "Sprint Frontend (16-21 Octubre)"
 
-### 4. Frontend
-- Componente ObjectDetectionQuestionCreator.jsx
-- Visualización con bounding boxes
-- Hover interactivo
-- Filtro por confianza
+          create_and_add_to_project \
+            "[FE] US4: Configuración de ajustes de voz" \
+            "**Como** usuario de voz, **Quiero** poder configurar la voz, **Para que** pueda personalizar la experiencia.
 
-### 5. Generación Preguntas
-- Preguntas de identificación
-- Preguntas de conteo
-- Pre-llenado formulario
+            ---
+            ### **Puntos de Estimación:** 5
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Debe haber un panel de ajustes.
+            - ✅ El usuario puede cambiar voz, velocidad y volumen.
+            - ✅ Los ajustes deben guardarse en \`localStorage\`." \
+            "Prioridad: Media" "Sprint Frontend (16-21 Octubre)"
 
-### 6. Documentación
-- Endpoint en Swagger
-- Ejemplos visuales
+          create_and_add_to_project \
+            "[FE] US5: Integración frontend del historial de voz" \
+            "**Como** usuario de voz, **Quiero** ver mi historial de interacciones, **Para que** pueda consultar mi actividad pasada.
 
-## 📊 Estimación: 10 Story Points
-## 🎯 Prioridad: Media
-## 📅 Fecha: 21 Noviembre 2025
-## 🔧 Tecnologías: Azure Object Detection, Node.js, React, Canvas
-EOF
-)" \
-            "Prioridad: Media,Backend,IA/ML" \
-            "Sprint Visión Computacional - Semana 2 (20-24 Nov 2025)"
+            ---
+            ### **Puntos de Estimación:** 3
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Crear una nueva vista/componente para mostrar el historial.
+            - ✅ Consumir el endpoint \`GET /api/voice-interactions/:userId\` del backend.
+            - ✅ Mostrar los datos de forma clara en la UI." \
+            "Prioridad: Media" "Sprint Frontend (16-21 Octubre)"
+
+          create_and_add_to_project \
+            "[FE] US6: Sistema de tutorial de audio" \
+            "**Como** nuevo usuario con dificultades visuales, **Quiero** recibir un tutorial de audio, **Para que** pueda aprender a jugar sin asistencia visual.
+
+            ---
+            ### **Puntos de Estimación:** 7
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El tutorial se ofrece automáticamente a nuevos usuarios.
+            - ✅ Cubre navegación, lectura y cómo responder.
+            - ✅ El usuario puede omitir el tutorial." \
+            "Prioridad: Media" "Sprint Frontend (16-21 Octubre)"
+
+          create_and_add_to_project \
+            "[FE] US7: Panel administrativo frontend" \
+            "**Como** administrador, **Quiero** ver y usar los controles de accesibilidad en el panel, **Para que** pueda gestionar la funcionalidad en la plataforma.
+
+            ---
+            ### **Puntos de Estimación:** 2
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ La UI del panel de administración debe tener la nueva sección de accesibilidad.
+            - ✅ Los controles deben consumir las APIs del backend para ver estadísticas y cambiar ajustes." \
+            "Prioridad: Baja" "Sprint Frontend (16-21 Octubre)"
+
+          create_and_add_to_project \
+            "[FE] US8: Integración frontend del modo de voz" \
+            "**Como** usuario de voz, **Quiero** que el modo de voz funcione correctamente durante una partida en tiempo real, **Para que** mi experiencia de juego sea fluida.
+
+            ---
+            ### **Puntos de Estimación:** 3
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ El estado del modo de voz (activado/desactivado) debe gestionarse correctamente con los eventos de WebSocket.
+            - ✅ No debe haber conflictos entre la lectura de TTS y los eventos del juego." \
+            "Prioridad: Alta" "Sprint Frontend (16-21 Octubre)"
+
+          create_and_add_to_project \
+            "[FE] US9: Reconocimiento de voz con Web Speech API" \
+            "**Como** usuario de voz, **Quiero** responder a las preguntas con mi voz, **Para que** pueda participar sin usar el mouse.
+
+            ---
+            ### **Puntos de Estimación:** 6
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Usar Web Speech API para escuchar y transcribir.
+            - ✅ Debe reconocer respuestas clave (\"A\", \"B\", \"C\", etc.).
+            - ✅ La respuesta se envía al backend para validación." \
+            "Prioridad: Alta" "Sprint Frontend (16-21 Octubre)"
       
+      # PASO 6: Crea y Vincula las Ramas para cada Issue
       - name: Crear Ramas y Vincularlas a las Issues
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
         run: |
           MAIN_BRANCH_SHA=$(git rev-parse main)
           gh issue list --state open --json number,title | jq -c '.[]' | while read issue; do
             ISSUE_NUMBER=$(echo $issue | jq -r '.number')
             ISSUE_TITLE=$(echo $issue | jq -r '.title')
-            BRANCH_TITLE=$(echo "$ISSUE_TITLE" | iconv -t ascii//TRANSLIT | sed -E 's/\[(BE|FE)\] //g' | sed -E 's/HU-VC[0-9]+: //g' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+|-+$//g' | tr '[:upper:]' '[:lower:]')
-            BRANCH_NAME="feature/hu-vc-${ISSUE_NUMBER}-${BRANCH_TITLE}"
+            BRANCH_TITLE=$(echo "$ISSUE_TITLE" | iconv -t ascii//TRANSLIT | sed -E 's/\[(BE|FE)\] //g' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+\|-+$//g' | tr '[:upper:]' '[:lower:]')
+            BRANCH_NAME="hu-${ISSUE_NUMBER}-${BRANCH_TITLE}"
 
             if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
               echo "La rama '$BRANCH_NAME' ya existe."
             else
               echo "Creando rama '$BRANCH_NAME'..."
               gh api repos/${{ github.repository }}/git/refs --method POST -f ref="refs/heads/${BRANCH_NAME}" -f sha="$MAIN_BRANCH_SHA"
-              gh issue comment $ISSUE_NUMBER --body "🌿 Rama creada: \`$BRANCH_NAME\`
-
-### 📝 Instrucciones:
-
-\`\`\`bash
-git fetch origin
-git checkout $BRANCH_NAME
-git commit -m \"feat(vision): descripción\"
-git push origin $BRANCH_NAME
-\`\`\`"
+              # Comenta en la issue para vincular la rama
+              gh issue comment $ISSUE_NUMBER --body "Se ha creado la rama de trabajo para esta HU: \`$BRANCH_NAME\`"
             fi
           done
+
