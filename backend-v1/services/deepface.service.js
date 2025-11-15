@@ -1,0 +1,221 @@
+/**
+ * Servicio para comunicación con el microservicio DeepFace
+ * Se comunica con el servicio de reconocimiento facial (Azure Container Instances o local)
+ */
+const axios = require('axios');
+
+class DeepFaceService {
+  constructor() {
+    // URL del microservicio DeepFace
+    // Se obtiene desde la variable de entorno DEEPFACE_SERVICE_URL
+    // Si no está definida, usa localhost para desarrollo local
+    if (!process.env.DEEPFACE_SERVICE_URL) {
+      console.warn('⚠️  DEEPFACE_SERVICE_URL no está definida. Usando localhost:5001 por defecto.');
+    }
+    this.baseURL = process.env.DEEPFACE_SERVICE_URL || 'http://localhost:5001';
+    // Timeout aumentado a 90 segundos porque DeepFace puede tardar mucho procesando imágenes
+    // Azure Container Instances puede tener timeouts más largos, así que aumentamos esto
+    this.timeout = 90000; // 90 segundos de timeout
+    // Timeout para conexión inicial (más corto)
+    this.connectTimeout = 10000; // 10 segundos
+    
+    // Log de la URL configurada (solo en desarrollo o si hay problemas)
+    console.log(`🔧 DeepFace Service configurado con URL: ${this.baseURL}`);
+  }
+
+  /**
+   * Verifica la salud del servicio DeepFace
+   */
+  async healthCheck() {
+    try {
+      const response = await axios.get(`${this.baseURL}/health`, {
+        timeout: 5000
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`DeepFace service no disponible: ${error.message}`);
+    }
+  }
+
+  /**
+   * Registra una cara en el sistema
+   * @param {string} imageBase64 - Imagen en formato Base64
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<Object>} Resultado del registro
+   */
+  async registerFace(imageBase64, userId) {
+    try {
+      const response = await axios.post(
+        `${this.baseURL}/register`,
+        {
+          image: imageBase64,
+          user_id: userId
+        },
+        {
+          timeout: this.timeout,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          // Configuración para manejar conexiones largas
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          // Keep-alive para mantener la conexión
+          httpAgent: new (require('http').Agent)({ 
+            keepAlive: true,
+            keepAliveMsecs: 30000
+          })
+        }
+      );
+
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        embedding: response.data.embedding,
+        faceDetected: response.data.face_detected
+      };
+    } catch (error) {
+      // Log detallado del error para debugging
+      console.error('Error en registerFace:', {
+        message: error.message,
+        code: error.code,
+        baseURL: this.baseURL,
+        hasResponse: !!error.response,
+        hasRequest: !!error.request
+      });
+      
+      if (error.response) {
+        // El servicio respondió con un error
+        throw new Error(
+          error.response.data?.error || 
+          `Error en registro facial: ${error.response.statusText}`
+        );
+      } else if (error.request) {
+        // La petición se hizo pero no hubo respuesta
+        let errorMsg;
+        if (error.code === 'ECONNREFUSED') {
+          errorMsg = `No se pudo conectar al servicio facial en ${this.baseURL}. Verifica que el servicio esté ejecutándose.`;
+        } else if (error.code === 'ETIMEDOUT') {
+          errorMsg = `Timeout al conectar con el servicio facial en ${this.baseURL}. El servicio puede estar sobrecargado o procesando una imagen muy grande.`;
+        } else if (error.code === 'ECONNRESET') {
+          errorMsg = `La conexión con el servicio facial se cerró inesperadamente. Esto puede deberse a que la imagen es muy grande o el procesamiento está tardando demasiado. Intenta con una imagen más pequeña o espera un momento.`;
+        } else {
+          errorMsg = `El servicio de reconocimiento facial no está disponible en ${this.baseURL}. Error: ${error.code || error.message}`;
+        }
+        throw new Error(errorMsg);
+      } else {
+        // Error al configurar la petición
+        throw new Error(`Error configurando petición: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Verifica si dos imágenes corresponden a la misma persona
+   * @param {string} img1Base64 - Primera imagen en Base64 (foto guardada)
+   * @param {string} img2Base64 - Segunda imagen en Base64 (foto de login)
+   * @param {number} retries - Número de reintentos (default: 2)
+   * @returns {Promise<Object>} Resultado de la verificación
+   */
+  async verifyFace(img1Base64, img2Base64, retries = 3) {
+    let lastError;
+    
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        if (attempt > 0) {
+          console.log(`🔄 Reintentando verificación facial (intento ${attempt + 1}/${retries + 1})...`);
+          // Esperar antes de reintentar (backoff exponencial más largo)
+          const waitTime = 2000 * attempt; // 2s, 4s, 6s...
+          console.log(`   Esperando ${waitTime}ms antes de reintentar...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+        const response = await axios.post(
+          `${this.baseURL}/verify`,
+          {
+            img1: img1Base64,
+            img2: img2Base64
+          },
+          {
+            timeout: this.timeout,
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            // Configuración para manejar conexiones largas
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
+            // Keep-alive para mantener la conexión con timeout más largo
+            httpAgent: new (require('http').Agent)({ 
+              keepAlive: true,
+              keepAliveMsecs: 60000, // 60 segundos
+              timeout: 10000, // 10 segundos para establecer conexión
+              // Aumentar el timeout de socket para evitar ECONNRESET
+              socketTimeout: this.timeout
+            })
+          }
+        );
+
+        return {
+          success: response.data.success,
+          verified: response.data.verified,
+          distance: response.data.distance,
+          threshold: response.data.threshold,
+          confidence: response.data.confidence,
+          faceDetected: response.data.face_detected !== false
+        };
+      } catch (error) {
+        lastError = error;
+        
+        // Log detallado del error para debugging
+        console.error(`Error en verifyFace (intento ${attempt + 1}/${retries + 1}):`, {
+          message: error.message,
+          code: error.code,
+          baseURL: this.baseURL,
+          hasResponse: !!error.response,
+          hasRequest: !!error.request
+        });
+        
+        // Si es el último intento o el error no es recuperable, lanzar error
+        if (attempt === retries) {
+          if (error.response) {
+            // El servicio respondió con un error
+            const errorData = error.response.data;
+            throw new Error(
+              errorData?.error || 
+              `Error en verificación facial: ${error.response.statusText}`
+            );
+          } else if (error.request) {
+            // La petición se hizo pero no hubo respuesta
+            let errorMsg;
+            if (error.code === 'ECONNREFUSED') {
+              errorMsg = `No se pudo conectar al servicio facial en ${this.baseURL}. Verifica que el servicio esté ejecutándose.`;
+            } else if (error.code === 'ETIMEDOUT') {
+              errorMsg = `Timeout al conectar con el servicio facial en ${this.baseURL}. El servicio puede estar sobrecargado o procesando una imagen muy grande.`;
+            } else if (error.code === 'ECONNRESET') {
+              errorMsg = `La conexión con el servicio facial se cerró inesperadamente después de ${retries + 1} intentos. Esto puede deberse a que las imágenes son muy grandes o el procesamiento está tardando demasiado. Intenta con imágenes más pequeñas.`;
+            } else {
+              errorMsg = `El servicio de reconocimiento facial no está disponible en ${this.baseURL}. Error: ${error.code || error.message}`;
+            }
+            throw new Error(errorMsg);
+          } else {
+            // Error al configurar la petición
+            throw new Error(`Error configurando petición: ${error.message}`);
+          }
+        }
+        
+        // Si es ECONNRESET o ETIMEDOUT, reintentar
+        if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT') {
+          continue; // Reintentar
+        } else {
+          // Para otros errores, no reintentar
+          throw error;
+        }
+      }
+    }
+    
+    // Esto no debería ejecutarse, pero por si acaso
+    throw lastError || new Error('Error desconocido en verificación facial');
+  }
+}
+
+module.exports = new DeepFaceService();
+

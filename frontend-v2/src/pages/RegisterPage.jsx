@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { auth } from '../services/firebase';
+import { auth, db } from '../services/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -19,10 +20,18 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       // The Firebase SDK signs the user in automatically after successful signup.
-      // Defer profile details to the complete profile page.
-      navigate('/complete-profile');
+      // Guardar visualDifficulty en Firestore si está marcado
+      if (visualDifficulty && userCredential.user) {
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          email: email,
+          visualDifficulty: true,
+          stats: { gamesPlayed: 0, wins: 0, correctAnswers: 0 }
+        }, { merge: true });
+      }
+      // Redirigir directamente a registro facial después de crear la cuenta
+      navigate('/face-register');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -70,9 +79,12 @@ export default function RegisterPage() {
           </Button>
         </form>
 
-        <div className="mt-6 text-center text-sm">
+        <div className="mt-6 text-center text-sm space-y-2">
           <p>
             ¿Ya tienes cuenta? <Link className="underline" to="/login">Inicia sesión aquí</Link>
+          </p>
+          <p className="text-white/60 text-xs">
+            💡 Después de crear tu cuenta, automáticamente te pediremos registrar tu cara para habilitar el login facial
           </p>
         </div>
       </div>

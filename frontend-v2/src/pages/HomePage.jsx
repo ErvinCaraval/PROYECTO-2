@@ -31,9 +31,14 @@ export default function HomePage() {
           </p>
           <div className="flex justify-center gap-4 flex-wrap">
             {user ? (
-              <Button as={Link} to="/dashboard" size="lg">
-                Ir al panel
-              </Button>
+              <>
+                <Button as={Link} to="/dashboard" size="lg">
+                  Ir al panel
+                </Button>
+                <Button as={Link} to="/face-register" variant="secondary" size="lg">
+                  📸 Registrar Reconocimiento Facial
+                </Button>
+              </>
             ) : (
               <>
                 <Button as={Link} to="/login" size="lg">
@@ -41,6 +46,9 @@ export default function HomePage() {
                 </Button>
                 <Button as={Link} to="/register" variant="secondary" size="lg">
                   Registrarse
+                </Button>
+                <Button as={Link} to="/face-login" variant="outline" size="lg">
+                  🔐 Login Facial
                 </Button>
               </>
             )}
@@ -77,6 +85,31 @@ export default function HomePage() {
                 <p className="text-white/70">
                   Sigue tus estadísticas y demuestra tus conocimientos
                 </p>
+              </CardBody>
+            </Card>
+            <Card>
+              <CardBody className="text-center space-y-3 p-6">
+                <div className="text-4xl">🔐</div>
+                <h3 className="text-xl font-semibold">Autenticación Facial</h3>
+                <p className="text-white/70">
+                  Inicia sesión de forma rápida y segura con reconocimiento facial
+                </p>
+                <div className="flex flex-col gap-2 mt-3">
+                  {!user ? (
+                    <>
+                      <Button as={Link} to="/face-login" variant="outline" size="sm">
+                        🔐 Probar Login Facial
+                      </Button>
+                      <p className="text-white/50 text-xs mt-2">
+                        💡 Después de registrarte, podrás registrar tu cara
+                      </p>
+                    </>
+                  ) : (
+                    <Button as={Link} to="/face-register" variant="secondary" size="sm">
+                      📸 Registrar Mi Cara
+                    </Button>
+                  )}
+                </div>
               </CardBody>
             </Card>
           </div>
