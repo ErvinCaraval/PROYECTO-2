@@ -7,10 +7,8 @@ const axios = require('axios');
 
 // URLs a probar
 const urls = [
-  'http://facial-service-ervin.guayfkfebtc3fnda.brazilsouth.azurecontainer.io/health',
-  'http://facial-service-ervin.guayfkfebtc3fnda.brazilsouth.azurecontainer.io:5001/health',
-  'http://4.203.90.128/health',
-  'http://4.203.90.128:5001/health'
+  'http://facial-service-ervin.brazilsouth.azurecontainer.io:5001/health',
+  'http://20.201.44.212:5001/health'
 ];
 
 async function testConnection(url) {
