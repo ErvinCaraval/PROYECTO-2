@@ -87,70 +87,17 @@ jobs:
               -f due_on='2025-11-24T23:59:59Z'
           fi
 
-      # PASO 5: Crear Iterations (Fechas de Iteración) en el Project
-      - name: Crear Iterations en el Proyecto
+      # PASO 5: Configurar el proyecto con campos necesarios
+      - name: Configurar Campos del Proyecto
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
         run: |
-          echo "🔄 Creando iterations en el proyecto..."
+          echo "⚙️ Configurando campos del proyecto..."
           PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
           
-          # Función para crear iteration
-          create_iteration() {
-            local title="$1"
-            local start_date="$2"
-            local end_date="$3"
-            
-            echo "🔍 Verificando iteration: $title"
-            
-            # Crear la iteration
-            echo "🆕 Creando iteration: $title"
-            ITERATION_RESULT=$(gh api graphql -f query='
-              mutation($projectId: ID!, $title: String!, $startDate: Date!, $endDate: Date!) {
-                createProjectV2Iteration(input: {
-                  projectId: $projectId
-                  title: $title
-                  startDate: $startDate
-                  duration: 0
-                }) {
-                  iteration {
-                    id
-                    title
-                    startDate
-                    duration
-                  }
-                }
-              }
-            ' -f projectId="$PROJECT_ID" -f title="$title" -f startDate="$start_date" -f endDate="$end_date" 2>/dev/null || echo "")
-            
-            if [ -n "$ITERATION_RESULT" ]; then
-              echo "✅ Iteration creada: $title"
-              # Extraer el ID de la iteration creada para usarlo después
-              ITERATION_ID=$(echo "$ITERATION_RESULT" | jq -r '.data.createProjectV2Iteration.iteration.id' 2>/dev/null || echo "")
-              if [ -n "$ITERATION_ID" ] && [ "$ITERATION_ID" != "null" ]; then
-                echo "   ID: $ITERATION_ID"
-              fi
-            else
-              echo "⚠️ No se pudo crear iteration: $title (posiblemente ya existe)"
-            fi
-          }
-
-          # Crear iterations para los sprints
-          create_iteration "Sprint 1: 17-19 Nov" "2025-11-17" "2025-11-19"
-          create_iteration "Sprint 2: 20-24 Nov" "2025-11-20" "2025-11-24"
-
-      # PASO 6: Crea todos los Issues, los añade al proyecto y solo si no existen
-      - name: Crear Issues y añadirlas al Proyecto
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
-          PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
-        run: |
-          # Obtener los IDs del proyecto
-          echo "Obteniendo IDs del proyecto..."
-          PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
-          
-          # Obtener el campo Status del proyecto
+          # Verificar si existe el campo Status
+          echo "🔍 Buscando campo Status..."
           STATUS_FIELD_ID=$(gh api graphql -f query='
             query($projectId: ID!) {
               node(id: $projectId) {
@@ -176,6 +123,35 @@ jobs:
             }
           ' -f projectId="$PROJECT_ID" | jq -r '.data.node.fields.nodes[] | select(.name == "Status") | .id')
           
+          if [ -z "$STATUS_FIELD_ID" ] || [ "$STATUS_FIELD_ID" = "null" ]; then
+            echo "🆕 Creando campo Status..."
+            # Crear campo single select para Status
+            STATUS_FIELD_ID=$(gh api graphql -f query='
+              mutation($projectId: ID!) {
+                addProjectV2FieldById(input: {
+                  projectId: $projectId
+                  fieldType: SINGLE_SELECT
+                  name: "Status"
+                  dataType: SINGLE_SELECT
+                  singleSelectOptions: [
+                    { name: "Todo", color: BLUE }
+                    { name: "In Progress", color: YELLOW }
+                    { name: "Done", color: GREEN }
+                  ]
+                }) {
+                  projectV2Field {
+                    id
+                    name
+                  }
+                }
+              }
+            ' -f projectId="$PROJECT_ID" | jq -r '.data.addProjectV2FieldById.projectV2Field.id')
+            
+            echo "✅ Campo Status creado con ID: $STATUS_FIELD_ID"
+          else
+            echo "✅ Campo Status ya existe: $STATUS_FIELD_ID"
+          fi
+          
           # Obtener el ID de la opción "Todo"
           TODO_COLUMN_ID=$(gh api graphql -f query='
             query($projectId: ID!) {
@@ -198,7 +174,24 @@ jobs:
             }
           ' -f projectId="$PROJECT_ID" | jq -r '.data.node.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Todo") | .id')
           
-          # Obtener el campo Iteration si existe
+          echo "📋 ID de opción Todo: $TODO_COLUMN_ID"
+          
+          # Guardar los IDs para el siguiente paso
+          echo "STATUS_FIELD_ID=$STATUS_FIELD_ID" >> $GITHUB_ENV
+          echo "TODO_COLUMN_ID=$TODO_COLUMN_ID" >> $GITHUB_ENV
+          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+
+      # PASO 6: Crear Iterations (Fechas de Iteración) en el Project
+      - name: Crear Iterations en el Proyecto
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+        run: |
+          echo "🔄 Creando iterations en el proyecto..."
+          
+          # Verificar si existe el campo Iteration
+          echo "🔍 Buscando campo Iteration..."
           ITERATION_FIELD_ID=$(gh api graphql -f query='
             query($projectId: ID!) {
               node(id: $projectId) {
@@ -220,33 +213,52 @@ jobs:
             }
           ' -f projectId="$PROJECT_ID" | jq -r '.data.node.fields.nodes[] | select(.name == "Iteration") | .id')
           
-          echo "IDs obtenidos: PROJECT=$PROJECT_ID, STATUS_FIELD=$STATUS_FIELD_ID, TODO_OPTION=$TODO_COLUMN_ID, ITERATION_FIELD=$ITERATION_FIELD_ID"
-          
-          # Si no se encontró el campo Status o la opción Todo, continuar sin mover las issues
-          if [ -z "$STATUS_FIELD_ID" ] || [ -z "$TODO_COLUMN_ID" ]; then
-            echo "⚠️ No se pudo encontrar el campo Status o la opción Todo. Las issues se crearán pero no se moverán."
-            MOVE_TO_TODO=false
+          if [ -z "$ITERATION_FIELD_ID" ] || [ "$ITERATION_FIELD_ID" = "null" ]; then
+            echo "🆕 Creando campo Iteration..."
+            # Crear campo iteration
+            ITERATION_FIELD_ID=$(gh api graphql -f query='
+              mutation($projectId: ID!) {
+                addProjectV2FieldById(input: {
+                  projectId: $projectId
+                  fieldType: ITERATION
+                  name: "Iteration"
+                }) {
+                  projectV2Field {
+                    id
+                    name
+                  }
+                }
+              }
+            ' -f projectId="$PROJECT_ID" | jq -r '.data.addProjectV2FieldById.projectV2Field.id')
+            echo "✅ Campo Iteration creado con ID: $ITERATION_FIELD_ID"
           else
-            MOVE_TO_TODO=true
+            echo "✅ Campo Iteration ya existe: $ITERATION_FIELD_ID"
           fi
 
-          # Obtener las iterations existentes para asignarlas
-          echo "Obteniendo iterations del proyecto..."
-          ITERATIONS_JSON=$(gh api graphql -f query='
-            query($projectId: ID!) {
-              node(id: $projectId) {
-                ... on ProjectV2 {
-                  fields(first: 20) {
-                    nodes {
-                      ... on ProjectV2IterationField {
-                        id
-                        name
-                        configuration {
-                          iterations {
-                            id
-                            title
-                            startDate
-                            duration
+          # Función para crear iteration
+          create_iteration() {
+            local title="$1"
+            local start_date="$2"
+            local end_date="$3"
+            
+            echo "🔍 Verificando iteration: $title"
+            
+            # Verificar si la iteration ya existe
+            EXISTING_ITERATION=$(gh api graphql -f query='
+              query($projectId: ID!) {
+                node(id: $projectId) {
+                  ... on ProjectV2 {
+                    fields(first: 20) {
+                      nodes {
+                        ... on ProjectV2IterationField {
+                          id
+                          name
+                          configuration {
+                            iterations {
+                              id
+                              title
+                              startDate
+                            }
                           }
                         }
                       }
@@ -254,14 +266,78 @@ jobs:
                   }
                 }
               }
-            }
-          ' -f projectId="$PROJECT_ID")
+            ' -f projectId="$PROJECT_ID" | jq -r ".data.node.fields.nodes[] | select(.name == \"Iteration\") | .configuration.iterations[] | select(.title == \"$title\") | .id")
+            
+            if [ -n "$EXISTING_ITERATION" ] && [ "$EXISTING_ITERATION" != "null" ]; then
+              echo "✅ Iteration '$title' ya existe: $EXISTING_ITERATION"
+              echo "$EXISTING_ITERATION"
+              return
+            fi
+            
+            # Crear la iteration
+            echo "🆕 Creando iteration: $title"
+            ITERATION_RESULT=$(gh api graphql -f query='
+              mutation($projectId: ID!, $title: String!, $startDate: Date!) {
+                createProjectV2Iteration(input: {
+                  projectId: $projectId
+                  title: $title
+                  startDate: $startDate
+                  duration: 2
+                }) {
+                  iteration {
+                    id
+                    title
+                    startDate
+                    duration
+                  }
+                }
+              }
+            ' -f projectId="$PROJECT_ID" -f title="$title" -f startDate="$start_date" 2>/dev/null || echo "")
+            
+            if [ -n "$ITERATION_RESULT" ]; then
+              ITERATION_ID=$(echo "$ITERATION_RESULT" | jq -r '.data.createProjectV2Iteration.iteration.id' 2>/dev/null || echo "")
+              if [ -n "$ITERATION_ID" ] && [ "$ITERATION_ID" != "null" ]; then
+                echo "✅ Iteration creada: $title - ID: $ITERATION_ID"
+                echo "$ITERATION_ID"
+              else
+                echo "⚠️ No se pudo crear iteration: $title"
+                echo ""
+              fi
+            else
+              echo "⚠️ No se pudo crear iteration: $title"
+              echo ""
+            fi
+          }
+
+          # Crear iterations para los sprints
+          SPRINT1_ITERATION_ID=$(create_iteration "Sprint 1: 17-19 Nov" "2025-11-17")
+          SPRINT2_ITERATION_ID=$(create_iteration "Sprint 2: 20-24 Nov" "2025-11-20")
           
-          # Extraer IDs de iterations específicas
-          SPRINT1_ITERATION_ID=$(echo "$ITERATIONS_JSON" | jq -r '.data.node.fields.nodes[] | select(.name == "Iteration") | .configuration.iterations[] | select(.title == "Sprint 1: 17-19 Nov") | .id' 2>/dev/null || echo "")
-          SPRINT2_ITERATION_ID=$(echo "$ITERATIONS_JSON" | jq -r '.data.node.fields.nodes[] | select(.name == "Iteration") | .configuration.iterations[] | select(.title == "Sprint 2: 20-24 Nov") | .id' 2>/dev/null || echo "")
-          
-          echo "Iterations encontradas: Sprint1=$SPRINT1_ITERATION_ID, Sprint2=$SPRINT2_ITERATION_ID"
+          # Guardar los IDs para el siguiente paso
+          echo "SPRINT1_ITERATION_ID=$SPRINT1_ITERATION_ID" >> $GITHUB_ENV
+          echo "SPRINT2_ITERATION_ID=$SPRINT2_ITERATION_ID" >> $GITHUB_ENV
+          echo "ITERATION_FIELD_ID=$ITERATION_FIELD_ID" >> $GITHUB_ENV
+
+      # PASO 7: Crea todos los Issues, los añade al proyecto y solo si no existen
+      - name: Crear Issues y añadirlas al Proyecto
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
+          PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+          STATUS_FIELD_ID: ${{ env.STATUS_FIELD_ID }}
+          TODO_COLUMN_ID: ${{ env.TODO_COLUMN_ID }}
+          ITERATION_FIELD_ID: ${{ env.ITERATION_FIELD_ID }}
+          SPRINT1_ITERATION_ID: ${{ env.SPRINT1_ITERATION_ID }}
+          SPRINT2_ITERATION_ID: ${{ env.SPRINT2_ITERATION_ID }}
+        run: |
+          echo "📝 Creando issues de visión computacional..."
+          echo "IDs disponibles:"
+          echo "PROJECT_ID: $PROJECT_ID"
+          echo "STATUS_FIELD_ID: $STATUS_FIELD_ID"
+          echo "TODO_COLUMN_ID: $TODO_COLUMN_ID"
+          echo "ITERATION_FIELD_ID: $ITERATION_FIELD_ID"
+          echo "SPRINT1_ITERATION_ID: $SPRINT1_ITERATION_ID"
+          echo "SPRINT2_ITERATION_ID: $SPRINT2_ITERATION_ID"
 
           # La función ahora también añade la issue al proyecto.
           create_and_add_to_project() {
@@ -281,21 +357,23 @@ jobs:
             fi
 
             if [ -n "$ISSUE_URL" ]; then
-                echo "Añadiendo issue $ISSUE_URL al proyecto ${{ env.PROJECT_NUMBER }}..."
+                echo "Añadiendo issue $ISSUE_URL al proyecto $PROJECT_NUMBER..."
                 CONTENT_ID=$(gh issue view $ISSUE_URL --json id | jq -r '.id')
 
                 # Añade la issue al proyecto y obtiene el ID del item
                 ITEM_ID=$(gh api graphql -f query='
                   mutation($project:ID!, $content:ID!) {
-                    addProjectV2ItemById(input: {projectId: $project, contentId: $content) {
+                    addProjectV2ItemById(input: {projectId: $project, contentId: $content}) {
                       item { id }
                     }
                   }
                 ' -f project="$PROJECT_ID" -f content="$CONTENT_ID" | jq -r '.data.addProjectV2ItemById.item.id')
 
-                # Mover a Todo solo si se encontraron los IDs
-                if [ "$MOVE_TO_TODO" = true ] && [ -n "$ITEM_ID" ]; then
-                  echo "Moviendo issue a Todo..."
+                echo "📋 Item creado en proyecto: $ITEM_ID"
+
+                # Mover a Todo si tenemos los IDs necesarios
+                if [ -n "$STATUS_FIELD_ID" ] && [ -n "$TODO_COLUMN_ID" ] && [ -n "$ITEM_ID" ]; then
+                  echo "🔄 Moviendo issue a Todo..."
                   
                   gh api graphql -f query="
                     mutation {
@@ -310,12 +388,12 @@ jobs:
                     }
                   " && echo "✅ Issue movida a Todo" || echo "⚠️ No se pudo mover la issue a Todo"
                 else
-                  echo "⚠️ No se pudo mover la issue a Todo (IDs no encontrados)"
+                  echo "⚠️ No se pudo mover la issue a Todo (IDs faltantes)"
                 fi
                 
                 # Asignar iteration si existe el campo y se proporcionó un ID de iteration
                 if [ -n "$ITERATION_FIELD_ID" ] && [ -n "$iteration_id" ] && [ -n "$ITEM_ID" ]; then
-                  echo "Asignando iteration a la issue..."
+                  echo "📅 Asignando iteration a la issue..."
                   gh api graphql -f query="
                     mutation {
                       updateProjectV2ItemFieldValue(input: {
@@ -452,7 +530,7 @@ jobs:
             - Variables: AZURE_COMPUTER_VISION_KEY, AZURE_COMPUTER_VISION_ENDPOINT" \
             "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)" "$SPRINT2_ITERATION_ID"
 
-      # PASO 7: Crea y Vincula las Ramas para cada Issue
+      # PASO 8: Crea y Vincula las Ramas para cada Issue
       - name: Crear Ramas y Vincularlas a las Issues
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
