@@ -13,6 +13,8 @@ const GameSummaryPage = React.lazy(() => import('./pages/GameSummaryPage'));
 const AdminPage = React.lazy(() => import('./pages/AdminPage'));
 const CompleteProfilePage = React.lazy(() => import('./pages/CompleteProfilePage'));
 const VoiceTestPage = React.lazy(() => import('./pages/VoiceTestPage'));
+const FaceRegister = React.lazy(() => import('./pages/FaceRegister'));
+const FaceLogin = React.lazy(() => import('./pages/FaceLogin'));
 const ProtectedRoute = React.lazy(() => import('./components/ProtectedRoute'));
 const AuthRedirect = React.lazy(() => import('./components/AuthRedirect'));
 
@@ -33,6 +35,8 @@ export default function AppRoutes() {
           <Route path="/summary/:gameId" element={<ProtectedRoute><GameSummaryPage /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminPage /></ProtectedRoute>} />
           <Route path="/voice-test" element={<VoiceTestPage />} />
+          <Route path="/face-register" element={<ProtectedRoute><FaceRegister /></ProtectedRoute>} />
+          <Route path="/face-login" element={<FaceLogin />} />
         </Routes>
       </Suspense>
     </Router>

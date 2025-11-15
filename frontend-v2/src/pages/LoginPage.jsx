@@ -125,6 +125,19 @@ export default function LoginPage() {
               ¿Olvidaste tu contraseña?
             </Link>
           </p>
+          <p>
+            <Link 
+              className="underline" 
+              to="/face-login"
+              onFocus={() => announce('Enlace para login facial')}
+              onMouseEnter={() => announce('Enlace para login facial')}
+            >
+              🔐 Iniciar sesión con reconocimiento facial
+            </Link>
+          </p>
+          <p className="text-white/60 text-xs mt-2">
+            💡 ¿No tienes registro facial? Regístrate primero y automáticamente te pediremos registrar tu cara
+          </p>
         </div>
       </div>
     </div>
