@@ -37,14 +37,20 @@ app.use(cors({
   origin: [
     'https://proyecto-2-2.onrender.com',
     'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
     'https://proyecto-2-2.onrender.com/',
-    'http://localhost:3000/'
+    'http://localhost:3000/',
+    'http://localhost:5173/',
+    'http://localhost:5174/'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-app.use(express.json());
+// Aumentar límite de tamaño para imágenes Base64 (hasta 50MB)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Rutas API
 app.use('/api/users', require('./routes/users'));
@@ -62,6 +68,7 @@ app.use('/api/voice-interactions', require('./routes/voiceInteractions'));
 app.use('/api/voice-responses', require('./routes/voiceResponses'));
 
 app.use('/api/assemblyai', require('./routes/assemblyAI'));
+app.use('/api/face', require('./routes/face.routes'));
 
 io.on('connection', (socket) => {
   // Listener para enviar la primera pregunta al socket que lo solicita
@@ -768,6 +775,25 @@ async function sendQuestion(io, gameId, questionIndex) {
 
 // [HU8] Importar funciones de recnocimiento de voz
 const { matchVoiceResponse, generateSuggestions } = require('./utils/voiceRecognition');
+
+// Middleware para manejar rutas no encontradas (404) - siempre devolver JSON
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    error: `Ruta no encontrada: ${req.method} ${req.path}`,
+    message: 'El endpoint solicitado no existe'
+  });
+});
+
+// Middleware de manejo de errores global - siempre devolver JSON
+app.use((err, req, res, next) => {
+  console.error('Error en el servidor:', err);
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.message || 'Error interno del servidor',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
