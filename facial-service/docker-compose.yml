@@ -1,0 +1,19 @@
+services:
+  deepface-service:
+    image: ervincaravaliibarra/facial-service:latest
+    container_name: facial-recognition-service
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./tmp:/tmp/deepface_uploads
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+

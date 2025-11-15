@@ -263,6 +263,15 @@ export default function DashboardPage() {
               Perfil
             </Button>
             <Button
+              variant="secondary"
+              onClick={() => navigate('/face-register')}
+              aria-label="Registrar reconocimiento facial"
+              onFocus={() => announce('Registrar tu cara para login facial')}
+              onMouseEnter={() => announce('Registrar tu cara para login facial')}
+            >
+              📸 Registrar Cara
+            </Button>
+            <Button
               variant="outline"
               onClick={logout}
               aria-label="Cerrar sesión"
