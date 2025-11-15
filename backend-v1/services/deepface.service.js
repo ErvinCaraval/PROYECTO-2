@@ -1,25 +1,19 @@
 /**
  * Servicio para comunicación con el microservicio DeepFace
- * Se comunica con el servicio de reconocimiento facial (Azure Container Instances o local)
+ * Se comunica con el servicio local de reconocimiento facial
  */
 const axios = require('axios');
 
 class DeepFaceService {
   constructor() {
     // URL del microservicio DeepFace
-    // Se obtiene desde la variable de entorno DEEPFACE_SERVICE_URL
-    // Si no está definida, usa localhost para desarrollo local
-    if (!process.env.DEEPFACE_SERVICE_URL) {
-      console.warn('⚠️  DEEPFACE_SERVICE_URL no está definida. Usando localhost:5001 por defecto.');
-    }
+    // Por defecto usa localhost para desarrollo local
+    // Se puede sobrescribir con la variable de entorno DEEPFACE_SERVICE_URL
     this.baseURL = process.env.DEEPFACE_SERVICE_URL || 'http://localhost:5001';
     // Timeout aumentado a 90 segundos porque DeepFace puede tardar mucho procesando imágenes
-    // Azure Container Instances puede tener timeouts más largos, así que aumentamos esto
     this.timeout = 90000; // 90 segundos de timeout
-    // Timeout para conexión inicial (más corto)
-    this.connectTimeout = 10000; // 10 segundos
     
-    // Log de la URL configurada (solo en desarrollo o si hay problemas)
+    // Log de la URL configurada
     console.log(`🔧 DeepFace Service configurado con URL: ${this.baseURL}`);
   }
 

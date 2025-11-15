@@ -1,13 +1,18 @@
 services:
   deepface-service:
-    # Usar tu imagen personalizada de Docker Hub
-    image: ervincaravaliibarra/facial-service:latest
+    image: serengil/deepface:latest
     container_name: facial-recognition-service
     ports:
       - "5001:5001"
-    # Volumen opcional para archivos temporales (si necesitas persistencia)
     volumes:
+      - ./api.py:/app/api.py
       - ./tmp:/tmp/deepface_uploads
+    working_dir: /app
+    command: >
+      sh -c "
+        pip install flask flask-cors &&
+        python api.py
+      "
     environment:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
