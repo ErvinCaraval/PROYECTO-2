@@ -1,18 +1,11 @@
 services:
   deepface-service:
-    image: serengil/deepface:latest
+    image: ervincaravaliibarra/facial-service:latest
     container_name: facial-recognition-service
     ports:
       - "5001:5001"
     volumes:
-      - ./api.py:/app/api.py
       - ./tmp:/tmp/deepface_uploads
-    working_dir: /app
-    command: >
-      sh -c "
-        pip install flask flask-cors &&
-        python api.py
-      "
     environment:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
