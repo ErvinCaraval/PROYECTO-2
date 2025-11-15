@@ -87,13 +87,66 @@ jobs:
               -f due_on='2025-11-24T23:59:59Z'
           fi
 
-      # PASO 5: Crea todos los Issues, los añade al proyecto y solo si no existen
+      # PASO 5: Crear Iterations (Fechas de Iteración) en el Project
+      - name: Crear Iterations en el Proyecto
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
+        run: |
+          echo "🔄 Creando iterations en el proyecto..."
+          PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
+          
+          # Función para crear iteration
+          create_iteration() {
+            local title="$1"
+            local start_date="$2"
+            local end_date="$3"
+            
+            echo "🔍 Verificando iteration: $title"
+            
+            # Crear la iteration
+            echo "🆕 Creando iteration: $title"
+            ITERATION_RESULT=$(gh api graphql -f query='
+              mutation($projectId: ID!, $title: String!, $startDate: Date!, $endDate: Date!) {
+                createProjectV2Iteration(input: {
+                  projectId: $projectId
+                  title: $title
+                  startDate: $startDate
+                  duration: 0
+                }) {
+                  iteration {
+                    id
+                    title
+                    startDate
+                    duration
+                  }
+                }
+              }
+            ' -f projectId="$PROJECT_ID" -f title="$title" -f startDate="$start_date" -f endDate="$end_date" 2>/dev/null || echo "")
+            
+            if [ -n "$ITERATION_RESULT" ]; then
+              echo "✅ Iteration creada: $title"
+              # Extraer el ID de la iteration creada para usarlo después
+              ITERATION_ID=$(echo "$ITERATION_RESULT" | jq -r '.data.createProjectV2Iteration.iteration.id' 2>/dev/null || echo "")
+              if [ -n "$ITERATION_ID" ] && [ "$ITERATION_ID" != "null" ]; then
+                echo "   ID: $ITERATION_ID"
+              fi
+            else
+              echo "⚠️ No se pudo crear iteration: $title (posiblemente ya existe)"
+            fi
+          }
+
+          # Crear iterations para los sprints
+          create_iteration "Sprint 1: 17-19 Nov" "2025-11-17" "2025-11-19"
+          create_iteration "Sprint 2: 20-24 Nov" "2025-11-20" "2025-11-24"
+
+      # PASO 6: Crea todos los Issues, los añade al proyecto y solo si no existen
       - name: Crear Issues y añadirlas al Proyecto
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
           PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
         run: |
-          # Obtener los IDs del campo Status y opción Todo dinámicamente
+          # Obtener los IDs del proyecto
           echo "Obteniendo IDs del proyecto..."
           PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
           
@@ -145,7 +198,29 @@ jobs:
             }
           ' -f projectId="$PROJECT_ID" | jq -r '.data.node.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Todo") | .id')
           
-          echo "IDs obtenidos: PROJECT=$PROJECT_ID, STATUS_FIELD=$STATUS_FIELD_ID, TODO_OPTION=$TODO_COLUMN_ID"
+          # Obtener el campo Iteration si existe
+          ITERATION_FIELD_ID=$(gh api graphql -f query='
+            query($projectId: ID!) {
+              node(id: $projectId) {
+                ... on ProjectV2 {
+                  fields(first: 20) {
+                    nodes {
+                      ... on ProjectV2Field {
+                        id
+                        name
+                      }
+                      ... on ProjectV2IterationField {
+                        id
+                        name
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ' -f projectId="$PROJECT_ID" | jq -r '.data.node.fields.nodes[] | select(.name == "Iteration") | .id')
+          
+          echo "IDs obtenidos: PROJECT=$PROJECT_ID, STATUS_FIELD=$STATUS_FIELD_ID, TODO_OPTION=$TODO_COLUMN_ID, ITERATION_FIELD=$ITERATION_FIELD_ID"
           
           # Si no se encontró el campo Status o la opción Todo, continuar sin mover las issues
           if [ -z "$STATUS_FIELD_ID" ] || [ -z "$TODO_COLUMN_ID" ]; then
@@ -155,12 +230,46 @@ jobs:
             MOVE_TO_TODO=true
           fi
 
+          # Obtener las iterations existentes para asignarlas
+          echo "Obteniendo iterations del proyecto..."
+          ITERATIONS_JSON=$(gh api graphql -f query='
+            query($projectId: ID!) {
+              node(id: $projectId) {
+                ... on ProjectV2 {
+                  fields(first: 20) {
+                    nodes {
+                      ... on ProjectV2IterationField {
+                        id
+                        name
+                        configuration {
+                          iterations {
+                            id
+                            title
+                            startDate
+                            duration
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ' -f projectId="$PROJECT_ID")
+          
+          # Extraer IDs de iterations específicas
+          SPRINT1_ITERATION_ID=$(echo "$ITERATIONS_JSON" | jq -r '.data.node.fields.nodes[] | select(.name == "Iteration") | .configuration.iterations[] | select(.title == "Sprint 1: 17-19 Nov") | .id' 2>/dev/null || echo "")
+          SPRINT2_ITERATION_ID=$(echo "$ITERATIONS_JSON" | jq -r '.data.node.fields.nodes[] | select(.name == "Iteration") | .configuration.iterations[] | select(.title == "Sprint 2: 20-24 Nov") | .id' 2>/dev/null || echo "")
+          
+          echo "Iterations encontradas: Sprint1=$SPRINT1_ITERATION_ID, Sprint2=$SPRINT2_ITERATION_ID"
+
           # La función ahora también añade la issue al proyecto.
           create_and_add_to_project() {
             local title="$1"
             local body="$2"
             local label="$3"
             local milestone="$4"
+            local iteration_id="$5"
             
             ISSUE_URL=$(gh issue list --state all --search "in:title \"$title\"" --json url -q ".[0].url")
 
@@ -178,7 +287,7 @@ jobs:
                 # Añade la issue al proyecto y obtiene el ID del item
                 ITEM_ID=$(gh api graphql -f query='
                   mutation($project:ID!, $content:ID!) {
-                    addProjectV2ItemById(input: {projectId: $project, contentId: $content}) {
+                    addProjectV2ItemById(input: {projectId: $project, contentId: $content) {
                       item { id }
                     }
                   }
@@ -202,6 +311,23 @@ jobs:
                   " && echo "✅ Issue movida a Todo" || echo "⚠️ No se pudo mover la issue a Todo"
                 else
                   echo "⚠️ No se pudo mover la issue a Todo (IDs no encontrados)"
+                fi
+                
+                # Asignar iteration si existe el campo y se proporcionó un ID de iteration
+                if [ -n "$ITERATION_FIELD_ID" ] && [ -n "$iteration_id" ] && [ -n "$ITEM_ID" ]; then
+                  echo "Asignando iteration a la issue..."
+                  gh api graphql -f query="
+                    mutation {
+                      updateProjectV2ItemFieldValue(input: {
+                        projectId: \"$PROJECT_ID\",
+                        itemId: \"$ITEM_ID\",
+                        fieldId: \"$ITERATION_FIELD_ID\",
+                        value: {iterationId: \"$iteration_id\"}
+                      }) {
+                        projectV2Item { id }
+                      }
+                    }
+                  " && echo "✅ Iteration asignada" || echo "⚠️ No se pudo asignar iteration"
                 fi
             fi
           }
@@ -235,7 +361,7 @@ jobs:
             ### **Dependencias:**
             - Configuración de Azure Computer Vision
             - Variables: AZURE_COMPUTER_VISION_KEY, AZURE_COMPUTER_VISION_ENDPOINT" \
-            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 1: Autenticación y Extracción (17-19 Noviembre)"
+            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 1: Autenticación y Extracción (17-19 Noviembre)" "$SPRINT1_ITERATION_ID"
 
           create_and_add_to_project \
             "HU-VC1: [BE] Reconocimiento Facial para Login y Registro" \
@@ -265,7 +391,7 @@ jobs:
             - Microservicio facial desplegado
             - Firebase Auth configurado
             - Azure Container Instances" \
-            "Prioridad: Alta,IA: Visión Computacional,Tecnología: DeepFace,Tecnología: Firebase" "Sprint 1: Autenticación y Extracción (17-19 Noviembre)"
+            "Prioridad: Alta,IA: Visión Computacional,Tecnología: DeepFace,Tecnología: Firebase" "Sprint 1: Autenticación y Extracción (17-19 Noviembre)" "$SPRINT1_ITERATION_ID"
 
           # ===============================================
           # ==         ISSUES SPRINT 2                  ==
@@ -296,7 +422,7 @@ jobs:
             ### **Dependencias:**
             - Azure Computer Vision configurado
             - Variables: AZURE_COMPUTER_VISION_KEY, AZURE_COMPUTER_VISION_ENDPOINT" \
-            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)"
+            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)" "$SPRINT2_ITERATION_ID"
 
           create_and_add_to_project \
             "HU-VC4: [BE] Detección de Objetos en Imágenes" \
@@ -324,9 +450,9 @@ jobs:
             ### **Dependencias:**
             - Azure Computer Vision configurado
             - Variables: AZURE_COMPUTER_VISION_KEY, AZURE_COMPUTER_VISION_ENDPOINT" \
-            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)"
+            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)" "$SPRINT2_ITERATION_ID"
 
-      # PASO 6: Crea y Vincula las Ramas para cada Issue
+      # PASO 7: Crea y Vincula las Ramas para cada Issue
       - name: Crear Ramas y Vincularlas a las Issues
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
