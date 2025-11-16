@@ -1,4 +1,4 @@
-name: 🚀 Crear Backlog y Sprints del Proyecto - Visión Computacional
+name: 🚀 Crear Backlog y Sprints - BrainBlitz Vision Computacional
 
 on:
   workflow_dispatch: # Permite ejecutar este workflow manualmente desde la pestaña Actions
@@ -18,14 +18,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # PASO 2 (MODIFICADO): Crea el proyecto si no existe y obtiene su número automáticamente
+      # PASO 2: Crea el proyecto si no existe y obtiene su número automáticamente
       - name: Crear Proyecto de GitHub si no existe
         id: project_setup # Le damos un ID a este paso para usar sus resultados
         env:
           # ⚠️ MODIFICACIÓN AÑADIDA: Usa el Token de Acceso Personal para tener permisos
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          PROJECT_NAME="Product Backlog"
+          PROJECT_NAME="BrainBlitz - Computer Vision Backlog"
           # ⚠️ MODIFICACIÓN AÑADIDA: Comando corregido para buscar el proyecto
           PROJECT_NUMBER=$(gh project list --owner "@me" --format json | jq -r ".projects[] | select(.title == \"$PROJECT_NAME\") | .number")
           
@@ -41,43 +41,49 @@ jobs:
           # Guarda el número del proyecto para que otros pasos puedan usarlo
           echo "PROJECT_NUMBER=$PROJECT_NUMBER" >> $GITHUB_OUTPUT
 
-      # PASO 3: Crea las Etiquetas de Prioridad si no existen
-      - name: Crear Etiquetas de Prioridad si no existen
+      # PASO 3: Crea las Etiquetas de Prioridad y Tecnología si no existen
+      - name: Crear Etiquetas si no existen
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
         run: |
           echo "Creando etiquetas de prioridad..."
-          gh label create "Prioridad: Alta" --color "D93F0B" --description "Esta tarea es crítica y bloquea otras." || echo "La etiqueta 'Prioridad: Alta' ya existe."
+          gh label create "Prioridad: Alta" --color "D93F0B" --description "Tarea crítica y bloqueante." || echo "La etiqueta 'Prioridad: Alta' ya existe."
           gh label create "Prioridad: Media" --color "FBCA04" --description "Tarea importante pero no urgente." || echo "La etiqueta 'Prioridad: Media' ya existe."
           gh label create "Prioridad: Baja" --color "0E8A16" --description "Tarea menor o mejora deseable." || echo "La etiqueta 'Prioridad: Baja' ya existe."
-      
+          
+          echo "Creando etiquetas de tecnología..."
+          gh label create "Tecnología: Azure" --color "0078D4" --description "Usa servicios de Azure" || echo "La etiqueta 'Tecnología: Azure' ya existe."
+          gh label create "Tecnología: DeepFace" --color "6F42C1" --description "Usa DeepFace para reconocimiento facial" || echo "La etiqueta 'Tecnología: DeepFace' ya existe."
+          gh label create "Tecnología: Firebase" --color "FF6D01" --description "Integración con Firebase" || echo "La etiqueta 'Tecnología: Firebase' ya existe."
+          gh label create "IA: Visión Computacional" --color "00B294" --description "Implementa visión computacional" || echo "La etiqueta 'IA: Visión Computacional' ya existe."
+
       # PASO 4: Crea los Milestones (Sprints) solo si no existen
       - name: Crear Milestones si no existen
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
           GH_REPO: ${{ github.repository }}
         run: |
-          # --- Sprint Semana 1: 17-19 Noviembre ---
-          MILESTONE_W1_TITLE="Sprint Visión Computacional - Semana 1 (17-19 Nov 2025)"
-          if gh api /repos/${GH_REPO}/milestones --paginate -q ".[] | select(.title == \"$MILESTONE_W1_TITLE\")" | grep -qF "$MILESTONE_W1_TITLE"; then
-            echo "Milestone '$MILESTONE_W1_TITLE' ya existe. Omitiendo."
+          # --- Sprint 1: Autenticación y Extracción ---
+          MILESTONE_SPRINT1_TITLE="Sprint 1: Autenticación y Extracción (17-19 Noviembre)"
+          if gh api /repos/${GH_REPO}/milestones --paginate -q ".[] | select(.title == \"$MILESTONE_SPRINT1_TITLE\")" | grep -qF "$MILESTONE_SPRINT1_TITLE"; then
+            echo "Milestone '$MILESTONE_SPRINT1_TITLE' ya existe. Omitiendo."
           else
-            echo "Creando milestone '$MILESTONE_W1_TITLE'..."
+            echo "Creando milestone '$MILESTONE_SPRINT1_TITLE'..."
             gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${GH_REPO}/milestones" \
-              -f title="$MILESTONE_W1_TITLE" \
-              -f description='Implementación de funcionalidades de visión computacional con Azure. Semana 1: OCR y Reconocimiento Facial.' \
+              -f title="$MILESTONE_SPRINT1_TITLE" \
+              -f description='Implementar OCR y Reconocimiento Facial. Total: 21 Story Points' \
               -f due_on='2025-11-19T23:59:59Z'
           fi
 
-          # --- Sprint Semana 2: 20-24 Noviembre ---
-          MILESTONE_W2_TITLE="Sprint Visión Computacional - Semana 2 (20-24 Nov 2025)"
-          if gh api /repos/${GH_REPO}/milestones --paginate -q ".[] | select(.title == \"$MILESTONE_W2_TITLE\")" | grep -qF "$MILESTONE_W2_TITLE"; then
-            echo "Milestone '$MILESTONE_W2_TITLE' ya existe. Omitiendo."
+          # --- Sprint 2: Análisis Visual Avanzado ---
+          MILESTONE_SPRINT2_TITLE="Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)"
+          if gh api /repos/${GH_REPO}/milestones --paginate -q ".[] | select(.title == \"$MILESTONE_SPRINT2_TITLE\")" | grep -qF "$MILESTONE_SPRINT2_TITLE"; then
+            echo "Milestone '$MILESTONE_SPRINT2_TITLE' ya existe. Omitiendo."
           else
-            echo "Creando milestone '$MILESTONE_W2_TITLE'..."
+            echo "Creando milestone '$MILESTONE_SPRINT2_TITLE'..."
             gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${GH_REPO}/milestones" \
-              -f title="$MILESTONE_W2_TITLE" \
-              -f description='Implementación de funcionalidades de visión computacional con Azure. Semana 2: Análisis de Imágenes y Detección de Objetos.' \
+              -f title="$MILESTONE_SPRINT2_TITLE" \
+              -f description='Implementar análisis de imágenes y detección de objetos. Total: 20 Story Points' \
               -f due_on='2025-11-24T23:59:59Z'
           fi
 
@@ -87,22 +93,74 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }} # Usamos el PAT para consistencia
           PROJECT_NUMBER: ${{ steps.project_setup.outputs.PROJECT_NUMBER }}
         run: |
+          # Obtener los IDs del campo Status y opción Todo dinámicamente
+          echo "Obteniendo IDs del proyecto..."
+          PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
+          
+          # Obtener el campo Status del proyecto
+          STATUS_FIELD_ID=$(gh api graphql -f query='
+            query($projectId: ID!) {
+              node(id: $projectId) {
+                ... on ProjectV2 {
+                  fields(first: 20) {
+                    nodes {
+                      ... on ProjectV2Field {
+                        id
+                        name
+                      }
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ' -f projectId="$PROJECT_ID" | jq -r '.data.node.fields.nodes[] | select(.name == "Status") | .id')
+          
+          # Obtener el ID de la opción "Todo"
+          TODO_COLUMN_ID=$(gh api graphql -f query='
+            query($projectId: ID!) {
+              node(id: $projectId) {
+                ... on ProjectV2 {
+                  fields(first: 20) {
+                    nodes {
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ' -f projectId="$PROJECT_ID" | jq -r '.data.node.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "Todo") | .id')
+          
+          echo "IDs obtenidos: PROJECT=$PROJECT_ID, STATUS_FIELD=$STATUS_FIELD_ID, TODO_OPTION=$TODO_COLUMN_ID"
+          
+          # Si no se encontró el campo Status o la opción Todo, continuar sin mover las issues
+          if [ -z "$STATUS_FIELD_ID" ] || [ -z "$TODO_COLUMN_ID" ]; then
+            echo "⚠️ No se pudo encontrar el campo Status o la opción Todo. Las issues se crearán pero no se moverán."
+            MOVE_TO_TODO=false
+          else
+            MOVE_TO_TODO=true
+          fi
+
           # La función ahora también añade la issue al proyecto.
-          # Acepta body como archivo o texto directo
           create_and_add_to_project() {
             local title="$1"
-            local body_source="$2"  # Puede ser archivo o texto
+            local body="$2"
             local label="$3"
             local milestone="$4"
-            
-            # Si body_source es un archivo, leerlo; si no, usarlo directamente
-            if [ -f "$body_source" ]; then
-              local body_file="$body_source"
-            else
-              # Crear archivo temporal con el texto
-              local body_file=$(mktemp)
-              echo "$body_source" > "$body_file"
-            fi
             
             ISSUE_URL=$(gh issue list --state all --search "in:title \"$title\"" --json url -q ".[0].url")
 
@@ -110,17 +168,11 @@ jobs:
               echo "Issue '$title' ya existe. Omitiendo creación."
             else
               echo "Creando issue '$title'..."
-              ISSUE_URL=$(gh issue create --title "$title" --body-file "$body_file" --label "$label" --milestone "$milestone")
-            fi
-            
-            # Limpiar archivo temporal si lo creamos
-            if [ ! -f "$body_source" ] && [ -f "$body_file" ]; then
-              rm -f "$body_file"
+              ISSUE_URL=$(gh issue create --title "$title" --body "$body" --label "$label" --milestone "$milestone")
             fi
 
             if [ -n "$ISSUE_URL" ]; then
                 echo "Añadiendo issue $ISSUE_URL al proyecto ${{ env.PROJECT_NUMBER }}..."
-                PROJECT_ID=$(gh project view ${{ env.PROJECT_NUMBER }} --owner "@me" --format json | jq -r '.id')
                 CONTENT_ID=$(gh issue view $ISSUE_URL --json id | jq -r '.id')
 
                 # Añade la issue al proyecto y obtiene el ID del item
@@ -132,522 +184,148 @@ jobs:
                   }
                 ' -f project="$PROJECT_ID" -f content="$CONTENT_ID" | jq -r '.data.addProjectV2ItemById.item.id')
 
-                # === MOVER LA ISSUE A LA COLUMNA 'Todo' ===
-                TODO_COLUMN_ID="f75ad846"
-                STATUS_FIELD_ID="PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM"
-                # Actualiza el campo Status del item usando una query más simple
-                echo "Moviendo issue a Todo con IDs: PROJECT=$PROJECT_ID, ITEM=$ITEM_ID, FIELD=$STATUS_FIELD_ID, OPTION=$TODO_COLUMN_ID"
-                
-                # Usar una query GraphQL más simple sin variables complejas
-                gh api graphql -f query="
-                  mutation {
-                    updateProjectV2ItemFieldValue(input: {
-                      projectId: \"$PROJECT_ID\",
-                      itemId: \"$ITEM_ID\",
-                      fieldId: \"$STATUS_FIELD_ID\",
-                      value: {singleSelectOptionId: \"$TODO_COLUMN_ID\"}
-                    }) {
-                      projectV2Item { id }
+                # Mover a Todo solo si se encontraron los IDs
+                if [ "$MOVE_TO_TODO" = true ] && [ -n "$ITEM_ID" ]; then
+                  echo "Moviendo issue a Todo..."
+                  
+                  gh api graphql -f query="
+                    mutation {
+                      updateProjectV2ItemFieldValue(input: {
+                        projectId: \"$PROJECT_ID\",
+                        itemId: \"$ITEM_ID\",
+                        fieldId: \"$STATUS_FIELD_ID\",
+                        value: {singleSelectOptionId: \"$TODO_COLUMN_ID\"}
+                      }) {
+                        projectV2Item { id }
+                      }
                     }
-                  }
-                " || echo "No se pudo mover la issue a la columna 'Todo'. Revisa el ID."
+                  " && echo "✅ Issue movida a Todo" || echo "⚠️ No se pudo mover la issue a Todo"
+                else
+                  echo "⚠️ No se pudo mover la issue a Todo (IDs no encontrados)"
+                fi
             fi
           }
 
           # ===============================================
-          # ==  HU: VISIÓN COMPUTACIONAL (AZURE)         ==
-          # ==  Organizadas por Estimación y Prioridad  ==
-          # ==  Fechas: 17-24 Noviembre 2025            ==
+          # ==         ISSUES SPRINT 1                  ==
           # ===============================================
 
-          # HU 1: OCR - Extracción de Texto (8 SP, Media) - Lunes 17 Nov
-          OCR_BODY_FILE=$(mktemp)
-          cat > "$OCR_BODY_FILE" << 'EOFBODY1'
-**C (Contexto)**: Los usuarios y administradores de BrainBlitz necesitan una forma de convertir imágenes con texto (pantallas, documentos, carteles, capturas) en texto editable para generar preguntas automáticamente o procesar contenido visual. Actualmente, el sistema requiere que las preguntas se ingresen manualmente, lo cual es lento y propenso a errores.
-
-            **O (Objetivo)**: Implementar un sistema de reconocimiento óptico de caracteres (OCR) que permita extraer texto de imágenes subidas por usuarios o administradores, facilitando la creación de preguntas y el procesamiento de contenido visual.
-
-            **N (Necesidad)**: Automatizar la extracción de texto de imágenes para reducir el tiempo de creación de preguntas, permitir que usuarios suban imágenes con preguntas y convertirlas automáticamente, y mejorar la accesibilidad del contenido visual.
-
-            **E (Entidad)**: Servicio de OCR (Azure Computer Vision), endpoint backend para procesamiento de imágenes, frontend para subir imágenes, base de datos para almacenar texto extraído, sistema de validación y limpieza de texto.
-
-            **S (Soporte)**: 
-            - Azure Computer Vision API con servicio OCR
-            - Endpoint backend: \`POST /api/vision/extract-text\`
-            - Frontend: componente para subir imágenes y mostrar texto extraído
-            - Variable de entorno: \`AZURE_COMPUTER_VISION_KEY\` y \`AZURE_COMPUTER_VISION_ENDPOINT\`
-            - Biblioteca: \`@azure/cognitiveservices-computervision\` o llamadas HTTP REST directas
-
-            **S (Suposición)**: 
-            - Azure Computer Vision está configurado y tiene créditos disponibles
-            - Las imágenes subidas contienen texto legible
-            - Los usuarios tienen permisos para subir imágenes
-            - El texto extraído puede requerir limpieza y validación
-
-            **A (Criterios de Aceptación)**:
-
-            #### **1. Configuración de Azure:**
-            - ✅ **Cuenta Azure**: Existe una cuenta de Azure con Computer Vision habilitado
-            - ✅ **API Key**: Se tiene la clave API de Azure Computer Vision
-            - ✅ **Endpoint**: Se tiene la URL del endpoint de Azure Computer Vision
-            - ✅ **Variables de Entorno**: Las variables \`AZURE_COMPUTER_VISION_KEY\` y \`AZURE_COMPUTER_VISION_ENDPOINT\` están configuradas en \`.env\`
-            - ✅ **Instalación de Dependencias**: Se instala \`@azure/cognitiveservices-computervision\` o se usa \`axios\`/\`fetch\` para llamadas REST
-
-            #### **2. Endpoint Backend:**
-            - ✅ **Ruta**: Existe \`POST /api/vision/extract-text\` en \`backend-v1/routes/vision.routes.js\`
-            - ✅ **Controlador**: Existe \`visionController.js\` con método \`extractText\`
-            - ✅ **Autenticación**: El endpoint requiere autenticación (middleware \`authenticate.js\`)
-            - ✅ **Validación**: Valida que se reciba \`image\` en Base64 o archivo
-            - ✅ **Límite de Tamaño**: Valida que la imagen no exceda 4MB (límite de Azure)
-
-            #### **3. Integración con Azure OCR:**
-            - ✅ **Conversión de Imagen**: Convierte Base64 a buffer binario para enviar a Azure
-            - ✅ **Llamada a Azure**: Hace POST a \`https://{endpoint}/vision/v3.2/read/analyze\`
-            - ✅ **Headers Correctos**: Incluye \`Ocp-Apim-Subscription-Key\` y \`Content-Type: application/octet-stream\`
-            - ✅ **Procesamiento Asíncrono**: Maneja el flujo asíncrono de Azure (analyze → get results)
-            - ✅ **Extracción de Texto**: Extrae todas las líneas de texto de la respuesta de Azure
-            - ✅ **Formato de Respuesta**: Retorna texto limpio y estructurado
-
-            #### **4. Respuesta del Endpoint:**
-            - ✅ **Formato JSON**: Retorna \`{ success: true, text: string, language: string, confidence: number, lines: array }\`
-            - ✅ **Texto Completo**: Incluye todo el texto extraído concatenado
-            - ✅ **Líneas Individuales**: Incluye array con cada línea de texto detectada
-            - ✅ **Idioma Detectado**: Incluye el idioma detectado por Azure (es, en, etc.)
-            - ✅ **Nivel de Confianza**: Incluye el nivel de confianza promedio de la extracción
-
-            #### **5. Manejo de Errores:**
-            - ✅ **Imagen Inválida**: Retorna error 400 si la imagen no es válida
-            - ✅ **Sin Texto Detectado**: Retorna mensaje claro si no se detecta texto en la imagen
-            - ✅ **Error de Azure**: Maneja errores de API de Azure (401, 429, 500) con mensajes claros
-            - ✅ **Timeout**: Maneja timeouts de Azure con reintentos o mensaje de error apropiado
-            - ✅ **Logging**: Registra errores en consola para debugging
-
-            #### **6. Pruebas:**
-            - ✅ **Prueba Unitaria**: Prueba la función de extracción de texto con imagen de prueba
-            - ✅ **Prueba de Integración**: Prueba el endpoint completo con imagen real
-            - ✅ **Prueba de Errores**: Prueba manejo de errores (imagen inválida, sin texto, error de Azure)
-            - ✅ **Prueba Manual**: Verifica que funciona con imágenes de diferentes tipos (JPG, PNG, PDF)
-
-            #### **7. Integración con el Juego - Frontend:**
-            - ✅ **Componente OCR**: Existe componente \`OCRQuestionCreator.jsx\` en \`frontend-v2/src/components/\` que:
-              - Permite subir una imagen (drag & drop o botón de selección)
-              - Muestra preview de la imagen subida
-              - Botón \"Extraer Texto\" que llama al endpoint \`/api/vision/extract-text\`
-              - Muestra spinner de carga mientras procesa
-              - Muestra el texto extraído en un textarea editable
-              - Botón \"Usar como Pregunta\" que pre-llena el formulario de creación de preguntas
-            - ✅ **Integración con AIQuestionGenerator**: El componente OCR se integra con \`AIQuestionGenerator.jsx\`:
-              - El texto extraído se pasa automáticamente al campo de pregunta
-              - El usuario puede editar el texto antes de crear la pregunta
-              - El usuario completa las opciones y selecciona la respuesta correcta
-              - Se crea la pregunta normalmente usando el flujo existente
-            - ✅ **Flujo de Usuario Completo**:
-              1. Usuario va a \"Crear Juego\" o \"Generar Preguntas\"
-              2. Ve opción \"Crear desde Imagen con Texto\" (nueva pestaña o botón)
-              3. Sube imagen con texto (ej: captura de pantalla, foto de libro, documento)
-              4. Sistema extrae texto automáticamente
-              5. Texto aparece en formulario editable
-              6. Usuario edita si es necesario y completa opciones de respuesta
-              7. Crea la pregunta normalmente
-            - ✅ **Resultado Final en el Juego**:
-              - Las preguntas creadas desde OCR aparecen en los juegos normalmente
-              - No hay diferencia visual entre preguntas creadas manualmente o desde OCR
-              - El texto extraído se guarda como el texto de la pregunta
-              - Los jugadores ven y responden la pregunta normalmente durante el juego
-
-            #### **8. Documentación:**
-            - ✅ **Swagger**: Endpoint documentado en \`swagger.yaml\` con ejemplos
-            - ✅ **README**: Instrucciones de configuración de Azure en README
-            - ✅ **Ejemplos**: Ejemplos de uso del endpoint en documentación
+          create_and_add_to_project \
+            "HU-VC2: [BE] OCR - Extracción de Texto de Imágenes" \
+            "**Como** usuario o administrador de BrainBlitz, **Quiero** poder extraer texto automáticamente de imágenes, **Para que** pueda generar preguntas de forma más eficiente.
 
             ---
             ### **Puntos de Estimación:** 8
-            ### **Prioridad:** Media
-            ### **Fecha Objetivo:** Lunes 17 Noviembre 2025
-            ### **Tecnologías:** Azure Computer Vision OCR, Node.js, Express, React
-EOFBODY1
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Configurar Azure Computer Vision con API Key y Endpoint
+            - ✅ Crear endpoint POST /api/vision/extract-text
+            - ✅ Integrar con Azure OCR v3.2 para procesamiento asíncrono
+            - ✅ Desarrollar componente OCRQuestionCreator.jsx en frontend
+            - ✅ Permitir subida de imágenes y preview
+            - ✅ Mostrar texto extraído en textarea editable
+            - ✅ Integrar con AIQuestionGenerator.jsx
+            - ✅ Realizar pruebas con JPG, PNG, PDF
+
+            ### **Tecnologías:**
+            - Azure Computer Vision OCR
+            - Node.js, Express, React
+            - Base64 encoding
+
+            ### **Dependencias:**
+            - Configuración de Azure Computer Vision
+            - Variables: AZURE_COMPUTER_VISION_KEY, AZURE_COMPUTER_VISION_ENDPOINT" \
+            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 1: Autenticación y Extracción (17-19 Noviembre)"
 
           create_and_add_to_project \
-            "[BE] US-VC2: OCR - Extracción de Texto de Imágenes (17 Nov)" \
-            "$OCR_BODY_FILE" \
-            "Prioridad: Media" \
-            "Sprint Visión Computacional - Semana 1 (17-19 Nov 2025)"
-
-          # HU 2: Reconocimiento Facial (13 SP, Alta) - Martes 18 Nov (Ya implementado, documentar/mejorar)
-          FACE_BODY_FILE=$(mktemp)
-          cat > "$FACE_BODY_FILE" << 'EOFBODY2'
-**C (Contexto)**: Los usuarios de BrainBlitz necesitan una forma segura y moderna de autenticarse sin depender únicamente de contraseñas. El sistema actual permite registro e inicio de sesión con email/contraseña, pero se requiere implementar autenticación biométrica mediante reconocimiento facial.
-
-            **O (Objetivo)**: Permitir que los usuarios se registren e inicien sesión usando reconocimiento facial como método de autenticación alternativo o principal, mejorando la seguridad y la experiencia de usuario.
-
-            **N (Necesidad)**: Proporcionar una opción de autenticación sin contraseña que sea rápida, segura y accesible desde dispositivos con cámara, reduciendo la fricción en el proceso de login y mejorando la seguridad mediante biometría.
-
-            **E (Entidad)**: Sistema de autenticación facial, base de datos de usuarios, servicio de reconocimiento facial (DeepFace), frontend con acceso a cámara, backend con endpoints de registro y login facial.
-
-            **S (Soporte)**: 
-            - Microservicio de reconocimiento facial (facial-service) usando DeepFace
-            - Endpoints backend: \`POST /api/face/register\` y \`POST /api/face/login\`
-            - Frontend: componentes \`FaceRegister.jsx\` y \`FaceLogin.jsx\`
-            - Firebase Firestore para almacenar embeddings faciales
-            - Azure Container Instances para desplegar el servicio facial
-
-            **S (Suposición)**: 
-            - Los usuarios tienen acceso a dispositivos con cámara web
-            - El navegador soporta acceso a la cámara (getUserMedia API)
-            - El servicio de reconocimiento facial está desplegado y accesible
-            - Los usuarios están dispuestos a registrar su rostro para autenticación
-
-            **A (Criterios de Aceptación)**:
-
-            #### **1. Registro Facial:**
-            - ✅ **Endpoint Backend**: Existe \`POST /api/face/register\` que acepta:
-              - \`image\`: Imagen en Base64 del rostro del usuario
-              - \`token\`: Token de autenticación Firebase válido
-            - ✅ **Validación de Imagen**: El sistema valida que la imagen contenga un rostro visible usando DeepFace
-            - ✅ **Generación de Embeddings**: Se generan embeddings faciales usando modelo VGG-Face
-            - ✅ **Almacenamiento**: Los embeddings se guardan en Firebase Firestore asociados al \`userId\`
-            - ✅ **Prevención de Duplicados**: Un usuario solo puede tener un registro facial activo
-            - ✅ **Respuesta Exitosa**: Retorna \`{ success: true, message: 'Cara registrada exitosamente' }\`
-            - ✅ **Manejo de Errores**: Retorna errores claros si no se detecta rostro, token inválido, o usuario ya registrado
-
-            #### **2. Login Facial:**
-            - ✅ **Endpoint Backend**: Existe \`POST /api/face/login\` que acepta:
-              - \`image\`: Imagen en Base64 del rostro del usuario
-              - \`email\`: Email del usuario para identificar el registro facial
-            - ✅ **Búsqueda de Usuario**: El sistema busca el usuario por email en Firebase Auth
-            - ✅ **Verificación de Registro**: Valida que el usuario tenga un registro facial previo
-            - ✅ **Comparación Facial**: Compara la imagen de login con el embedding almacenado usando DeepFace
-            - ✅ **Umbral de Confianza**: La verificación requiere un nivel de confianza mínimo (ej: 0.7)
-            - ✅ **Generación de Token**: Si la verificación es exitosa, genera un token personalizado de Firebase
-            - ✅ **Respuesta Exitosa**: Retorna \`{ success: true, verified: true, customToken, userId, confidence }\`
-            - ✅ **Manejo de Errores**: Retorna errores claros si no se detecta rostro, usuario no encontrado, o verificación fallida
-
-            #### **3. Frontend - Registro Facial:**
-            - ✅ **Componente FaceRegister**: Existe componente React que:
-              - Muestra vista previa de la cámara en tiempo real
-              - Permite capturar foto del rostro
-              - Convierte la imagen a Base64
-              - Envía la imagen al endpoint \`/api/face/register\`
-              - Muestra mensajes de éxito/error al usuario
-            - ✅ **Acceso a Cámara**: Solicita permisos de cámara usando \`navigator.mediaDevices.getUserMedia()\`
-            - ✅ **Validación Visual**: Muestra indicador visual cuando se detecta un rostro en la cámara
-            - ✅ **Manejo de Errores**: Muestra mensajes claros si no hay cámara, permisos denegados, o registro fallido
-
-            #### **4. Frontend - Login Facial:**
-            - ✅ **Componente FaceLogin**: Existe componente React que:
-              - Permite ingresar email del usuario
-              - Muestra vista previa de la cámara
-              - Captura foto del rostro
-              - Envía email e imagen al endpoint \`/api/face/login\`
-              - Maneja la respuesta y autentica al usuario con el token recibido
-            - ✅ **Integración con Auth**: Después de login exitoso, actualiza el estado de autenticación en \`AuthContext\`
-            - ✅ **Redirección**: Redirige al usuario a la página principal después de login exitoso
-
-            #### **5. Seguridad:**
-            - ✅ **Autenticación Requerida**: El registro facial requiere token de Firebase válido
-            - ✅ **Validación de Token**: El backend verifica el token antes de procesar el registro
-            - ✅ **Protección de Datos**: Los embeddings faciales se almacenan de forma segura en Firestore
-            - ✅ **Rate Limiting**: Los endpoints tienen rate limiting para prevenir ataques
-
-            #### **6. Despliegue:**
-            - ✅ **Servicio Facial Desplegado**: El microservicio facial está desplegado en Azure Container Instances
-            - ✅ **URL Configurada**: La URL del servicio está configurada en \`.env\` como \`DEEPFACE_SERVICE_URL\`
-            - ✅ **Health Check**: El servicio responde correctamente a \`GET /health\`
-
-            #### **7. Pruebas:**
-            - ✅ **Pruebas Unitarias**: Existen pruebas para los controladores de registro y login facial
-            - ✅ **Pruebas de Integración**: Se prueban los flujos completos de registro y login
-            - ✅ **Pruebas Manuales**: Se verifica que el registro y login funcionen en navegadores Chrome, Firefox y Edge
+            "HU-VC1: [BE] Reconocimiento Facial para Login y Registro" \
+            "**Como** usuario de BrainBlitz, **Quiero** poder autenticarme usando reconocimiento facial, **Para que** tenga una experiencia más segura y moderna.
 
             ---
             ### **Puntos de Estimación:** 13
-            ### **Prioridad:** Alta
-            ### **Fecha Objetivo:** Martes 18 Noviembre 2025
-            ### **Tecnologías:** DeepFace, Azure Container Instances, Firebase Auth, React
-EOFBODY2
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Crear endpoints POST /api/face/register y POST /api/face/login
+            - ✅ Implementar validación de rostros con DeepFace
+            - ✅ Generar embeddings faciales con modelo VGG-Face
+            - ✅ Almacenar embeddings en Firestore asociados a userId
+            - ✅ Desarrollar componentes FaceRegister.jsx y FaceLogin.jsx
+            - ✅ Integrar vista previa de cámara en tiempo real
+            - ✅ Configurar microservicio facial en Azure Container Instances
+            - ✅ Implementar rate limiting y seguridad
+            - ✅ Realizar pruebas de autenticación biométrica
+
+            ### **Tecnologías:**
+            - DeepFace, VGG-Face
+            - Azure Container Instances
+            - Firebase Auth
+            - React, getUserMedia API
+
+            ### **Dependencias:**
+            - Microservicio facial desplegado
+            - Firebase Auth configurado
+            - Azure Container Instances" \
+            "Prioridad: Alta,IA: Visión Computacional,Tecnología: DeepFace,Tecnología: Firebase" "Sprint 1: Autenticación y Extracción (17-19 Noviembre)"
+
+          # ===============================================
+          # ==         ISSUES SPRINT 2                  ==
+          # ===============================================
 
           create_and_add_to_project \
-            "[BE] US-VC1: Reconocimiento Facial para Login y Registro (18 Nov)" \
-            "$FACE_BODY_FILE" \
-            "Prioridad: Alta" \
-            "Sprint Visión Computacional - Semana 1 (17-19 Nov 2025)"
-
-          # HU 3: Análisis de Imágenes (10 SP, Media) - Jueves 20 Nov
-          ANALYSIS_BODY_FILE=$(mktemp)
-          cat > "$ANALYSIS_BODY_FILE" << 'EOFBODY3'
-**C (Contexto)**: Los usuarios y administradores de BrainBlitz necesitan generar preguntas automáticamente a partir de imágenes. Actualmente, las preguntas se crean manualmente o mediante IA basada en texto. Se requiere un sistema que analice imágenes y genere descripciones, tags y categorías automáticamente para facilitar la creación de preguntas visuales.
-
-            **O (Objetivo)**: Implementar un sistema de análisis inteligente de imágenes que genere descripciones automáticas, tags, categorías y metadatos de imágenes, permitiendo crear preguntas de trivia basadas en contenido visual de forma automática.
-
-            **N (Necesidad)**: Automatizar la generación de contenido para preguntas visuales, mejorar la accesibilidad describiendo imágenes, y permitir búsqueda y categorización automática de imágenes por contenido.
-
-            **E (Entidad)**: Servicio de análisis de imágenes (Azure Computer Vision), endpoint backend para análisis, frontend para subir y visualizar análisis, base de datos para almacenar metadatos de imágenes, sistema de generación de preguntas basado en análisis.
-
-            **S (Soporte)**: 
-            - Azure Computer Vision API con servicio Analyze Image
-            - Endpoint backend: \`POST /api/vision/analyze-image\`
-            - Frontend: componente para subir imágenes y mostrar análisis
-            - Variable de entorno: \`AZURE_COMPUTER_VISION_KEY\` y \`AZURE_COMPUTER_VISION_ENDPOINT\`
-            - Biblioteca: \`@azure/cognitiveservices-computervision\` o llamadas HTTP REST
-
-            **S (Suposición)**: 
-            - Azure Computer Vision está configurado
-            - Las imágenes contienen contenido reconocible (objetos, escenas, texto)
-            - Los usuarios tienen permisos para subir imágenes
-            - El análisis puede usarse para generar preguntas automáticamente
-
-            **A (Criterios de Aceptación)**:
-
-            #### **1. Configuración de Azure:**
-            - ✅ **API Key Configurada**: Variable \`AZURE_COMPUTER_VISION_KEY\` en \`.env\`
-            - ✅ **Endpoint Configurado**: Variable \`AZURE_COMPUTER_VISION_ENDPOINT\` en \`.env\`
-            - ✅ **Dependencias Instaladas**: \`@azure/cognitiveservices-computervision\` instalado o uso de \`axios\`/\`fetch\`
-
-            #### **2. Endpoint Backend:**
-            - ✅ **Ruta**: Existe \`POST /api/vision/analyze-image\` en \`backend-v1/routes/vision.routes.js\`
-            - ✅ **Controlador**: Método \`analyzeImage\` en \`visionController.js\`
-            - ✅ **Autenticación**: Requiere autenticación válida
-            - ✅ **Validación**: Valida imagen en Base64 o archivo, tamaño máximo 4MB
-
-            #### **3. Integración con Azure Analyze Image:**
-            - ✅ **Llamada a Azure**: POST a \`https://{endpoint}/vision/v3.2/analyze?visualFeatures=Description,Tags,Categories,Objects,Color\`
-            - ✅ **Headers**: Incluye \`Ocp-Apim-Subscription-Key\` y \`Content-Type: application/octet-stream\`
-            - ✅ **Parámetros Visuales**: Solicita Description, Tags, Categories, Objects, Color
-            - ✅ **Procesamiento**: Procesa respuesta JSON de Azure correctamente
-
-            #### **4. Extracción de Datos:**
-            - ✅ **Descripción**: Extrae la descripción principal y descripciones alternativas de la imagen
-            - ✅ **Tags**: Extrae todos los tags con sus niveles de confianza
-            - ✅ **Categorías**: Extrae categorías detectadas (abstract, people, outdoor, etc.)
-            - ✅ **Objetos**: Extrae objetos detectados con sus bounding boxes
-            - ✅ **Colores**: Extrae colores dominantes y acento de color
-            - ✅ **Metadatos**: Extrae dimensiones, formato de imagen si está disponible
-
-            #### **5. Respuesta del Endpoint:**
-            - ✅ **Formato JSON**: Retorna objeto estructurado con descripción, tags, categorías, objetos y colores
-            - ✅ **Niveles de Confianza**: Todos los datos incluyen niveles de confianza
-            - ✅ **Ordenamiento**: Tags y categorías ordenados por confianza descendente
-
-            #### **6. Manejo de Errores:**
-            - ✅ **Imagen Inválida**: Error 400 con mensaje claro
-            - ✅ **Sin Contenido**: Mensaje si no se detecta contenido reconocible
-            - ✅ **Error de Azure**: Maneja 401, 429, 500 con mensajes apropiados
-            - ✅ **Timeout**: Maneja timeouts con reintentos
-            - ✅ **Logging**: Registra errores para debugging
-
-            #### **7. Pruebas:**
-            - ✅ **Prueba Unitaria**: Prueba función de análisis con imagen de prueba
-            - ✅ **Prueba de Integración**: Prueba endpoint completo
-            - ✅ **Prueba de Diferentes Tipos**: Prueba con imágenes de arte, geografía, objetos, personas
-            - ✅ **Prueba de Errores**: Verifica manejo de errores
-
-            #### **8. Integración con el Juego - Frontend:**
-            - ✅ **Componente Análisis de Imágenes**: Existe componente \`ImageAnalysisQuestionCreator.jsx\` en \`frontend-v2/src/components/\` que:
-              - Permite subir una imagen (drag & drop o botón de selección)
-              - Muestra preview de la imagen subida
-              - Botón \"Analizar Imagen\" que llama al endpoint \`/api/vision/analyze-image\`
-              - Muestra spinner de carga mientras procesa
-              - Muestra resultados del análisis en secciones:
-                - **Descripción Principal**: Texto destacado con la descripción de la imagen
-                - **Tags Detectados**: Chips/badges con los tags más relevantes (mínimo confianza 0.7)
-                - **Categorías**: Lista de categorías detectadas
-                - **Objetos Detectados**: Lista de objetos con sus niveles de confianza
-            - ✅ **Generación Automática de Preguntas**:
-              - Botón \"Generar Pregunta desde Análisis\" que:
-                1. Usa la descripción principal como base para la pregunta
-                2. Usa los tags detectados para sugerir categoría (Arte, Geografía, Historia, etc.)
-                3. Pre-llena el campo de pregunta con formato: \"¿Qué se muestra en esta imagen?\" o \"Según la imagen, ¿qué es...?\"
-                4. Sugiere opciones de respuesta basadas en tags y objetos detectados
-              - El usuario puede editar la pregunta generada antes de guardarla
-            - ✅ **Integración con AIQuestionGenerator**: El componente se integra con el generador de preguntas:
-              - Aparece como nueva opción \"Crear desde Análisis de Imagen\"
-              - El análisis se usa para pre-llenar el formulario de pregunta
-              - El usuario completa/edita y crea la pregunta normalmente
-            - ✅ **Flujo de Usuario Completo**:
-              1. Usuario va a \"Crear Juego\" o \"Generar Preguntas\"
-              2. Selecciona opción \"Crear desde Análisis de Imagen\"
-              3. Sube imagen (ej: foto de monumento, obra de arte, paisaje, objeto)
-              4. Sistema analiza imagen y muestra resultados
-              5. Usuario revisa descripción, tags y objetos detectados
-              6. Usuario hace clic en \"Generar Pregunta\"
-              7. Sistema pre-llena formulario con pregunta sugerida basada en análisis
-              8. Usuario edita pregunta y opciones si es necesario
-              9. Usuario selecciona respuesta correcta y crea la pregunta
-            - ✅ **Resultado Final en el Juego**:
-              - Las preguntas creadas desde análisis aparecen en los juegos con la imagen asociada
-              - Durante el juego, los jugadores ven:
-                - La imagen en la pregunta (si se guardó)
-                - El texto de la pregunta generada desde el análisis
-                - Las opciones de respuesta
-              - Ejemplo de pregunta generada: \"¿Qué monumento histórico se muestra en la imagen?\" con opciones basadas en tags detectados
-              - Los jugadores responden normalmente y el sistema valida la respuesta correcta
-
-            #### **9. Documentación:**
-            - ✅ **Swagger**: Endpoint documentado con ejemplos
-            - ✅ **Ejemplos de Uso**: Ejemplos de imágenes y respuestas esperadas
-            - ✅ **Guía de Integración**: Cómo usar el análisis para generar preguntas
+            "HU-VC3: [BE] Análisis Inteligente de Imágenes" \
+            "**Como** usuario o administrador de BrainBlitz, **Quiero** analizar imágenes automáticamente, **Para que** pueda generar preguntas basadas en contenido visual.
 
             ---
             ### **Puntos de Estimación:** 10
-            ### **Prioridad:** Media
-            ### **Fecha Objetivo:** Jueves 20 Noviembre 2025
-            ### **Tecnologías:** Azure Computer Vision Analyze Image, Node.js, Express, React
-EOFBODY3
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Crear endpoint POST /api/vision/analyze-image
+            - ✅ Integrar con Azure Analyze Image API
+            - ✅ Extraer descripción, tags, categorías, objetos y colores
+            - ✅ Ordenar resultados por confianza descendente
+            - ✅ Desarrollar componente ImageAnalysisQuestionCreator.jsx
+            - ✅ Mostrar resultados en secciones organizadas
+            - ✅ Implementar generación automática de preguntas
+            - ✅ Pre-llenar formularios con sugerencias
+            - ✅ Realizar pruebas con diferentes tipos de imágenes
+
+            ### **Tecnologías:**
+            - Azure Computer Vision Analyze Image
+            - Node.js, Express, React
+
+            ### **Dependencias:**
+            - Azure Computer Vision configurado
+            - Variables: AZURE_COMPUTER_VISION_KEY, AZURE_COMPUTER_VISION_ENDPOINT" \
+            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)"
 
           create_and_add_to_project \
-            "[BE] US-VC3: Análisis Inteligente de Imágenes (20 Nov)" \
-            "$ANALYSIS_BODY_FILE" \
-            "Prioridad: Media" \
-            "Sprint Visión Computacional - Semana 2 (20-24 Nov 2025)"
-
-          # HU 4: Detección de Objetos (10 SP, Media) - Viernes 21 Nov
-          DETECTION_BODY_FILE=$(mktemp)
-          cat > "$DETECTION_BODY_FILE" << 'EOFBODY4'
-**C (Contexto)**: Los usuarios de BrainBlitz necesitan crear preguntas visuales donde se identifiquen objetos específicos en imágenes. Por ejemplo, "¿Qué objeto aparece en esta imagen?" o "¿Cuántos objetos de tipo X hay en la imagen?". Actualmente, no existe funcionalidad para detectar y localizar objetos en imágenes.
-
-            **O (Objetivo)**: Implementar un sistema de detección de objetos que identifique y localice objetos específicos dentro de imágenes, permitiendo crear preguntas interactivas basadas en la detección de objetos y mejorar la experiencia de preguntas visuales.
-
-            **N (Necesidad)**: Habilitar la creación de preguntas visuales interactivas, permitir búsqueda de objetos en imágenes, y mejorar la accesibilidad describiendo qué objetos están presentes en una imagen.
-
-            **E (Entidad)**: Servicio de detección de objetos (Azure Computer Vision), endpoint backend para detección, frontend para visualizar objetos detectados, base de datos para almacenar detecciones, sistema de preguntas basadas en objetos.
-
-            **S (Soporte)**: 
-            - Azure Computer Vision API con Object Detection
-            - Endpoint backend: \`POST /api/vision/detect-objects\`
-            - Frontend: componente para mostrar objetos detectados con bounding boxes
-            - Variable de entorno: \`AZURE_COMPUTER_VISION_KEY\` y \`AZURE_COMPUTER_VISION_ENDPOINT\`
-            - Biblioteca: \`@azure/cognitiveservices-computervision\` o HTTP REST
-
-            **S (Suposición)**: 
-            - Azure Computer Vision soporta detección de objetos
-            - Las imágenes contienen objetos reconocibles
-            - Los usuarios necesitan crear preguntas basadas en objetos detectados
-
-            **A (Criterios de Aceptación)**:
-
-            #### **1. Configuración de Azure:**
-            - ✅ **API Key**: Variable \`AZURE_COMPUTER_VISION_KEY\` configurada
-            - ✅ **Endpoint**: Variable \`AZURE_COMPUTER_VISION_ENDPOINT\` configurada
-            - ✅ **Dependencias**: Librería de Azure instalada o uso de HTTP REST
-
-            #### **2. Endpoint Backend:**
-            - ✅ **Ruta**: Existe \`POST /api/vision/detect-objects\` en \`backend-v1/routes/vision.routes.js\`
-            - ✅ **Controlador**: Método \`detectObjects\` en \`visionController.js\`
-            - ✅ **Autenticación**: Requiere autenticación
-            - ✅ **Validación**: Valida imagen Base64 o archivo, tamaño máximo 4MB
-
-            #### **3. Integración con Azure Object Detection:**
-            - ✅ **Llamada a Azure**: POST a \`https://{endpoint}/vision/v3.2/detect\`
-            - ✅ **Headers**: Incluye \`Ocp-Apim-Subscription-Key\` y \`Content-Type: application/octet-stream\`
-            - ✅ **Procesamiento**: Procesa respuesta JSON de Azure con objetos detectados
-
-            #### **4. Extracción de Objetos:**
-            - ✅ **Lista de Objetos**: Extrae todos los objetos detectados con nombre, confianza, bounding box y área
-            - ✅ **Filtrado por Confianza**: Opcionalmente filtra objetos con confianza < 0.5
-            - ✅ **Ordenamiento**: Ordena objetos por confianza descendente o por área
-
-            #### **5. Respuesta del Endpoint:**
-            - ✅ **Formato JSON**: Retorna objeto con array de objetos detectados, total de objetos y dimensiones de imagen
-            - ✅ **Metadatos**: Incluye total de objetos y dimensiones de imagen
-            - ✅ **Coordenadas Normalizadas**: Bounding boxes en coordenadas de píxeles o normalizadas (0-1)
-
-            #### **6. Funcionalidades Adicionales:**
-            - ✅ **Búsqueda de Objeto Específico**: Parámetro opcional \`objectName\` para buscar un objeto específico
-            - ✅ **Conteo de Objetos**: Retorna conteo de cada tipo de objeto detectado
-            - ✅ **Agrupación**: Agrupa objetos del mismo tipo
-
-            #### **7. Manejo de Errores:**
-            - ✅ **Imagen Inválida**: Error 400 con mensaje claro
-            - ✅ **Sin Objetos**: Retorna lista vacía si no se detectan objetos (no error)
-            - ✅ **Error de Azure**: Maneja errores de API con mensajes apropiados
-            - ✅ **Timeout**: Maneja timeouts
-            - ✅ **Logging**: Registra errores
-
-            #### **8. Pruebas:**
-            - ✅ **Prueba Unitaria**: Prueba detección con imagen de prueba
-            - ✅ **Prueba de Integración**: Prueba endpoint completo
-            - ✅ **Prueba con Múltiples Objetos**: Verifica detección de múltiples objetos
-            - ✅ **Prueba de Precisión**: Verifica que objetos se detecten correctamente
-            - ✅ **Prueba de Errores**: Verifica manejo de errores
-
-            #### **9. Integración con el Juego - Frontend:**
-            - ✅ **Componente Detección de Objetos**: Existe componente \`ObjectDetectionQuestionCreator.jsx\` en \`frontend-v2/src/components/\` que:
-              - Permite subir una imagen (drag & drop o botón de selección)
-              - Muestra preview de la imagen subida
-              - Botón \"Detectar Objetos\" que llama al endpoint \`/api/vision/detect-objects\`
-              - Muestra spinner de carga mientras procesa
-              - Muestra la imagen con bounding boxes dibujados sobre los objetos detectados
-              - Muestra lista de objetos detectados con:
-                - Nombre del objeto
-                - Nivel de confianza (barra de progreso o porcentaje)
-                - Posición en la imagen (coordenadas)
-            - ✅ **Visualización Interactiva**:
-              - Al hacer hover sobre un objeto en la lista, se resalta su bounding box en la imagen
-              - Al hacer clic en un bounding box en la imagen, se resalta en la lista
-              - Filtro por confianza mínima (slider para ajustar umbral)
-              - Contador de objetos por tipo (ej: \"3 guitarras\", \"1 persona\", \"2 sillas\")
-            - ✅ **Generación Automática de Preguntas**:
-              - Botón \"Crear Pregunta de Objetos\" que:
-                1. Genera pregunta tipo: \"¿Qué objeto aparece en esta imagen?\" o \"¿Cuántos [objeto] hay en la imagen?\"
-                2. Usa los objetos detectados como opciones de respuesta
-                3. Marca automáticamente el objeto con mayor confianza como respuesta correcta
-                4. Pre-llena el formulario con pregunta y opciones
-              - Opción para crear preguntas de conteo: \"¿Cuántos [objeto] hay en la imagen?\"
-                - Sistema cuenta objetos del mismo tipo
-                - Genera opciones numéricas (0, 1, 2, 3, 4+)
-            - ✅ **Integración con AIQuestionGenerator**: El componente se integra con el generador:
-              - Aparece como opción \"Crear Pregunta de Detección de Objetos\"
-              - La imagen con objetos detectados se guarda asociada a la pregunta
-              - El formulario se pre-llena con pregunta y opciones generadas
-            - ✅ **Flujo de Usuario Completo**:
-              1. Usuario va a \"Crear Juego\" o \"Generar Preguntas\"
-              2. Selecciona opción \"Crear Pregunta de Detección de Objetos\"
-              3. Sube imagen con objetos visibles (ej: foto de instrumentos, animales, objetos cotidianos)
-              4. Sistema detecta objetos y muestra resultados visuales
-              5. Usuario revisa objetos detectados y ajusta filtro de confianza si es necesario
-              6. Usuario selecciona tipo de pregunta:
-                 - \"¿Qué objeto es este?\" (identificación)
-                 - \"¿Cuántos [objeto] hay?\" (conteo)
-              7. Sistema genera pregunta y opciones automáticamente
-              8. Usuario edita pregunta y opciones si es necesario
-              9. Usuario confirma respuesta correcta y crea la pregunta
-            - ✅ **Resultado Final en el Juego**:
-              - Las preguntas de detección aparecen en los juegos mostrando:
-                - La imagen original (sin bounding boxes para no dar pistas)
-                - El texto de la pregunta (ej: \"¿Qué objeto musical aparece en la imagen?\")
-                - Las opciones de respuesta (objetos detectados)
-              - Durante el juego, los jugadores:
-                1. Ven la imagen de la pregunta
-                2. Leen la pregunta sobre qué objeto identificar o contar
-                3. Seleccionan su respuesta entre las opciones
-                4. El sistema valida si la respuesta es correcta
-              - Ejemplo de pregunta en juego:
-                - Imagen: Foto de una guitarra, piano y violín
-                - Pregunta: \"¿Qué instrumento musical aparece en la imagen?\"
-                - Opciones: [\"Guitarra\", \"Piano\", \"Violín\", \"Batería\"]
-                - Respuesta correcta: \"Guitarra\" (objeto con mayor confianza detectado)
-
-            #### **10. Documentación:**
-            - ✅ **Swagger**: Endpoint documentado con ejemplos
-            - ✅ **Ejemplos Visuales**: Ejemplos de imágenes y objetos detectados
-            - ✅ **Guía de Uso**: Cómo usar detección para crear preguntas
+            "HU-VC4: [BE] Detección de Objetos en Imágenes" \
+            "**Como** usuario de BrainBlitz, **Quiero** detectar objetos en imágenes, **Para que** pueda crear preguntas visuales interactivas.
 
             ---
             ### **Puntos de Estimación:** 10
-            ### **Prioridad:** Media
-            ### **Fecha Objetivo:** Viernes 21 Noviembre 2025
-            ### **Tecnologías:** Azure Computer Vision Object Detection, Node.js, Express, React
-EOFBODY4
+            ---
+            ### **Criterios de Aceptación:**
+            - ✅ Crear endpoint POST /api/vision/detect-objects
+            - ✅ Integrar con Azure Object Detection API
+            - ✅ Procesar bounding boxes y niveles de confianza
+            - ✅ Desarrollar componente ObjectDetectionQuestionCreator.jsx
+            - ✅ Mostrar bounding boxes sobre imágenes
+            - ✅ Implementar funcionalidades interactivas (hover, filtros)
+            - ✅ Generar preguntas de identificación y conteo automáticamente
+            - ✅ Usar Canvas API para visualización
+            - ✅ Realizar pruebas de precisión y múltiples objetos
 
-          create_and_add_to_project \
-            "[BE] US-VC4: Detección de Objetos en Imágenes (21 Nov)" \
-            "$DETECTION_BODY_FILE" \
-            "Prioridad: Media" \
-            "Sprint Visión Computacional - Semana 2 (20-24 Nov 2025)"
+            ### **Tecnologías:**
+            - Azure Computer Vision Object Detection
+            - Node.js, Express, React
+            - Canvas API
 
-          # Limpiar archivos temporales
-          rm -f "$OCR_BODY_FILE" "$FACE_BODY_FILE" "$ANALYSIS_BODY_FILE" "$DETECTION_BODY_FILE"
-      
+            ### **Dependencias:**
+            - Azure Computer Vision configurado
+            - Variables: AZURE_COMPUTER_VISION_KEY, AZURE_COMPUTER_VISION_ENDPOINT" \
+            "Prioridad: Media,IA: Visión Computacional,Tecnología: Azure" "Sprint 2: Análisis Visual Avanzado (20-24 Noviembre)"
+
       # PASO 6: Crea y Vincula las Ramas para cada Issue
       - name: Crear Ramas y Vincularlas a las Issues
         env:
@@ -657,8 +335,8 @@ EOFBODY4
           gh issue list --state open --json number,title | jq -c '.[]' | while read issue; do
             ISSUE_NUMBER=$(echo $issue | jq -r '.number')
             ISSUE_TITLE=$(echo $issue | jq -r '.title')
-            BRANCH_TITLE=$(echo "$ISSUE_TITLE" | iconv -t ascii//TRANSLIT | sed -E 's/\[(BE|FE)\] //g' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+\|-+$//g' | tr '[:upper:]' '[:lower:]')
-            BRANCH_NAME="hu-${ISSUE_NUMBER}-${BRANCH_TITLE}"
+            BRANCH_TITLE=$(echo "$ISSUE_TITLE" | iconv -t ascii//TRANSLIT | sed -E 's/\[(BE|FE)\] //g' | sed -E 's/HU-VC[0-9]+: //g' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+\|-+$//g' | tr '[:upper:]' '[:lower:]')
+            BRANCH_NAME="hu-vc${ISSUE_NUMBER}-${BRANCH_TITLE}"
 
             if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
               echo "La rama '$BRANCH_NAME' ya existe."
@@ -666,6 +344,6 @@ EOFBODY4
               echo "Creando rama '$BRANCH_NAME'..."
               gh api repos/${{ github.repository }}/git/refs --method POST -f ref="refs/heads/${BRANCH_NAME}" -f sha="$MAIN_BRANCH_SHA"
               # Comenta en la issue para vincular la rama
-              gh issue comment $ISSUE_NUMBER --body "Se ha creado la rama de trabajo para esta HU: \`$BRANCH_NAME\`"
+              gh issue comment $ISSUE_NUMBER --body "Se ha creado la rama de trabajo para esta HU de Visión Computacional: \`$BRANCH_NAME\`"
             fi
           done
