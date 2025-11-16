@@ -1,102 +1,35 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import Button from '../components/ui/Button';
 import Alert from '../components/ui/Alert';
+import FaceCaptureCamera from '../components/FaceCaptureCamera';
 import { optimizeImage, getImageSize } from '../utils/imageOptimizer';
 
 export default function FaceRegister() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [stream, setStream] = useState(null);
   const [capturedImage, setCapturedImage] = useState(null);
   const [preview, setPreview] = useState(null);
   
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Inicializar cámara al montar el componente
-  useEffect(() => {
-    startCamera();
-    return () => {
-      stopCamera();
-    };
-  }, []);
-
-  const startCamera = async () => {
+  const handleCapture = async (base64String) => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: 'user'
-        }
-      });
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-    } catch (err) {
-      setError('No se pudo acceder a la cámara. Por favor, verifica los permisos.');
-      console.error('Error accediendo a la cámara:', err);
+      // Optimizar imagen antes de guardarla
+      const optimized = await optimizeImage(base64String, 300, 300, 0.6);
+      const originalSize = getImageSize(base64String);
+      const optimizedSize = getImageSize(optimized);
+      console.log(`Imagen optimizada: ${originalSize}KB → ${optimizedSize}KB (${Math.round((1 - optimizedSize/originalSize) * 100)}% reducción)`);
+      setCapturedImage(optimized);
+      setPreview(optimized);
+    } catch (error) {
+      console.error('Error optimizando imagen, usando original:', error);
+      setCapturedImage(base64String);
+      setPreview(base64String);
     }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  };
-
-  const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) {
-      setError('Error capturando la foto');
-      return;
-    }
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-
-    // Configurar canvas con las dimensiones del video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    // Dibujar el frame actual del video en el canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Convertir canvas a Blob y luego a Base64 (calidad reducida para optimizar)
-    canvas.toBlob(async (blob) => {
-      if (blob) {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64String = reader.result;
-          try {
-            // Optimizar imagen antes de guardarla (reduce tamaño significativamente)
-            // Usar 300x300 y calidad 0.6 para reducir aún más el tamaño y tiempo de procesamiento
-            const optimized = await optimizeImage(base64String, 300, 300, 0.6);
-            const originalSize = getImageSize(base64String);
-            const optimizedSize = getImageSize(optimized);
-            console.log(`Imagen optimizada: ${originalSize}KB → ${optimizedSize}KB (${Math.round((1 - optimizedSize/originalSize) * 100)}% reducción)`);
-            setCapturedImage(optimized);
-            setPreview(optimized);
-          } catch (error) {
-            console.error('Error optimizando imagen, usando original:', error);
-            // Si falla la optimización, usar la original
-            setCapturedImage(base64String);
-            setPreview(base64String);
-          }
-        };
-        reader.readAsDataURL(blob);
-      }
-    }, 'image/jpeg', 0.8);
   };
 
   const retakePhoto = () => {
@@ -159,7 +92,6 @@ export default function FaceRegister() {
 
       if (data.success) {
         setSuccess('¡Registro facial completado exitosamente!');
-        stopCamera();
         
         // Redirigir a completar perfil o dashboard después de 2 segundos
         setTimeout(() => {
@@ -204,51 +136,13 @@ export default function FaceRegister() {
           {success && <Alert intent="success" className="mb-4">{success}</Alert>}
 
           {!preview ? (
-            <div className="space-y-4">
-              {/* Video Preview */}
-              <div className="relative bg-black rounded-lg overflow-hidden">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-auto max-h-[480px]"
-                />
-                {!stream && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                    <p className="text-white">Iniciando cámara...</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Canvas oculto para captura */}
-              <canvas ref={canvasRef} className="hidden" />
-
-              {/* Botones de control */}
-              <div className="flex gap-4 justify-center">
-                <Button
-                  onClick={capturePhoto}
-                  disabled={!stream || loading}
-                  size="lg"
-                >
-                  📷 Capturar Foto
-                </Button>
-                <Button
-                  onClick={stopCamera}
-                  variant="outline"
-                  disabled={!stream}
-                  size="lg"
-                >
-                  ⏹️ Detener Cámara
-                </Button>
-              </div>
-
-              <div className="text-center text-sm text-white/60">
-                <p>💡 Asegúrate de tener buena iluminación</p>
-                <p>💡 Mira directamente a la cámara</p>
-                <p>💡 Mantén tu rostro centrado</p>
-              </div>
-            </div>
+            <FaceCaptureCamera
+              onCapture={handleCapture}
+              onCancel={() => navigate('/dashboard')}
+              disabled={loading}
+              buttonText="📷 Capturar Foto"
+              showCancel={true}
+            />
           ) : (
             <div className="space-y-4">
               {/* Preview de la foto capturada */}
@@ -295,4 +189,3 @@ export default function FaceRegister() {
     </div>
   );
 }
-
