@@ -19,11 +19,12 @@
     "test:a11y": "playwright test tests/e2e/a11y.spec.ts",
     "test:visual": "playwright test --project=chromium",
     "test:ci": "vitest && playwright test",
-    "test": "npm run test:unit && npm run test:e2e"
+    "test": "npm run test:unit && npm run test:e2e",
+    "postinstall": "node ./scripts/create-mediapipe-sourcemap.cjs"
   },
   "dependencies": {
     "@mediapipe/face_detection": "^0.4.1646425229",
-    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
+    "@mediapipe/tasks-vision": "^0.10.22",
     "@tensorflow-models/face-detection": "^1.0.3",
     "@tensorflow/tfjs": "^4.22.0",
     "face-api.js": "^0.22.2",
