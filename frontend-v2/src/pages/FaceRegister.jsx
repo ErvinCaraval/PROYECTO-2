@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import Button from '../components/ui/Button';
@@ -15,6 +15,7 @@ export default function FaceRegister() {
   
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [hasRegistration, setHasRegistration] = useState(false);
 
   const handleCapture = async (base64String) => {
     try {
@@ -113,6 +114,54 @@ export default function FaceRegister() {
     }
   };
 
+  // Check if current user already has a facial registration
+  useEffect(() => {
+    const check = async () => {
+      if (!user) return setHasRegistration(false);
+      try {
+        const token = await user.getIdToken();
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const res = await fetch(`${apiBase}/api/face/exists`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        setHasRegistration(!!data.exists);
+      } catch (err) {
+        console.error('Error checking face registration:', err);
+      }
+    };
+    check();
+  }, [user]);
+
+  const deleteFaceRegistration = async () => {
+    if (!user) {
+      setError('Debes estar autenticado para eliminar tu registro facial');
+      return;
+    }
+    if (!confirm('¿Estás seguro de eliminar tu registro facial? Esta acción no se puede deshacer.')) return;
+
+    setLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiBase}/api/face/${user.uid}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error eliminando registro facial');
+      setSuccess('Registro facial eliminado correctamente');
+      setHasRegistration(false);
+      setPreview(null);
+      setCapturedImage(null);
+    } catch (err) {
+      setError(err.message || 'Error eliminando registro facial');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="container min-h-screen px-4 py-10">
       <div className="max-w-2xl mx-auto">
@@ -176,13 +225,26 @@ export default function FaceRegister() {
           )}
 
           <div className="mt-6 text-center">
-            <Button
-              onClick={() => navigate('/dashboard')}
-              variant="ghost"
-              size="sm"
-            >
-              ← Volver al Dashboard
-            </Button>
+            <div className="flex items-center justify-center gap-3">
+              <Button
+                onClick={() => navigate('/dashboard')}
+                variant="ghost"
+                size="sm"
+              >
+                ← Volver al Dashboard
+              </Button>
+
+              {hasRegistration && (
+                <Button
+                  onClick={deleteFaceRegistration}
+                  variant="destructive"
+                  size="sm"
+                  disabled={loading}
+                >
+                  🗑️ Eliminar registro facial
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
