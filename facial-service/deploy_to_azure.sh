@@ -8,7 +8,9 @@ set -e  # Salir si hay algún error
 # Configuración
 DOCKER_IMAGE="ervincaravaliibarra/facial-service:latest"
 RESOURCE_GROUP="facial-service-rg"
-CONTAINER_NAME="facial-service-ervin"
+# Use a distinct variable name for the facial-service container so it does not
+# collide with the Redis CONTAINER_NAME used by deploy_redis_to_azure.sh/.env
+FACIAL_CONTAINER_NAME="facial-service-ervin"
 LOCATION="brazilsouth"  # Cambia según tu preferencia
 DNS_NAME_LABEL="facial-service-ervin"  # Debe ser único globalmente
 
@@ -24,18 +26,31 @@ if ! command -v az &> /dev/null; then
     exit 1
 fi
 
+## Load .env if present (export variables)
+if [ -f ".env" ]; then
+    set -a
+    # shellcheck source=/dev/null
+    source .env
+    set +a
+fi
+
+# Allow an explicit facial DNS label to be set (so Redis and facial-service can
+# use different DNS names). If `FACIAL_DNS_LABEL` is provided it takes
+# precedence; otherwise fall back to `DNS_NAME_LABEL` from .env or the default.
+FACIAL_DNS_LABEL="${FACIAL_DNS_LABEL:-${DNS_NAME_LABEL:-facial-service-ervin}}"
+
 # Verificar autenticación
 echo "🔐 Verificando autenticación en Azure..."
 if ! az account show &> /dev/null; then
-    echo "❌ No estás autenticado en Azure."
-    echo ""
-    echo "💡 Para autenticarte, ejecuta:"
-    echo "   ./azure_login.sh"
-    echo ""
-    echo "   O manualmente:"
-    echo "   az login"
-    echo ""
-    exit 1
+        echo "❌ No estás autenticado en Azure."
+        echo ""
+        echo "💡 Para autenticarte, ejecuta:"
+        echo "   ./azure_login.sh"
+        echo ""
+        echo "   O manualmente:"
+        echo "   az login"
+        echo ""
+        exit 1
 fi
 
 ACCOUNT=$(az account show --query name -o tsv)
@@ -55,9 +70,9 @@ echo ""
 
 # Eliminar contenedor existente si existe (para actualizar)
 echo "🗑️  Verificando contenedor existente..."
-if az container show --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME &> /dev/null; then
+if az container show --resource-group $RESOURCE_GROUP --name $FACIAL_CONTAINER_NAME &> /dev/null; then
     echo "   Eliminando contenedor existente..."
-    az container delete --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME --yes
+    az container delete --resource-group $RESOURCE_GROUP --name $FACIAL_CONTAINER_NAME --yes
     echo "   Esperando a que se elimine..."
     sleep 10
 fi
@@ -72,19 +87,21 @@ echo ""
 
 az container create \
     --resource-group $RESOURCE_GROUP \
-    --name $CONTAINER_NAME \
+    --name $FACIAL_CONTAINER_NAME \
     --image $DOCKER_IMAGE \
     --os-type Linux \
-    --dns-name-label $DNS_NAME_LABEL \
+    --dns-name-label $FACIAL_DNS_LABEL \
     --ports 5001 \
     --cpu 2 \
     --memory 4 \
     --registry-login-server docker.io \
-    --registry-username ervincaravaliibarra \
-    --registry-password 94092232381 \
+    --registry-username "${DOCKERHUB_USER:-ervincaravaliibarra}" \
+    --registry-password "${DOCKERHUB_PASS:-}" \
     --environment-variables \
         FLASK_ENV=production \
         PYTHONUNBUFFERED=1 \
+        USE_REDIS=true \
+        REDIS_URL="${REDIS_URL:-}" \
     --restart-policy Always
 
 echo ""
@@ -95,9 +112,9 @@ echo ""
 
 # Obtener información del contenedor
 echo "📋 Información del contenedor:"
-FQDN=$(az container show --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME --query ipAddress.fqdn -o tsv)
-IP_ADDRESS=$(az container show --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME --query ipAddress.ip -o tsv)
-STATE=$(az container show --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME --query containers[0].instanceView.currentState.state -o tsv)
+FQDN=$(az container show --resource-group $RESOURCE_GROUP --name $FACIAL_CONTAINER_NAME --query ipAddress.fqdn -o tsv)
+IP_ADDRESS=$(az container show --resource-group $RESOURCE_GROUP --name $FACIAL_CONTAINER_NAME --query ipAddress.ip -o tsv)
+STATE=$(az container show --resource-group $RESOURCE_GROUP --name $FACIAL_CONTAINER_NAME --query containers[0].instanceView.currentState.state -o tsv)
 
 echo "   FQDN: $FQDN"
 echo "   IP: $IP_ADDRESS"

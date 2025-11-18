@@ -1,4 +1,61 @@
 require('dotenv').config();
+const fs = require('fs');
+
+/**
+ * Resolve the DEEPFACE service URL automatically depending on environment.
+ * Priority:
+ *  1. process.env.DEEPFACE_SERVICE_URL (explicit)
+ *  2. process.env.FACIAL_SERVICE_HOST or FACIAL_SERVICE_AZURE_HOST (explicit host)
+ *  3. If running on Azure App Service (WEBSITE_HOSTNAME) => https://<WEBSITE_HOSTNAME>
+ *  4. If running on Render (RENDER_EXTERNAL_URL) => https://<RENDER_EXTERNAL_URL>
+ *  5. If running in Docker (detect /.dockerenv or /proc/1/cgroup) => service name from compose 'http://deepface-service:5001'
+ *  6. Fallback to local: 'http://localhost:5001'
+ */
+function resolveDeepfaceServiceUrl() {
+  if (process.env.DEEPFACE_SERVICE_URL && process.env.DEEPFACE_SERVICE_URL.trim() !== '') {
+    return process.env.DEEPFACE_SERVICE_URL;
+  }
+
+  if (process.env.FACIAL_SERVICE_HOST && process.env.FACIAL_SERVICE_HOST.trim() !== '') {
+    const host = process.env.FACIAL_SERVICE_HOST.trim();
+    return host.startsWith('http') ? host : `http://${host}`;
+  }
+  if (process.env.FACIAL_SERVICE_AZURE_HOST && process.env.FACIAL_SERVICE_AZURE_HOST.trim() !== '') {
+    const host = process.env.FACIAL_SERVICE_AZURE_HOST.trim();
+    return host.startsWith('http') ? host : `https://${host}`;
+  }
+
+  // Azure App Service
+  if (process.env.WEBSITE_HOSTNAME) {
+    return `https://${process.env.WEBSITE_HOSTNAME}`;
+  }
+
+  // Render or other platforms which expose an env var
+  if (process.env.RENDER_EXTERNAL_URL) {
+    return `https://${process.env.RENDER_EXTERNAL_URL.replace(/^https?:\/\//, '')}`;
+  }
+
+  // Detect Docker by /.dockerenv or cgroup
+  try {
+    if (fs.existsSync('/.dockerenv')) {
+      return 'http://deepface-service:5001';
+    }
+    const cgroup = fs.readFileSync('/proc/1/cgroup', 'utf8');
+    if (/docker|kubepods|containerd/.test(cgroup)) {
+      return 'http://deepface-service:5001';
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  // Default to localhost for development
+  return 'http://localhost:5001';
+}
+
+// Ensure DEEPFACE_SERVICE_URL is set early so other modules can use it
+const resolvedDeepfaceUrl = resolveDeepfaceServiceUrl();
+process.env.DEEPFACE_SERVICE_URL = process.env.DEEPFACE_SERVICE_URL || resolvedDeepfaceUrl;
+console.log(`Resolved DEEPFACE_SERVICE_URL=${process.env.DEEPFACE_SERVICE_URL}`);
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
@@ -28,7 +85,6 @@ const io = new Server(server, {
 
 // Swagger UI para documentación interactiva usando swagger.yaml
 const swaggerUi = require('swagger-ui-express');
-const fs = require('fs');
 const yaml = require('js-yaml');
 const swaggerDocument = yaml.load(fs.readFileSync(__dirname + '/swagger/swagger.yaml', 'utf8'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
