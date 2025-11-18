@@ -26,5 +26,15 @@ router.post('/login', generalUserLimiter, (req, res) => {
   faceController.login(req, res);
 });
 
+// Check existence of facial registration for authenticated user
+router.get('/exists', generalUserLimiter, (req, res) => {
+  faceController.exists(req, res);
+});
+
+// Delete facial registration for a given userId (protected)
+router.delete('/:userId', generalUserLimiter, (req, res) => {
+  faceController.deleteRegistration(req, res);
+});
+
 module.exports = router;
 

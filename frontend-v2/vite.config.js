@@ -46,9 +46,33 @@ const copyMediaPipeWasm = () => {
   }
 }
 
+// Plugin to serve a placeholder sourcemap for @mediapipe/tasks-vision
+const serveMissingSourcemap = () => {
+  return {
+    name: 'serve-mediapipe-sourcemap',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url && req.url.includes('/@fs/') && req.url.endsWith('vision_bundle_mjs.js.map')) {
+          res.statusCode = 200
+          res.setHeader('Content-Type', 'application/json')
+          res.end('{}')
+          return
+        }
+        if (req.url && req.url.endsWith('/node_modules/@mediapipe/tasks-vision/vision_bundle_mjs.js.map')) {
+          res.statusCode = 200
+          res.setHeader('Content-Type', 'application/json')
+          res.end('{}')
+          return
+        }
+        next()
+      })
+    }
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), copyMediaPipeWasm()],
+  plugins: [react(), copyMediaPipeWasm(), serveMissingSourcemap()],
   server: {
     port: 3000,
     open: true,
