@@ -209,6 +209,78 @@ class DeepFaceService {
     // Esto no debería ejecutarse, pero por si acaso
     throw lastError || new Error('Error desconocido en verificación facial');
   }
+
+  /**
+   * Verifica si existe un registro facial para un userId en el microservicio
+   * @param {string} userId
+   * @returns {Promise<boolean>}
+   */
+  async hasFaceRegistration(userId) {
+    try {
+      const response = await axios.get(`${this.baseURL}/user/exists`, {
+        params: { user_id: userId },
+        timeout: 5000
+      });
+      return !!(response.data && response.data.exists);
+    } catch (error) {
+      console.error('Error comprobando registro facial en DeepFace service:', error.message || error);
+      // En caso de error asumimos que no existe (para permitir reintento en registro)
+      return false;
+    }
+  }
+
+  /**
+   * Verifica la imagen enviada contra el registro almacenado por user_id en el microservicio
+   * @param {string} userId
+   * @param {string} imageBase64
+   */
+  async verifyFaceByUser(userId, imageBase64, retries = 2) {
+    try {
+      const response = await axios.post(
+        `${this.baseURL}/verify/user`,
+        { user_id: userId, image: imageBase64 },
+        {
+          timeout: this.timeout,
+          headers: { 'Content-Type': 'application/json' },
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity
+        }
+      );
+
+      return {
+        success: response.data.success,
+        verified: response.data.verified,
+        distance: response.data.distance,
+        threshold: response.data.threshold,
+        confidence: response.data.confidence
+      };
+    } catch (error) {
+      console.error('Error en verifyFaceByUser:', {
+        message: error.message,
+        hasResponse: !!error.response
+      });
+      if (error.response) {
+        const err = error.response.data;
+        throw new Error(err?.error || 'Error en verificación por usuario');
+      }
+      throw new Error(error.message || 'Error conectando con DeepFace service');
+    }
+  }
+
+  /**
+   * Elimina el registro facial asociado a userId en el microservicio
+   * @param {string} userId
+   */
+  async deleteUser(userId) {
+    try {
+      const response = await axios.delete(`${this.baseURL}/user/${encodeURIComponent(userId)}`, { timeout: 10000 });
+      return !!(response.data && response.data.removed);
+    } catch (error) {
+      console.error('Error eliminando usuario en DeepFace service:', error.message || error);
+      // Lanzar para que el controlador lo reporte adecuadamente
+      throw new Error(error.response?.data?.error || error.message || 'Error eliminando registro en microservicio');
+    }
+  }
 }
 
 module.exports = new DeepFaceService();
