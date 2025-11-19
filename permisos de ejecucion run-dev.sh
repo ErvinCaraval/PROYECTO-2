@@ -1,1 +1,1 @@
-chmod +x run-dev.sh
+chmod +x 

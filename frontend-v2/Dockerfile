@@ -1,55 +1,55 @@
-# Multi-stage build para frontend-v2
-# Stage 1: Builder
-FROM node:20-ubuntu AS builder
+# Frontend - Multi-stage build
+# Stage 1: Build
+FROM node:20 AS builder
 
 WORKDIR /app
 
-# Copiar archivos de dependencias
-COPY package*.json ./
-
-# Instalar todas las dependencias (incluyendo devDependencies para build)
-RUN npm ci
-
-# Copiar código fuente
+# Copiar todo el proyecto
 COPY . .
 
-# Build de la aplicación
+# Instalar dependencias
+RUN npm install --verbose
+
+# Reconstruir con las variables de entorno correctas
+ENV VITE_API_URL=http://localhost:5000
+ENV VITE_SOCKET_URL=http://localhost:5000
+
+# Build
 RUN npm run build
 
-# Stage 2: Runtime (Nginx)
-FROM nginx:latest
+# Stage 2: Runtime
+FROM nginx:alpine
 
-# Etiquetas de metadatos
 LABEL maintainer="Ervin Caraval <ervin@brainblitz.com>"
 LABEL version="1.0"
-LABEL description="Frontend React para BrainBlitz - Gamificación y aprendizaje"
+LABEL description="Frontend React para BrainBlitz"
 
 # Instalar curl para health check
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache curl
 
 # Copiar configuración de Nginx
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY nginx-default.conf /etc/nginx/conf.d/default.conf
+COPY ./nginx.conf /etc/nginx/nginx.conf
+COPY ./nginx-default.conf /etc/nginx/conf.d/default.conf
 
-# Copiar archivos construidos desde builder
+# Copiar el dist del builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Crear usuario no-root para Nginx
-RUN useradd -m -u 1001 nginx && \
-    chown -R nginx:nginx /usr/share/nginx/html && \
+# Permisos
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
-    chown -R nginx:nginx /var/run/nginx.pid
+    mkdir -p /var/run/nginx && \
+    chown -R nginx:nginx /var/run/nginx
 
-# Cambiar a usuario no-root
+# Usuario nginx
 USER nginx
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:80/ || exit 1
 
-# Exponer puerto
+# Puerto
 EXPOSE 80
 
-# Comando de inicio
+# Inicio
 CMD ["nginx", "-g", "daemon off;"]
