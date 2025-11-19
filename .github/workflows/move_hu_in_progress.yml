@@ -68,8 +68,6 @@ jobs:
           ISSUE_ID=$(gh issue view $HU_NUMBER --repo "$REPO_OWNER/$REPO_NAME" --json id | jq -r '.id')
           if [ "$ISSUE_ID" = "null" ] || [ -z "$ISSUE_ID" ]; then
             echo "Error: No se pudo encontrar la issue #$HU_NUMBER en $REPO_OWNER/$REPO_NAME"
-            echo "Verificando si la issue existe..."
-            gh issue view $HU_NUMBER --repo "$REPO_OWNER/$REPO_NAME" || echo "Issue no encontrada"
             exit 1
           fi
           
@@ -79,8 +77,6 @@ jobs:
           PROJECT_ID=$(gh project list --owner "$REPO_OWNER" --format json | jq -r '.projects[] | select(.title == "Product Backlog") | .id')
           if [ "$PROJECT_ID" = "null" ] || [ -z "$PROJECT_ID" ]; then
             echo "Error: No se pudo encontrar el proyecto 'Product Backlog' para $REPO_OWNER"
-            echo "Proyectos disponibles:"
-            gh project list --owner "$REPO_OWNER" --format json | jq -r '.projects[] | .title'
             exit 1
           fi
           
@@ -132,9 +128,7 @@ jobs:
           
           if [ $? -eq 0 ]; then
             echo "✅ HU #$HU_NUMBER movida exitosamente a In Progress"
-            echo "Resultado: $MOVE_RESULT"
           else
             echo "❌ Error: No se pudo mover la HU a In Progress. Revisa los IDs de las columnas."
-            echo "Respuesta de la API: $MOVE_RESULT"
             exit 1
           fi

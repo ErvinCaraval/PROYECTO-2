@@ -31,6 +31,13 @@ jobs:
             exit 1
           fi
 
+      - name: Verificar que el PR fue mergeado
+        run: |
+          if [[ "${{ github.event.pull_request.merged }}" != "true" ]]; then
+            echo "El PR fue cerrado pero no mergeado. No se mueve la HU a Done."
+            exit 0
+          fi
+
       - name: Verificar que la issue existe
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
@@ -51,17 +58,12 @@ jobs:
           
           echo "✅ Issue #$HU_NUMBER encontrada"
 
-      - name: Mover la HU a la columna Done si el PR fue mergeado
+      - name: Mover la HU a la columna Done
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           DONE_OPTION_ID: 98236657
           STATUS_FIELD_ID: PVTSSF_lAHOCfyr_s4BFLg_zg2l7HM
         run: |
-          if [[ "${{ github.event.pull_request.merged }}" != "true" ]]; then
-            echo "El PR fue cerrado pero no mergeado. No se mueve la HU a Done."
-            exit 0
-          fi
-          
           HU_NUMBER=${{ steps.extract_hu.outputs.HU_NUMBER }}
           REPO_OWNER="${{ github.repository_owner }}"
           REPO_NAME="${{ github.event.repository.name }}"
@@ -73,8 +75,6 @@ jobs:
           ISSUE_ID=$(gh issue view $HU_NUMBER --repo "$REPO_OWNER/$REPO_NAME" --json id | jq -r '.id')
           if [ "$ISSUE_ID" = "null" ] || [ -z "$ISSUE_ID" ]; then
             echo "Error: No se pudo encontrar la issue #$HU_NUMBER en $REPO_OWNER/$REPO_NAME"
-            echo "Verificando si la issue existe..."
-            gh issue view $HU_NUMBER --repo "$REPO_OWNER/$REPO_NAME" || echo "Issue no encontrada"
             exit 1
           fi
           
@@ -84,8 +84,6 @@ jobs:
           PROJECT_ID=$(gh project list --owner "$REPO_OWNER" --format json | jq -r '.projects[] | select(.title == "Product Backlog") | .id')
           if [ "$PROJECT_ID" = "null" ] || [ -z "$PROJECT_ID" ]; then
             echo "Error: No se pudo encontrar el proyecto 'Product Backlog' para $REPO_OWNER"
-            echo "Proyectos disponibles:"
-            gh project list --owner "$REPO_OWNER" --format json | jq -r '.projects[] | .title'
             exit 1
           fi
           
@@ -137,9 +135,7 @@ jobs:
           
           if [ $? -eq 0 ]; then
             echo "✅ HU #$HU_NUMBER movida exitosamente a Done"
-            echo "Resultado: $MOVE_RESULT"
           else
             echo "❌ Error: No se pudo mover la HU a Done. Revisa los IDs de las columnas."
-            echo "Respuesta de la API: $MOVE_RESULT"
             exit 1
           fi
