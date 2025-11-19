@@ -424,10 +424,16 @@ def register():
         user_id = data.get('user_id', 'unknown')
         
         logger.info(f"📸 Registro iniciado para usuario: {user_id}")
+        logger.info(f"   DEBUG: user_id type={type(user_id)}, len={len(user_id) if isinstance(user_id, str) else 'N/A'}")
+        logger.info(f"   DEBUG: persistent_store exists={embedding_cache.persistent_store is not None}")
+        if embedding_cache.persistent_store:
+            logger.info(f"   DEBUG: persistent_store type={type(embedding_cache.persistent_store).__name__}")
+            logger.info(f"   DEBUG: has set_user method={hasattr(embedding_cache.persistent_store, 'set_user')}")
         
         # PASO 1: Verificar caché
         cached_embedding = embedding_cache.get(image_base64)
         if cached_embedding:
+            logger.info(f"   DEBUG: Embedding encontrado en caché")
             return jsonify({
                 'success': True,
                 'message': 'Cara registrada exitosamente (desde caché)',
@@ -474,6 +480,7 @@ def register():
             )
             
             embedding_data = embedding[0]['embedding'] if embedding else None
+            logger.info(f"   DEBUG: Embedding generado, dimensiones={len(embedding_data) if embedding_data else 0}")
 
             # PASO 5: Cachear embedding
             embedding_cache.set(image_base64, embedding_data)
@@ -481,10 +488,16 @@ def register():
 
             # Si viene user_id, guardar también el embedding bajo user:{user_id} en el store persistente
             try:
-                if user_id and embedding_cache.persistent_store and hasattr(embedding_cache.persistent_store, 'set_user'):
+                logger.info(f"   DEBUG: Intentando guardar por user_id...")
+                logger.info(f"   DEBUG: user_id={user_id}, persistent_store={embedding_cache.persistent_store is not None}")
+                if user_id and user_id != 'unknown' and embedding_cache.persistent_store and hasattr(embedding_cache.persistent_store, 'set_user'):
+                    logger.info(f"   DEBUG: Llamando set_user({user_id}, embedding_data)")
                     embedding_cache.persistent_store.set_user(user_id, embedding_data)
+                    logger.info(f"   DEBUG: set_user completado sin excepción")
+                else:
+                    logger.warning(f"   DEBUG: No se pudo guardar - user_id={user_id}, has_store={embedding_cache.persistent_store is not None}, has_method={hasattr(embedding_cache.persistent_store, 'set_user') if embedding_cache.persistent_store else False}")
             except Exception as e:
-                logger.warning(f"No se pudo guardar embedding por user_id: {str(e)}")
+                logger.error(f"❌ Error en set_user: {str(e)}\n{traceback.format_exc()}")
             
             # no temp files to cleanup
             
@@ -639,15 +652,24 @@ def verify_user():
         if not image_base64 or not user_id:
             return jsonify({'success': False, 'verified': False, 'error': 'Se requieren `image` y `user_id`.'}), 400
 
+        logger.info(f"🔍 Verificación por usuario iniciada")
+        logger.info(f"   DEBUG: user_id={user_id}, user_id type={type(user_id)}")
+        logger.info(f"   DEBUG: persistent_store exists={embedding_cache.persistent_store is not None}")
+
         # Obtener embedding guardado para el usuario
         stored = None
         if embedding_cache.persistent_store and hasattr(embedding_cache.persistent_store, 'get_user'):
             try:
+                logger.info(f"   DEBUG: Llamando get_user({user_id})")
                 stored = embedding_cache.persistent_store.get_user(user_id)
+                logger.info(f"   DEBUG: get_user retornó: stored={stored is not None}")
+                if stored is None:
+                    logger.warning(f"   DEBUG: ❌ get_user retornó None para user_id={user_id}")
             except Exception as e:
-                logger.warning(f"Error consultando embedding de usuario: {str(e)}")
+                logger.error(f"   DEBUG: ❌ Error en get_user: {str(e)}\n{traceback.format_exc()}")
 
         if not stored:
+            logger.warning(f"❌ Usuario {user_id} no tiene registro facial en Redis")
             return jsonify({'success': True, 'verified': False, 'error': 'Usuario no registrado'}), 200
 
         # Generar embedding de la imagen enviada (en memoria)
@@ -678,13 +700,14 @@ def verify_user():
         threshold = float(os.getenv('FACE_VERIFY_THRESHOLD', '0.4'))
         verified = distance <= threshold
 
-        logger.info(f"✓ VERIFICACION POR USUARIO para {user_id} => {'VERIFICADO' if verified else 'NO VERIFICADO'} (distancia: {distance:.4f})")
+        logger.info(f"✓ VERIFICACION POR USUARIO para {user_id} => {'✓ VERIFICADO' if verified else '❌ NO VERIFICADO'} (distancia: {distance:.4f}, threshold: {threshold})")
 
         return jsonify({
             'success': True,
             'verified': bool(verified),
             'distance': float(distance),
             'threshold': threshold,
+            'confidence': float(1 - min(distance / threshold, 1.0)) if verified else 0.0,
             'processing_time_ms': round((time.time() - start_time) * 1000)
         }), 200
 

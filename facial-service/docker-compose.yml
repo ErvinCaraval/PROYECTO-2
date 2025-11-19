@@ -1,6 +1,10 @@
+version: '3.8'
+
 services:
   deepface-service:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     image: facial-service:local
     container_name: facial-recognition-service
     ports:
@@ -13,7 +17,12 @@ services:
       - REDIS_URL=redis://redis:6379/0
     restart: unless-stopped
     
-    # Configuración de recursos para escalabilidad
+    # Asegura que DeepFace espere a que Redis esté listo antes de iniciar
+    depends_on:
+      redis:
+        condition: service_started
+
+    # Configuración de recursos
     deploy:
       resources:
         limits:
@@ -31,13 +40,11 @@ services:
       retries: 3
       start_period: 40s
     
-    # Limites de procesos para evitar saturación
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
     
-    # Logging para monitoreo
     logging:
       driver: "json-file"
       options:
@@ -45,6 +52,7 @@ services:
         max-file: "3"
 
   redis:
+    # Construimos desde la carpeta ./redis como solicitaste
     build: ./redis
     image: facial-service-redis:local
     container_name: facial-service-redis
@@ -53,6 +61,14 @@ services:
     volumes:
       - redis-data:/data
     restart: unless-stopped
+    
+    # Healthcheck para Redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
     logging:
       driver: "json-file"
       options:
