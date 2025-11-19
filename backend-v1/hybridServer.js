@@ -8,7 +8,7 @@ const fs = require('fs');
  *  2. process.env.FACIAL_SERVICE_HOST or FACIAL_SERVICE_AZURE_HOST (explicit host)
  *  3. If running on Azure App Service (WEBSITE_HOSTNAME) => https://<WEBSITE_HOSTNAME>
  *  4. If running on Render (RENDER_EXTERNAL_URL) => https://<RENDER_EXTERNAL_URL>
- *  5. If running in Docker (detect /.dockerenv or /proc/1/cgroup) => service name from compose 'http://deepface-service:5001'
+ *  5. If running in Docker (detect /.dockerenv or /proc/1/cgroup) => service name from compose 'http://facial-recognition-service:5001'
  *  6. Fallback to local: 'http://localhost:5001'
  */
 function resolveDeepfaceServiceUrl() {
@@ -38,11 +38,11 @@ function resolveDeepfaceServiceUrl() {
   // Detect Docker by /.dockerenv or cgroup
   try {
     if (fs.existsSync('/.dockerenv')) {
-      return 'http://deepface-service:5001';
+      return 'http://facial-recognition-service:5001';
     }
     const cgroup = fs.readFileSync('/proc/1/cgroup', 'utf8');
     if (/docker|kubepods|containerd/.test(cgroup)) {
-      return 'http://deepface-service:5001';
+      return 'http://facial-recognition-service:5001';
     }
   } catch (e) {
     // ignore
@@ -56,6 +56,32 @@ function resolveDeepfaceServiceUrl() {
 const resolvedDeepfaceUrl = resolveDeepfaceServiceUrl();
 process.env.DEEPFACE_SERVICE_URL = process.env.DEEPFACE_SERVICE_URL || resolvedDeepfaceUrl;
 console.log(`Resolved DEEPFACE_SERVICE_URL=${process.env.DEEPFACE_SERVICE_URL}`);
+
+/**
+ * Función para construir dinámicamente la lista de orígenes CORS permitidos
+ */
+function getCorsOrigins() {
+  const corsOriginEnv = process.env.CORS_ORIGIN || '';
+  const defaultOrigins = [
+    'https://proyecto-2-2.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:80',
+    'http://localhost',
+  ];
+
+  // Agregar orígenes desde variable de entorno CORS_ORIGIN (separados por comas)
+  if (corsOriginEnv.trim()) {
+    const envOrigins = corsOriginEnv.split(',').map(o => o.trim());
+    return [...new Set([...defaultOrigins, ...envOrigins])];
+  }
+
+  return defaultOrigins;
+}
+
+const corsOrigins = getCorsOrigins();
+console.log(`CORS Origins allowed:`, corsOrigins);
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
@@ -68,12 +94,7 @@ const io = new Server(server, {
 
 
   cors: {
-    origin: [
-      'https://proyecto-2-2.onrender.com',
-      'http://localhost:3000',
-      'https://proyecto-2-2.onrender.com/',
-      'http://localhost:3000/'
-    ],
+    origin: corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -90,16 +111,7 @@ const swaggerDocument = yaml.load(fs.readFileSync(__dirname + '/swagger/swagger.
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(cors({
-  origin: [
-    'https://proyecto-2-2.onrender.com',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://proyecto-2-2.onrender.com/',
-    'http://localhost:3000/',
-    'http://localhost:5173/',
-    'http://localhost:5174/'
-  ],
+  origin: corsOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

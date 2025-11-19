@@ -70,7 +70,6 @@ if [ -n "$ACR_NAME" ]; then
     --resource-group "$RESOURCE_GROUP" \
     --name "$CONTAINER_NAME" \
     --image "$IMAGE_REF" \
-    --os-type Linux \
     --cpu "$CPU" --memory "$MEMORY" \
     --dns-name-label "$DNS_NAME_LABEL" \
     --ports 6379 \
@@ -87,7 +86,6 @@ else
       --resource-group "$RESOURCE_GROUP" \
       --name "$CONTAINER_NAME" \
       --image "$IMAGE_REF" \
-      --os-type Linux \
       --cpu "$CPU" --memory "$MEMORY" \
       --dns-name-label "$DNS_NAME_LABEL" \
       --ports 6379 \
@@ -100,7 +98,6 @@ else
       --resource-group "$RESOURCE_GROUP" \
       --name "$CONTAINER_NAME" \
       --image "$IMAGE_REF" \
-      --os-type Linux \
       --cpu "$CPU" --memory "$MEMORY" \
       --dns-name-label "$DNS_NAME_LABEL" \
       --ports 6379 \

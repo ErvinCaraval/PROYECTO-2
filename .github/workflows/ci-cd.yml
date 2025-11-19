@@ -1,73 +1,63 @@
-name: Backend CI/CD 
+# GitHub Actions CI/CD Workflow para Frontend-v2
+# Ejecuta pruebas, builds, y despliegue para el servicio de frontend.
+
+name: Frontend-v2 - CI/CD
 
 on:
   workflow_call:
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
   security-events: write
 
 jobs:
-  test-and-deploy:
-    name: Test & Deploy Backend-v1 (optimized)
+  test-and-build:
+    name: Test & Deploy Frontend-v2
     runs-on: ubuntu-latest
-
-    env:
-      COVERAGE_THRESHOLD: 95
-      SERVICE_ACCOUNT_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
 
     defaults:
       run:
-        working-directory: backend-v1
+        working-directory: frontend-v2
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
-          cache-dependency-path: backend-v1/package-lock.json
-
-      - name: Install minimal system libraries (faster)
-        # Install only essential system packages and avoid "Recommends" to reduce size/time
-        run: |
-          sudo apt-get update -y
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            ca-certificates \
-            libasound2 \
-            libnss3 \
-            libx11-6 \
-            xvfb \
-            fonts-liberation \
-            jq \
-            chromium-browser \
-            libgbm1 \
-            libxss1 \
-            # Required for running Chrome headless and Playwright tests
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-        timeout-minutes: 10
-        
-      - name: Install Playwright browsers
-        working-directory: frontend-v2
-        run: npx playwright install chromium --with-deps
+          cache-dependency-path: frontend-v2/package-lock.json
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm install --no-audit --no-fund --no-progress --save-dev jest eslint || true
+        run: npm ci
 
       - name: Run unit tests
-        run: npm run test:unit -- --coverage --coverageReporters=json --coverageReporters=html
+        run: npm run test:unit
 
-      - name: Run integration tests
-        run: npm run test:integration
+      - name: Build project
+        run: npm run build
 
-      - name: Run coverage tests
-        run: npm run coverage
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright E2E tests
+        run: |
+          mkdir -p src/test
+          NODE_ENV=test PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm run test:e2e
+
+      - name: Run visual tests
+        if: always()
+        run: npm run test:visual || true
+
+      - name: Run accessibility (a11y) tests
+        if: always()
+        run: npm run test:a11y || true
 
       - name: Dependency Security Audit
         if: github.event_name == 'pull_request'
@@ -96,121 +86,25 @@ jobs:
         if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
         uses: github/codeql-action/analyze@v3
 
-      - name: Upload coverage reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-coverage-reports
-          path: backend-v1/tests/reports/
-
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-test-logs
-          path: backend-v1/tests/logs/
-
-      - name: Cleanup old artifacts
-        run: |
-          find backend-v1/tests/logs/ -type f -mtime +14 -delete || true
-          find backend-v1/tests/reports/ -type f -mtime +14 -delete || true
-
-      - name: Deploy to Render
-        if: success()
-        run: |
-          curl -X POST "https://api.render.com/deploy/srv-d3mpnpndiees739vva60?key=7Kto2rE1QRQ"
-
-      # Notes: If your tests still require many multimedia libraries (gstreamer, flite, etc.),
-      # consider building a custom Docker image with those preinstalled and reference it
-      # using the 'container:' key in the job to avoid long apt installs on every run.
-# GitHub Actions CI/CD Workflow para frontend-v
-# Ejecuta pruebas, builds, y despliegue para el servicio de frontend.
-
-name: Frontend-v2 - CI/CD
-
-on:
-  workflow_call:
-
-concurrency:
-  group: frontend-ci-${{ github.ref }}
-  cancel-in-progress: true
-
-jobs:
-  test-and-build:
-    name: Test & Deploy Frontend-v2
-    runs-on: ubuntu-latest
-
-    # Se define el directorio de trabajo por defecto para todos los comandos 'run'
-    defaults:
-      run:
-        working-directory: frontend-v2
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          # Se especifica la ruta al package-lock.json para el caché del monorepo
-          cache-dependency-path: frontend-v2/package-lock.json
-
-      # El paso manual de 'actions/cache' se elimina porque es redundante.
-      # 'setup-node' con la opción 'cache' ya se encarga de esto.
-
-      - name: Install dependencies
-        run: npm ci
-
-      
-
-      - name: Run unit tests
-        run: npm run test:unit
-
-      - name: Build project
-        run: npm run build
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-
-      - name: Export Playwright Chromium path
-        run: |
-          node -e "(async()=>{const { chromium }=require('playwright'); const p=chromium.executablePath(); if(p){console.log(p)} else {console.error('no-chrome'); process.exit(1)} })()" > ../chrome-path.txt
-          if [ -s ../chrome-path.txt ]; then echo "CHROME_PATH=$(cat ../chrome-path.txt)" >> $GITHUB_ENV; fi
-        # Se elimina 'working-directory: .' para que se ejecute en el directorio por defecto 'frontend-v2'
-
-      - name: Run Lighthouse (LHCI)
-        env:
-          CHROME_PATH: ${{ env.CHROME_PATH }}
-        run: |
-          npm install -g @lhci/cli@0.8 || true
-          echo "Using CHROME_PATH=$CHROME_PATH"
-          # LHCI necesita buscar el directorio 'dist' que está dentro de 'frontend-v2'
-          npx http-server ./dist -p 8080 --silent &
-          npx -y @lhci/cli@0.8 autorun --collect.url=http://localhost:8080 --upload.target=temporary-public-storage || (echo "LHCI failed - printing environment" && env)
-
-      - name: Run Playwright E2E tests
-        run: |
-          # Ensure test setup directory exists
-          mkdir -p src/test
-          # Run e2e tests with specific environment variables
-          NODE_ENV=test PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm run test:e2e
-
-      - name: Run visual tests
-        run: npm run test:visual
-
-      - name: Run accessibility (a11y) tests
-        run: npm run test:a11y
-
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: frontend-v2/playwright-report
+          name: frontend-playwright-report
+          path: frontend-v2/playwright-report/
 
-     
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-reports
+          path: frontend-v2/coverage/ || true
+
+      - name: Cleanup old artifacts
+        run: |
+          find frontend-v2/playwright-report/ -type f -mtime +14 -delete || true
+          find frontend-v2/coverage/ -type f -mtime +14 -delete || true
+
       - name: Deploy to Render
         if: success()
         run: |
