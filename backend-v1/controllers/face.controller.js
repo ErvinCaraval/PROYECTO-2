@@ -41,9 +41,11 @@ class FaceController {
       }
 
       const userId = decodedToken.uid;
+      console.log(`📸 DEBUG: Registro iniciado - userId=${userId} (type=${typeof userId})`);
 
       // Verificar si el usuario ya tiene registro facial (consulta al microservicio Redis)
       const hasRegistration = await deepfaceService.hasFaceRegistration(userId);
+      console.log(`   DEBUG: hasRegistration=${hasRegistration}`);
       if (hasRegistration) {
         return res.status(400).json({
           success: false,
@@ -54,8 +56,11 @@ class FaceController {
       // Enviar imagen al microservicio DeepFace para validación y generación de embeddings
       let registerResult;
       try {
+        console.log(`   DEBUG: Llamando registerFace con userId=${userId}`);
         registerResult = await deepfaceService.registerFace(image, userId);
+        console.log(`   DEBUG: registerFace completado, result.success=${registerResult.success}`);
       } catch (error) {
+        console.error(`❌ Error en registerFace: ${error.message}`);
         return res.status(500).json({
           success: false,
           error: error.message
@@ -129,9 +134,11 @@ class FaceController {
       }
 
       const userId = userRecord.uid;
+      console.log(`🔐 DEBUG: Login iniciado - email=${email}, userId=${userId} (type=${typeof userId})`);
 
       // Verificar si el usuario tiene registro facial (consulta al microservicio Redis)
       const hasRegistration = await deepfaceService.hasFaceRegistration(userId);
+      console.log(`   DEBUG: hasRegistration=${hasRegistration}`);
       if (!hasRegistration) {
         return res.status(400).json({
           success: false,
@@ -142,8 +149,11 @@ class FaceController {
       // Enviar la imagen al microservicio para verificación contra el embedding guardado por user_id
       let verifyResult;
       try {
+        console.log(`   DEBUG: Llamando verifyFaceByUser con userId=${userId}`);
         verifyResult = await deepfaceService.verifyFaceByUser(userId, image);
+        console.log(`   DEBUG: verifyFaceByUser completado, result.verified=${verifyResult.verified}`);
       } catch (error) {
+        console.error(`❌ Error en verifyFaceByUser: ${error.message}`);
         return res.status(500).json({
           success: false,
           error: error.message
