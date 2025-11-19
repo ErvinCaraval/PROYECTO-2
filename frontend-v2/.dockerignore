@@ -10,7 +10,7 @@ README.md
 .idea
 tests
 coverage
-dist
+# dist
 build
 *.log
 .next
@@ -47,5 +47,4 @@ public
 diagnostic-script.js
 voice-test.html
 Infome.tex
-scripts
 render.yaml
