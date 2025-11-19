@@ -59,55 +59,96 @@ export default function FaceRegister() {
     setSuccess('');
 
     try {
+      console.log('1. Iniciando registro facial...');
+      
       // Obtener token de Firebase
-      const token = await user.getIdToken();
+      let token;
+      try {
+        token = await user.getIdToken();
+        console.log('2. Token obtenido correctamente');
+      } catch (tokenErr) {
+        console.error('Error obteniendo token:', tokenErr);
+        throw new Error('No se pudo obtener el token de autenticación. Por favor, inicia sesión nuevamente.');
+      }
 
       // Obtener URL base de la API
       const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      console.log('3. API URL:', apiBase);
+      console.log('4. Tamaño de imagen:', capturedImage.length, 'caracteres');
 
-      // Enviar imagen al backend
-      const response = await fetch(`${apiBase}/api/face/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          image: capturedImage,
-          token: token
-        })
-      });
+      // Crear un timeout para la petición
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos timeout
 
-      // Verificar que la respuesta sea JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('Respuesta no es JSON:', text.substring(0, 200));
-        throw new Error(`El servidor devolvió un error. Verifica que el backend esté corriendo en ${apiBase}`);
-      }
+      try {
+        console.log('5. Enviando petición al backend...');
+        // Enviar imagen al backend
+        const response = await fetch(`${apiBase}/api/face/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            image: capturedImage,
+            token: token
+          }),
+          signal: controller.signal
+        });
 
-      const data = await response.json();
+        clearTimeout(timeoutId);
+        console.log('6. Respuesta recibida. Status:', response.status);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Error en el registro facial');
-      }
+        // Verificar que la respuesta sea JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error('Respuesta no es JSON:', text.substring(0, 200));
+          throw new Error(`El servidor devolvió un error (${response.status}). Verifica la consola para más detalles.`);
+        }
 
-      if (data.success) {
-        setSuccess('¡Registro facial completado exitosamente!');
+        const data = await response.json();
+        console.log('7. Datos JSON parseados:', data);
+
+        if (!response.ok) {
+          console.error('Respuesta no OK:', data);
+          throw new Error(data.error || `Error en el servidor (${response.status})`);
+        }
+
+        if (data.success) {
+          console.log('8. Registro facial exitoso!');
+          setSuccess('¡Registro facial completado exitosamente!');
+          
+          // Redirigir a completar perfil o dashboard después de 2 segundos
+          setTimeout(() => {
+            // Verificar si el usuario tiene displayName, si no, ir a complete-profile
+            if (!user?.displayName) {
+              navigate('/complete-profile');
+            } else {
+              navigate('/dashboard');
+            }
+          }, 2000);
+        } else {
+          throw new Error(data.error || 'Error en el registro');
+        }
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
         
-        // Redirigir a completar perfil o dashboard después de 2 segundos
-        setTimeout(() => {
-          // Verificar si el usuario tiene displayName, si no, ir a complete-profile
-          if (!user?.displayName) {
-            navigate('/complete-profile');
-          } else {
-            navigate('/dashboard');
-          }
-        }, 2000);
-      } else {
-        throw new Error(data.error || 'Error en el registro');
+        if (fetchErr.name === 'AbortError') {
+          console.error('Timeout en la petición');
+          throw new Error('La petición tardó demasiado tiempo. Intenta con una imagen más pequeña.');
+        }
+        
+        if (fetchErr instanceof TypeError) {
+          console.error('Error de conexión:', fetchErr);
+          throw new Error(`No se pudo conectar al servidor (${apiBase}). Verifica que esté activo.`);
+        }
+        
+        throw fetchErr;
       }
     } catch (err) {
-      setError(err.message || 'Error al registrar la cara. Por favor, intenta de nuevo.');
+      const errorMsg = err.message || 'Error al registrar la cara. Por favor, intenta de nuevo.';
+      setError(errorMsg);
       console.error('Error en registro facial:', err);
     } finally {
       setLoading(false);
