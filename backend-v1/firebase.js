@@ -2,7 +2,10 @@ const admin = require('firebase-admin');
 const path = require('path');
 
 let serviceAccount;
-if (process.env.SERVICE_ACCOUNT_KEY) {
+if (process.env.SERVICE_ACCOUNT_KEY_PATH) {
+  // Kubernetes: lee desde archivo montado
+  serviceAccount = require(path.resolve(process.env.SERVICE_ACCOUNT_KEY_PATH));
+} else if (process.env.SERVICE_ACCOUNT_KEY) {
   // Cloud: lee desde variable de entorno
   serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
 } else {
