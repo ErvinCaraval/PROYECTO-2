@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { auth, db } from '../services/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import backendAuthService from '../services/backendAuthService';
 import { useNavigate, Link } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -20,17 +18,11 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // The Firebase SDK signs the user in automatically after successful signup.
-      // Guardar visualDifficulty en Firestore si está marcado
-      if (visualDifficulty && userCredential.user) {
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-          email: email,
-          visualDifficulty: true,
-          stats: { gamesPlayed: 0, wins: 0, correctAnswers: 0 }
-        }, { merge: true });
-      }
-      // Redirigir directamente a registro facial después de crear la cuenta
+      // ✅ Use backend authentication service to register
+      const displayName = email.split('@')[0]; // Use email prefix as display name
+      await backendAuthService.register(email, password, displayName, visualDifficulty);
+      
+      // Redirect to face registration after successful signup
       navigate('/face-register');
     } catch (err) {
       setError(err.message);

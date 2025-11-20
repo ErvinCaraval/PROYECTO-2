@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { auth, db } from '../services/firebase';
-import { updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { useAuth } from '../AuthContext';
+import backendAuthService from '../services/backendAuthService';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
 
 export default function CompleteProfilePage() {
+  const { user } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [visualDifficulty, setVisualDifficulty] = useState(false);
   const [error, setError] = useState('');
@@ -19,14 +19,15 @@ export default function CompleteProfilePage() {
     setError('');
     setLoading(true);
     try {
-      if (!auth.currentUser) throw new Error('No autenticado');
-      await updateProfile(auth.currentUser, { displayName });
-      await setDoc(doc(db, 'users', auth.currentUser.uid), {
-        email: auth.currentUser.email,
+      if (!user) throw new Error('Not authenticated');
+      
+      // ✅ Get ID token and use backend service to update profile
+      const idToken = await user.getIdToken();
+      await backendAuthService.updateProfile(idToken, {
         displayName,
-        visualDifficulty,
-        stats: { gamesPlayed: 0, wins: 0, correctAnswers: 0 }
-      }, { merge: true });
+        visualDifficulty
+      });
+      
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
