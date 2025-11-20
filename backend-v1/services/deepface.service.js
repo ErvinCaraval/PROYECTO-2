@@ -10,11 +10,12 @@ class DeepFaceService {
     // Por defecto usa localhost para desarrollo local
     // Se puede sobrescribir con la variable de entorno DEEPFACE_SERVICE_URL
     this.baseURL = process.env.DEEPFACE_SERVICE_URL || 'http://localhost:5001';
-    // Timeout aumentado a 90 segundos porque DeepFace puede tardar mucho procesando imágenes
-    this.timeout = 90000; // 90 segundos de timeout
+    // Timeout reducido a 45 segundos (optimizado con cache + Facenet512)
+    // Antes: 90s. Ahora: 45s. Con cache habilitado, típicamente <2s
+    this.timeout = 45000; // 45 segundos de timeout
     
     // Log de la URL configurada
-    console.log(`🔧 DeepFace Service configurado con URL: ${this.baseURL}`);
+    console.log(`🔧 DeepFace Service configurado con URL: ${this.baseURL} (timeout: ${this.timeout/1000}s)`);
   }
 
   /**

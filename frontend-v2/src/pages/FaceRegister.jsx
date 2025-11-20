@@ -10,6 +10,7 @@ export default function FaceRegister() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState('');
   const [capturedImage, setCapturedImage] = useState(null);
   const [preview, setPreview] = useState(null);
   
@@ -19,17 +20,21 @@ export default function FaceRegister() {
 
   const handleCapture = async (base64String) => {
     try {
-      // Optimizar imagen antes de guardarla
-      const optimized = await optimizeImage(base64String, 300, 300, 0.6);
+      setProgress('Optimizando imagen...');
+      // Optimizar imagen agresivamente para máxima velocidad
+      const optimized = await optimizeImage(base64String, 240, 240, 0.5);
       const originalSize = getImageSize(base64String);
       const optimizedSize = getImageSize(optimized);
-      console.log(`Imagen optimizada: ${originalSize}KB → ${optimizedSize}KB (${Math.round((1 - optimizedSize/originalSize) * 100)}% reducción)`);
+      const reduction = Math.round((1 - optimizedSize/originalSize) * 100);
+      console.log(`✓ Imagen optimizada: ${originalSize}KB → ${optimizedSize}KB (${reduction}% reducción)`);
       setCapturedImage(optimized);
       setPreview(optimized);
+      setProgress('');
     } catch (error) {
       console.error('Error optimizando imagen, usando original:', error);
       setCapturedImage(base64String);
       setPreview(base64String);
+      setProgress('');
     }
   };
 
@@ -55,6 +60,7 @@ export default function FaceRegister() {
     }
 
     setLoading(true);
+    setProgress('Preparando registro...');
     setError('');
     setSuccess('');
 
@@ -64,6 +70,7 @@ export default function FaceRegister() {
       // Obtener token de Firebase
       let token;
       try {
+        setProgress('Obteniendo autenticación...');
         token = await user.getIdToken();
         console.log('2. Token obtenido correctamente');
       } catch (tokenErr) {
@@ -78,12 +85,13 @@ export default function FaceRegister() {
 
       // Crear un timeout para la petición
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos timeout
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 segundos timeout (optimizado)
 
       try {
         console.log('5. Enviando petición al backend...');
+        setProgress('Enviando imagen...');
         // Enviar imagen al backend
-        const response = await fetch(`${apiBase}/api/face/register`, {
+        const response = await fetch(`${apiBase}/face/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -98,6 +106,7 @@ export default function FaceRegister() {
 
         clearTimeout(timeoutId);
         console.log('6. Respuesta recibida. Status:', response.status);
+        setProgress('Procesando resultado...');
 
         // Verificar que la respuesta sea JSON
         const contentType = response.headers.get('content-type');
@@ -118,6 +127,7 @@ export default function FaceRegister() {
         if (data.success) {
           console.log('8. Registro facial exitoso!');
           setSuccess('¡Registro facial completado exitosamente!');
+          setProgress('');
           
           // Redirigir a completar perfil o dashboard después de 2 segundos
           setTimeout(() => {
@@ -152,6 +162,7 @@ export default function FaceRegister() {
       console.error('Error en registro facial:', err);
     } finally {
       setLoading(false);
+      setProgress('');
     }
   };
 
@@ -162,7 +173,7 @@ export default function FaceRegister() {
       try {
         const token = await user.getIdToken();
         const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const res = await fetch(`${apiBase}/api/face/exists`, {
+        const res = await fetch(`${apiBase}/face/exists`, {
           method: 'GET',
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -186,7 +197,7 @@ export default function FaceRegister() {
     try {
       const token = await user.getIdToken();
       const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiBase}/api/face/${user.uid}`, {
+      const res = await fetch(`${apiBase}/face/${user.uid}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -224,6 +235,7 @@ export default function FaceRegister() {
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl p-6">
           {error && <Alert intent="error" className="mb-4">{error}</Alert>}
           {success && <Alert intent="success" className="mb-4">{success}</Alert>}
+          {progress && <Alert intent="info" className="mb-4">⏳ {progress}</Alert>}
 
           {!preview ? (
             <FaceCaptureCamera
@@ -259,7 +271,7 @@ export default function FaceRegister() {
                   disabled={loading}
                   size="lg"
                 >
-                  {loading ? 'Registrando...' : '✅ Registrar Cara'}
+                  {loading ? '⏳ Registrando...' : '✅ Registrar Cara'}
                 </Button>
               </div>
             </div>
