@@ -116,6 +116,26 @@ app.use(cors({
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// ✅ SECURITY FIX: Add security headers
+app.use((req, res, next) => {
+  // Prevent clickjacking attacks
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  // Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  // Enable XSS protection
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // Control referrer information
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Enable HSTS
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  // Disable client-side caching for sensitive data
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Aumentar límite de tamaño para imágenes Base64 (hasta 50MB)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -851,17 +871,31 @@ const { matchVoiceResponse, generateSuggestions } = require('./utils/voiceRecogn
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,
-    error: `Ruta no encontrada: ${req.method} ${req.path}`,
-    message: 'El endpoint solicitado no existe'
+    error: 'Endpoint not found',
+    message: `The requested endpoint does not exist: ${req.method} ${req.path}`
   });
 });
 
-// Middleware de manejo de errores global - siempre devolver JSON
+// ✅ SECURITY FIX: Middleware de manejo de errores global - no exponer detalles internos
 app.use((err, req, res, next) => {
-  console.error('Error en el servidor:', err);
-  res.status(err.status || 500).json({
+  console.error('Error en el servidor:', {
+    message: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method
+  });
+  
+  const statusCode = err.status || 500;
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // Generic message for production to avoid leaking info
+  const clientMessage = isProduction 
+    ? 'Internal server error. Please contact support.'
+    : err.message;
+  
+  res.status(statusCode).json({
     success: false,
-    error: err.message || 'Error interno del servidor',
+    error: clientMessage,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });

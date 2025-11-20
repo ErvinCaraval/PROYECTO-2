@@ -92,7 +92,7 @@ function validateDisplayName(displayName) {
   // Remove potentially dangerous characters
   const sanitized = displayName
     .replace(/[<>\"'`]/g, '') // Remove HTML/script chars
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/(javascript|data|vbscript):/gi, '') // Remove dangerous protocols (javascript:, data:, vbscript:)
     .replace(/on\w+\s*=/gi, ''); // Remove event handlers
   
   if (sanitized !== displayName) {
