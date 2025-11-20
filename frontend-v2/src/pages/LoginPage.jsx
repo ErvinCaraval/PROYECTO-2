@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { auth } from '../services/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import backendAuthService from '../services/backendAuthService';
 import { useNavigate, Link } from 'react-router-dom';
 import { useVoice } from '../VoiceContext';
 import Button from '../components/ui/Button';
@@ -27,7 +26,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // ✅ Use backend authentication service
+      await backendAuthService.login(email, password);
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);

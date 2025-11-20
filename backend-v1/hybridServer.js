@@ -121,12 +121,15 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Rutas API
+// ✅ Authentication routes (centralized)
+app.use('/api/auth', require('./routes/auth'));
+
 app.use('/api/users', require('./routes/users'));
 app.use('/api/tts', require('./routes/tts'));
 
 // Ruta de prueba para verificar que el servidor está funcionando
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', services: ['tts', 'users'] });
+  res.json({ status: 'ok', services: ['tts', 'users', 'auth'] });
 });
 app.use('/api/games', require('./routes/games'));
 app.use('/api/questions', require('./routes/questions'));

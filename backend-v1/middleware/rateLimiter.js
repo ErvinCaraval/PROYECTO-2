@@ -12,6 +12,19 @@ const registerLimiter = rateLimit({
   skipSuccessfulRequests: false, // Contar todos los requests
 });
 
+// ✅ SECURITY FIX: Rate limiter para login (verificación de credenciales)
+// Protege contra ataques de fuerza bruta
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // máximo 5 intentos de login por IP cada 15 minutos
+  message: {
+    error: 'Demasiados intentos de inicio de sesión. Intenta de nuevo en 15 minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false, // Contar todos los requests (fallidos y exitosos)
+});
+
 // Rate limiter para recuperación de contraseña
 const passwordRecoveryLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
@@ -48,6 +61,7 @@ const generalUserLimiter = rateLimit({
 
 module.exports = {
   registerLimiter,
+  loginLimiter,
   passwordRecoveryLimiter,
   profileUpdateLimiter,
   generalUserLimiter
