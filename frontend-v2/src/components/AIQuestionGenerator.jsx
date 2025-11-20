@@ -77,7 +77,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
         return;
       }
       const token = user && user.getIdToken ? await user.getIdToken() : null;
-      const response = await fetch(`${apiBase}/api/ai/generate-questions`, {
+      const response = await fetch(`${apiBase}/ai/generate-questions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -121,7 +121,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
         let saveOk = false;
         try {
           const bulkToken = user && user.getIdToken ? await user.getIdToken() : null;
-          const response = await fetch(`${apiBase}/api/questions/bulk`, {
+          const response = await fetch(`${apiBase}/questions/bulk`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -416,7 +416,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
                                       const token = await user.getIdToken();
 
                                       // Save single question
-                                      const response = await fetch(`${apiBase}/api/questions`, {
+                                      const response = await fetch(`${apiBase}/questions`, {
                                         method: 'POST',
                                         headers: {
                                           'Content-Type': 'application/json',
@@ -436,7 +436,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
                                       // If last question, bulk save (server may already store them individually, but keep compatibility)
                                       if (next.length === manualCount) {
                                         // Do a bulk save to keep existing API usage
-                                        const bulkResp = await fetch(`${apiBase}/api/questions/bulk`, {
+                                        const bulkResp = await fetch(`${apiBase}/questions/bulk`, {
                                           method: 'POST',
                                           headers: {
                                             'Content-Type': 'application/json',

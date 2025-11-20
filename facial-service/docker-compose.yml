@@ -10,7 +10,7 @@ services:
     environment:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
-      - USE_INMEM_CACHE=0
+      - USE_INMEM_CACHE=1
       - USE_REDIS=1
       - REDIS_URL=redis://redis:6379/0
     restart: unless-stopped
