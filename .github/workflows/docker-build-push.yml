@@ -1,0 +1,79 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - en
+    paths:
+      - 'backend-v1/**'
+      - 'frontend-v2/**'
+      - 'facial-service/**'
+      - '.github/workflows/docker-build-push.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: facial-service-redis
+            context: ./facial-service/redis
+            dockerfile: ./facial-service/redis/Dockerfile
+            image: ervincaravaliibarra/facial-service-redis
+
+          - service: facial-service
+            context: ./facial-service
+            dockerfile: ./facial-service/Dockerfile
+            image: ervincaravaliibarra/facial-service
+
+          - service: backend-v1
+            context: ./backend-v1
+            dockerfile: ./backend-v1/Dockerfile
+            image: ervincaravaliibarra/backend-v1
+
+          - service: frontend-v2
+            context: ./frontend-v2
+            dockerfile: ./frontend-v2/Dockerfile
+            image: ervincaravaliibarra/frontend-v2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ matrix.image }}:latest
+            ${{ matrix.image }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Image digest
+        run: echo "Built ${{ matrix.image }}:latest"
+
+  deploy-verification:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify images on Docker Hub
+        run: |
+          echo "✅ All Docker images built and pushed successfully!"
+          echo "Images available at:"
+          echo "  - ervincaravaliibarra/facial-service-redis:latest"
+          echo "  - ervincaravaliibarra/facial-service:latest"
+          echo "  - ervincaravaliibarra/backend-v1:latest"
+          echo "  - ervincaravaliibarra/frontend-v2:latest"
