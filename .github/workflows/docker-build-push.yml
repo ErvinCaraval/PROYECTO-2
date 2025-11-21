@@ -1,10 +1,11 @@
 name: Build and Push Docker Images
 
+# Este workflow se activa cuando "CI/CD Workflow" O "Test Workflow" terminan.
 on:
   workflow_run:
     workflows:
-      - "CI/CD Workflow"   # nombre exacto del workflow ci-cd.yml
-      - "Test Workflow"    # nombre exacto del workflow test.yml
+      - "CI/CD Workflow"
+      - "Test Workflow"
     types:
       - completed
 
@@ -12,39 +13,46 @@ jobs:
   conditional-build:
     runs-on: ubuntu-latest
     outputs:
-      any_success: ${{ steps.set_success.outputs.any_success }}
+      should_proceed: ${{ steps.set_success.outputs.should_proceed }}
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check if this is a PR to main
-        id: check_pr
-        run: |
-          if [ "${{ github.event.workflow_run.pull_requests[0].base.ref }}" != "main" ]; then
-            echo "No es PR hacia main. Abortando."
-            exit 1
-          fi
-          echo "PR hacia main confirmado."
-
-      - name: Check workflows status
+      - name: 🚦 Check conditions (Branch and Status)
         id: set_success
         run: |
-          STATUS_CICD="${{ github.event.workflow_run.name == 'CI/CD Workflow' && github.event.workflow_run.conclusion || 'null' }}"
-          STATUS_TEST="${{ github.event.workflow_run.name == 'Test Workflow' && github.event.workflow_run.conclusion || 'null' }}"
+          # 1. Verificar la rama de destino del workflow que lo disparó
+          TARGET_BRANCH="${{ github.event.workflow_run.head_branch }}"
+          
+          if [ "$TARGET_BRANCH" != "main" ]; then
+            echo "🚫 El workflow original (disparador) no estaba dirigido a la rama 'main' (rama: $TARGET_BRANCH). Abortando el build."
+            echo "::set-output name=should_proceed::false"
+            exit 0
+          fi
+          
+          # 2. Verificar el estado del workflow que lo disparó
+          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+          WORKFLOW_STATUS="${{ github.event.workflow_run.conclusion }}"
 
-          echo "CI/CD status: $STATUS_CICD"
-          echo "Test status: $STATUS_TEST"
+          echo "✅ PR hacia main confirmado."
+          echo "Workflow disparador: $WORKFLOW_NAME"
+          echo "Estado del disparador: $WORKFLOW_STATUS"
 
-          ANY_SUCCESS=false
-          if [ "$STATUS_CICD" == "success" ] || [ "$STATUS_TEST" == "success" ]; then
-            ANY_SUCCESS=true
+          SHOULD_PROCEED=false
+          if [ "$WORKFLOW_STATUS" == "success" ]; then
+            SHOULD_PROCEED=true
+            echo "✅ Estado exitoso. Procediendo con el build y push."
+          else
+            echo "❌ El estado del workflow ($WORKFLOW_NAME) no es 'success'. No se realizará el build."
           fi
 
-          echo "::set-output name=any_success::$ANY_SUCCESS"
+          echo "::set-output name=should_proceed::$SHOULD_PROCEED"
 
   build-and-push:
     needs: conditional-build
-    if: needs.conditional-build.outputs.any_success == 'true'
+    # Solo se ejecuta si el job anterior confirmó que fue un PR a main Y tuvo éxito
+    if: needs.conditional-build.outputs.should_proceed == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -110,5 +118,4 @@ jobs:
           echo "  - ervincaravaliibarra/facial-service:latest"
           echo "  - ervincaravaliibarra/backend-v1:latest"
           echo "  - ervincaravaliibarra/frontend-v2:latest"
-
 
