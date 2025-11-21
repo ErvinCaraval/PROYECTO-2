@@ -28,8 +28,8 @@ class VoiceService {
     }
 
     this.baseUrl = viteApiUrl || (process.env && process.env.NODE_ENV === 'production'
-      ? 'https://proyecto-2-olvb.onrender.com'
-      : 'http://localhost:5000');
+      ? 'https://proyecto-2-olvb.onrender.com/api'
+      : 'http://localhost:5000/api');
     
     // Load settings from localStorage if available
     if (typeof localStorage !== 'undefined') {
@@ -113,7 +113,7 @@ class VoiceService {
 
   async checkBackendConnection() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/health`);
+      const response = await fetch(`${this.baseUrl}/health`);
       const data = await response.json();
       console.log('Backend connection status:', data);
       if (!data.services.includes('tts')) {
@@ -185,8 +185,8 @@ class VoiceService {
     try {
       const headers = await this.getAuthHeaders();
       
-      console.log('Fetching voices from:', `${this.baseUrl}/api/tts/voices`);
-      const response = await fetch(`${this.baseUrl}/api/tts/voices`, {
+      console.log('Fetching voices from:', `${this.baseUrl}/tts/voices`);
+      const response = await fetch(`${this.baseUrl}/tts/voices`, {
         headers
       });
       
@@ -258,7 +258,7 @@ class VoiceService {
           this.stop();
         }
 
-        const apiUrl = `${this.baseUrl}/api/tts/synthesize`;
+        const apiUrl = `${this.baseUrl}/tts/synthesize`;
         // Get the selected voice details from available voices
         const selectedVoice = this.availableVoices.find(v => 
           v.name === (options.voiceName || this.settings.voiceName)

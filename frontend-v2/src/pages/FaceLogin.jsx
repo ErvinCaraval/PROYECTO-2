@@ -13,6 +13,7 @@ export default function FaceLogin() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState('');
   const [capturedImage, setCapturedImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [step, setStep] = useState('email'); // 'email' o 'capture'
@@ -21,17 +22,21 @@ export default function FaceLogin() {
 
   const handleCapture = async (base64String) => {
     try {
-      // Optimizar imagen antes de guardarla
-      const optimized = await optimizeImage(base64String, 300, 300, 0.6);
+      setProgress('Optimizando imagen...');
+      // Optimizar imagen agresivamente para máxima velocidad
+      const optimized = await optimizeImage(base64String, 240, 240, 0.5);
       const originalSize = getImageSize(base64String);
       const optimizedSize = getImageSize(optimized);
-      console.log(`Imagen optimizada: ${originalSize}KB → ${optimizedSize}KB (${Math.round((1 - optimizedSize/originalSize) * 100)}% reducción)`);
+      const reduction = Math.round((1 - optimizedSize/originalSize) * 100);
+      console.log(`✓ Imagen optimizada: ${originalSize}KB → ${optimizedSize}KB (${reduction}% reducción)`);
       setCapturedImage(optimized);
       setPreview(optimized);
+      setProgress('');
     } catch (error) {
       console.error('Error optimizando imagen, usando original:', error);
       setCapturedImage(base64String);
       setPreview(base64String);
+      setProgress('');
     }
   };
 
@@ -65,6 +70,7 @@ export default function FaceLogin() {
     }
 
     setLoading(true);
+    setProgress('Enviando imagen...');
     setError('');
     setSuccess('');
 
@@ -73,7 +79,8 @@ export default function FaceLogin() {
       const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
       // Enviar imagen al backend para verificación
-      const response = await fetch(`${apiBase}/api/face/login`, {
+      setProgress('Verificando rostro...');
+      const response = await fetch(`${apiBase}/face/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -101,6 +108,7 @@ export default function FaceLogin() {
       if (data.success && data.verified) {
         // Login exitoso - usar el customToken para autenticar
         if (data.customToken) {
+          setProgress('Autenticando...');
           await signInWithCustomToken(auth, data.customToken);
           setSuccess('¡Login facial exitoso! Redirigiendo...');
           
@@ -119,6 +127,7 @@ export default function FaceLogin() {
       console.error('Error en login facial:', err);
     } finally {
       setLoading(false);
+      setProgress('');
     }
   };
 
@@ -143,6 +152,7 @@ export default function FaceLogin() {
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl p-6">
           {error && <Alert intent="error" className="mb-4">{error}</Alert>}
           {success && <Alert intent="success" className="mb-4">{success}</Alert>}
+          {progress && <Alert intent="info" className="mb-4">⏳ {progress}</Alert>}
 
           {step === 'email' ? (
             <form onSubmit={handleEmailSubmit} className="space-y-4">
@@ -201,7 +211,7 @@ export default function FaceLogin() {
                       disabled={loading}
                       size="lg"
                     >
-                      {loading ? 'Verificando...' : '✅ Verificar y Login'}
+                      {loading ? '⏳ Verificando...' : '✅ Verificar y Login'}
                     </Button>
                   </div>
                 </>
