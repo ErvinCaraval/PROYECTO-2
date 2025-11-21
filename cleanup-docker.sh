@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script para limpiar todas las imágenes, contenedores y volúmenes de Docker
-# Generados por docker-compose
+# Generados por docker-compose.
 
 echo "🧹 Limpiando Docker..."
 echo ""
