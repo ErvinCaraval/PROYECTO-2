@@ -2,7 +2,7 @@ Facial Recognition Service (Redis-only persistent store)
 
 Resumen
 - Este microservicio usa DeepFace para generar embeddings faciales.
-- Persistencia de embeddings: Redis (configurable vía `USE_REDIS` / `REDIS_URL`).
+- Persistencia de embeddings: Redis (configurable vía ...`USE_REDIS` / `REDIS_URL`).
 - Caché en memoria deshabilitable con `USE_INMEM_CACHE=0`.
 - Firestore/Firebase no se usa en esta carpeta (removido).
 
