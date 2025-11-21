@@ -17,9 +17,9 @@ export function VoiceProvider({ children }) {
 
   // Check if user has visual difficulty and auto-enable voice mode
   useEffect(() => {
-    // Subscribe to the user's Firestore doc so we react immediately when it's created/updated.
-    let unsubscribe = null;
-    const subscribeToUserDoc = async () => {
+    // ✅ FIXED: Use backend API instead of direct Firestore access
+    let isMounted = true;
+    const fetchUserSettings = async () => {
       if (!user) {
         setIsVoiceModeEnabled(false);
         setUserHasVisualDifficulty(false);
@@ -28,44 +28,36 @@ export function VoiceProvider({ children }) {
       }
 
       try {
-        const { db } = await import('./services/firebase');
-        const { doc, onSnapshot } = await import('firebase/firestore');
-
-        const userRef = doc(db, 'users', user.uid);
-        unsubscribe = onSnapshot(userRef, (snap) => {
-          try {
-            if (!snap.exists()) {
-              // doc not yet created - keep default states but stop loading
-              setUserHasVisualDifficulty(false);
-              setLoading(false);
-              return;
-            }
-
-            const data = snap.data() || {};
-            const hasVisualDifficulty = data.visualDifficulty || false;
-            setUserHasVisualDifficulty(hasVisualDifficulty);
-
-            // Auto-enable voice mode for users with visual difficulty, but don't force-disable
-            // if user already intentionally turned voice off.
-            setIsVoiceModeEnabled(prev => (hasVisualDifficulty ? true : prev));
-            setLoading(false);
-          } catch (e) {
-            console.error('Error processing user snapshot:', e);
+        // Get user settings from backend (secure)
+        const idToken = await user.getIdToken();
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${apiBase}/auth/profile`, {
+          headers: {
+            'Authorization': `Bearer ${idToken}`
           }
-        }, (err) => {
-          console.error('Error subscribing to user doc:', err);
-          setLoading(false);
         });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch user settings: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (isMounted) {
+          const hasVisualDifficulty = data.visualDifficulty || false;
+          setUserHasVisualDifficulty(hasVisualDifficulty);
+          setIsVoiceModeEnabled(hasVisualDifficulty ? true : false);
+          setLoading(false);
+        }
       } catch (error) {
-        console.error('Error setting up user doc subscription:', error);
+        console.error('Error fetching user settings from backend:', error);
         setLoading(false);
       }
     };
 
-    subscribeToUserDoc();
+    fetchUserSettings();
 
     return () => {
-      if (typeof unsubscribe === 'function') unsubscribe();
+      isMounted = false;
     };
   }, [user]);
 

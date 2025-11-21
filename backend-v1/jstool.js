@@ -99,9 +99,76 @@ function main() {
   }
 
   try {
-    // Usamos el constructor de Function, que es más seguro que eval().
-    const resultFunction = new Function('data', `return ${query}`);
-    let result = resultFunction(data);
+    // ✅ SECURITY FIX: Use whitelist of allowed operations instead of dynamic code execution
+    // Prevents RCE vulnerability from arbitrary JavaScript execution
+    
+    const allowedOperations = {
+      // Access nested properties: 'data.users[0].name'
+      'get': (data, queryPath) => {
+        const parts = queryPath.split(/[\[\]\.]+/).filter(p => p);
+        let result = data;
+        for (const part of parts) {
+          if (result == null) return undefined;
+          result = result[part];
+        }
+        return result;
+      },
+      
+      // Filter: 'filter:userId==123'
+      'filter': (data, config) => {
+        if (!Array.isArray(data)) return data;
+        const [key, operator, value] = config.split(/(==|!=|>|<)/);
+        return data.filter(item => {
+          switch(operator) {
+            case '==': return String(item[key.trim()]) === String(value.trim());
+            case '!=': return String(item[key.trim()]) !== String(value.trim());
+            case '>': return Number(item[key.trim()]) > Number(value);
+            case '<': return Number(item[key.trim()]) < Number(value);
+            default: return true;
+          }
+        });
+      },
+      
+      // Map: 'map:id,name'
+      'map': (data, fields) => {
+        if (!Array.isArray(data)) return data;
+        const fieldList = fields.split(',').map(f => f.trim());
+        return data.map(item => {
+          const obj = {};
+          fieldList.forEach(field => {
+            obj[field] = item[field];
+          });
+          return obj;
+        });
+      },
+      
+      // Sort: 'sort:name:asc'
+      'sort': (data, config) => {
+        if (!Array.isArray(data)) return data;
+        const [field, order] = config.split(':');
+        const sorted = [...data].sort((a, b) => {
+          if (a[field] < b[field]) return -1;
+          if (a[field] > b[field]) return 1;
+          return 0;
+        });
+        return order === 'desc' ? sorted.reverse() : sorted;
+      },
+      
+      // Length/Count: 'length'
+      'length': (data) => {
+        return Array.isArray(data) ? data.length : (data ? 1 : 0);
+      }
+    };
+
+    // Parse query format: 'operation:params'
+    const [operation, ...params] = query.split(':');
+    const opFunc = allowedOperations[operation.toLowerCase()];
+    
+    if (!opFunc) {
+      throw new Error(`❌ Operation not allowed: '${operation}'. Allowed: get, filter, map, sort, length`);
+    }
+
+    let result = opFunc(data, params.join(':'));
 
     // Si el resultado es undefined, lo convertimos a null para que sea visible.
     if (result === undefined) {

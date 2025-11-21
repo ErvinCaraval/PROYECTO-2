@@ -36,9 +36,9 @@ export const fetchTopics = async () => {
     return topicsCache.data;
   }
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   try {
-    const data = await fetchWithRetry(`${apiBase}/api/ai/topics`);
+    const data = await fetchWithRetry(`${apiBase}/ai/topics`);
     if (data.success && Array.isArray(data.topics)) {
       topicsCache = {
         data: data.topics,
@@ -62,9 +62,9 @@ export const fetchDifficultyLevels = async () => {
     return difficultyLevelsCache.data;
   }
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   try {
-    const data = await fetchWithRetry(`${apiBase}/api/ai/difficulty-levels`);
+    const data = await fetchWithRetry(`${apiBase}/ai/difficulty-levels`);
     if (data.success) {
       difficultyLevelsCache = {
         data: data.levels,
