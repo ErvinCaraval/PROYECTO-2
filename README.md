@@ -1,6 +1,32 @@
 # BrainBlitz - Plan de Implementación de Funcionalidades de Accesibilidad   
 
-## 📋 Resumen del Proyecto... ....
+## 🚀 Inicio Rápido
+
+### Dar permisos a los scripts
+Primero, ejecuta este comando para hacer ejecutables todos los archivos `.sh`:
+```bash
+find . -name "*.sh" -exec chmod +x {} \;
+```
+**¿Qué hace?** Busca todos los archivos con extensión `.sh` en el proyecto y les da permisos de ejecución (`chmod +x`). Necesario para poder ejecutar los scripts.
+
+### Comandos principales
+```bash
+# Desarrollo - Inicia todos los servicios en modo desarrollo
+bash scripts/run-dev.sh
+
+# Producción - Inicia los servicios usando imágenes de Docker Hub
+bash scripts/run-prod.sh
+
+# Limpiar - Elimina todos los contenedores, imágenes y volúmenes de Docker
+bash scripts/cleanup-docker.sh
+
+# Push - Sube todas las imágenes (backend, frontend, facial-service, redis) a Docker Hub
+bash scripts/push-all-to-dockerhub.sh
+```
+
+---
+
+## 📋 Resumen del Proyecto
 
 Este documento describe el plan de implementación para agregar funcionalidades integrales de accesibilidad a BrainBlitz, un juego de trivia multijugador. El proyecto involucra 5 desarrolladores: 1 Desarrollador Backend y 4 Desarrolladores Frontend.
 
