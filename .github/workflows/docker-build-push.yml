@@ -1,59 +1,65 @@
 name: Build and Push Docker Images
 
-# Este workflow se activa cuando "CI/CD Workflow" O "Test Workflow" terminan.
 on:
-  workflow_run:
-    workflows:
-      - "CI/CD Workflow"
-      - "Test Workflow"
-    types:
-      - completed
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  conditional-build:
+  wait-for-tests:
     runs-on: ubuntu-latest
     outputs:
-      should_proceed: ${{ steps.set_success.outputs.should_proceed }}
-      
+      proceed: ${{ steps.check_status.outputs.proceed }}
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🚦 Check conditions (Branch and Status)
-        id: set_success
+      - name: Check statuses of CI/CD and Test workflows
+        id: check_status
         run: |
-          # 1. Verificar la rama de destino del workflow que lo disparó
-          TARGET_BRANCH="${{ github.event.workflow_run.head_branch }}"
-          
-          if [ "$TARGET_BRANCH" != "main" ]; then
-            echo "🚫 El workflow original (disparador) no estaba dirigido a la rama 'main' (rama: $TARGET_BRANCH). Abortando el build."
-            echo "::set-output name=should_proceed::false"
-            exit 0
-          fi
-          
-          # 2. Verificar el estado del workflow que lo disparó
-          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
-          WORKFLOW_STATUS="${{ github.event.workflow_run.conclusion }}"
+          echo "🔍 Revisando CI/CD y Test para este Pull Request..."
 
-          echo "✅ PR hacia main confirmado."
-          echo "Workflow disparador: $WORKFLOW_NAME"
-          echo "Estado del disparador: $WORKFLOW_STATUS"
+          REPO="${{ github.repository }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          TOKEN="${{ secrets.GITHUB_TOKEN }}"
 
-          SHOULD_PROCEED=false
-          if [ "$WORKFLOW_STATUS" == "success" ]; then
-            SHOULD_PROCEED=true
-            echo "✅ Estado exitoso. Procediendo con el build y push."
+          # Obtener estado del workflow CI/CD
+          STATUS_CICD=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            "https://api.github.com/repos/$REPO/actions/runs?event=pull_request&per_page=50" \
+            | jq -r --arg pr "$PR_NUMBER" '
+                .workflow_runs[]
+                | select(.head_branch != null)
+                | select(.pull_requests[].number == ($pr|tonumber))
+                | select(.name == "CI/CD Workflow")
+                | .conclusion' | head -n 1)
+
+          # Obtener estado del workflow Test
+          STATUS_TEST=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            "https://api.github.com/repos/$REPO/actions/runs?event=pull_request&per_page=50" \
+            | jq -r --arg pr "$PR_NUMBER" '
+                .workflow_runs[]
+                | select(.head_branch != null)
+                | select(.pull_requests[].number == ($pr|tonumber))
+                | select(.name == "Test Workflow")
+                | .conclusion' | head -n 1)
+
+          echo "CI/CD Status: $STATUS_CICD"
+          echo "Test Status: $STATUS_TEST"
+
+          # Condición: al menos uno debe haber pasado
+          if [ "$STATUS_CICD" = "success" ] || [ "$STATUS_TEST" = "success" ]; then
+            echo "Uno o ambos workflows pasaron ✔"
+            echo "::set-output name=proceed::true"
           else
-            echo "❌ El estado del workflow ($WORKFLOW_NAME) no es 'success'. No se realizará el build."
+            echo "⚠ Ninguno de los workflows pasó. Abortando build."
+            echo "::set-output name=proceed::false"
           fi
-
-          echo "::set-output name=should_proceed::$SHOULD_PROCEED"
 
   build-and-push:
-    needs: conditional-build
-    # Solo se ejecuta si el job anterior confirmó que fue un PR a main Y tuvo éxito
-    if: needs.conditional-build.outputs.should_proceed == 'true'
+    needs: wait-for-tests
+    if: needs.wait-for-tests.outputs.proceed == 'true'
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         include:
@@ -109,12 +115,8 @@ jobs:
     needs: build-and-push
     if: needs.build-and-push.result == 'success'
     runs-on: ubuntu-latest
+
     steps:
       - name: Verify images on Docker Hub
         run: |
-          echo "✅ All Docker images built and pushed successfully!"
-          echo "Images available at:"
-          echo "  - ervincaravaliibarra/facial-service-redis:latest"
-          echo "  - ervincaravaliibarra/facial-service:latest"
-          echo "  - ervincaravaliibarra/backend-v1:latest"
-          echo "  - ervincaravaliibarra/frontend-v2:latest"
+          echo "🚀 Docker images were successfully built and pushed!"

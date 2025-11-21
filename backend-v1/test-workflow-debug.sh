@@ -2,7 +2,7 @@
 echo "🔍 DIAGNÓSTICO DEL WORKFLOW TEST.YML,,"
 echo "====================================="
 echo ""
-echo "1. Verificando directorio actual:"
+echo "1. Verificando directorio actual.:"
 pwd
 echo ""
 echo "2. Verificando estructura de directorios:"
