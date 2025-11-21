@@ -12,5 +12,6 @@ echo "  ✓ ervincaravaliibarra/frontend-v2:latest"
 echo ""
 
 # Ejecutar docker-compose.prod.yml
-docker compose -f docker-compose.prod.yml up --build -d
+cd "$(dirname "$0")/.." || exit
+docker compose -f docker/docker-compose.prod.yml up --build -d
 
