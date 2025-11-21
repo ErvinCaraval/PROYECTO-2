@@ -1,58 +1,12 @@
 name: Build and Push Docker Images
 
-# 🚨 CAMBIO CLAVE: Se activa cuando los workflows de CI/CD o Test terminan.
 on:
-  workflow_run:
-    workflows:
-      - "Frontend-v2 - CI/CD" # Nombre exacto del workflow ci-cd.yml
-      - "Backend-v1 - CI/CD"   # Nombre exacto del workflow test.yml
-    types:
-      - completed
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  conditional-build:
-    runs-on: ubuntu-latest
-    outputs:
-      should_proceed: ${{ steps.set_success.outputs.should_proceed }}
-      
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🚦 Check conditions (Branch and Status)
-        id: set_success
-        run: |
-          # 1. Verificar la rama de destino: debe ser 'main'
-          TARGET_BRANCH="${{ github.event.workflow_run.head_branch }}"
-          
-          if [ "$TARGET_BRANCH" != "main" ]; then
-            echo "🚫 El workflow original no estaba dirigido a la rama 'main' (rama: $TARGET_BRANCH). Abortando el build."
-            echo "should_proceed=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          # 2. Verificar el estado del workflow disparador: debe ser 'success'
-          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
-          WORKFLOW_STATUS="${{ github.event.workflow_run.conclusion }}"
-
-          echo "✅ PR hacia main confirmado."
-          echo "Workflow disparador: $WORKFLOW_NAME"
-          echo "Estado del disparador: $WORKFLOW_STATUS"
-
-          SHOULD_PROCEED=false
-          if [ "$WORKFLOW_STATUS" == "success" ]; then
-            SHOULD_PROCEED=true
-            echo "✅ Estado exitoso. Procediendo con el build y push."
-          else
-            echo "❌ El estado del workflow ($WORKFLOW_NAME) no es 'success'. No se realizará el build."
-          fi
-
-          echo "should_proceed=$SHOULD_PROCEED" >> $GITHUB_OUTPUT
-
   build-and-push:
-    needs: conditional-build
-    # Solo se ejecuta si el job anterior confirmó que fue un PR a main Y tuvo éxito
-    if: needs.conditional-build.outputs.should_proceed == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -101,6 +55,3 @@ jobs:
             ${{ matrix.image }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Image digest
-        run: echo "Built ${{ matrix.service }}:latest"
