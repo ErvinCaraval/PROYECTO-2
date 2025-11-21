@@ -1,6 +1,0 @@
-find . -name "*.sh" -exec chmod +x {} \;
-
-bash scripts/run-dev.sh          # Desarrollo
-bash scripts/run-prod.sh         # Producción
-bash scripts/cleanup-docker.sh   # Limpiar
-bash scripts/push-all-to-dockerhub.sh
