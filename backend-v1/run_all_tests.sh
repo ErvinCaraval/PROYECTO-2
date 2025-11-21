@@ -12,7 +12,7 @@ COVERAGE_JSON="$REPORT_DIR/coverage-final.json"
 COVERAGE_HTML="$REPORT_DIR/coverage-html"
 
 
-# Run all tests with coverage
+# Run all tests with coverage.
 npm test -- --coverage || exit 1
 
 exit 0
