@@ -11,7 +11,7 @@ COPY . .
 RUN npm install --verbose
 
 # Reconstruir con las variables de entorno correctas
-ENV VITE_API_URL=http://localhost:5000
+ENV VITE_API_URL=http://localhost:5000/api
 ENV VITE_SOCKET_URL=http://localhost:5000
 
 # Build
