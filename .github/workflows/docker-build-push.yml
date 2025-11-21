@@ -120,3 +120,4 @@ jobs:
       - name: Verify images on Docker Hub
         run: |
           echo "🚀 Docker images were successfully built and pushed!"
+
