@@ -4,8 +4,8 @@ name: Build and Push Docker Images
 on:
   workflow_run:
     workflows:
-      - "ci-cd" # Nombre exacto del workflow ci-cd.yml
-      - "test"   # Nombre exacto del workflow test.yml
+      - "Frontend-v2 - CI/CD" # Nombre exacto del workflow ci-cd.yml
+      - "Backend-v1 - CI/CD"   # Nombre exacto del workflow test.yml
     types:
       - completed
 
