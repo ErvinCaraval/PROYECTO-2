@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "🔍 DIAGNÓSTICO DEL WORKFLOW TEST.YML"
+echo "🔍 DIAGNÓSTICO DEL WORKFLOW TEST.YML,,"
 echo "====================================="
 echo ""
 echo "1. Verificando directorio actual:"
