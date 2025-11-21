@@ -1,18 +1,19 @@
 name: Build and Push Docker Images
 
 on:
-  push:
+  pull_request:
     branches:
-      - en
+      - main
     paths:
       - 'backend-v1/**'
       - 'frontend-v2/**'
       - 'facial-service/**'
       - '.github/workflows/docker-build-push.yml'
-  workflow_dispatch:
 
 jobs:
+  # Job que construye y hace push de las imágenes solo en PR a main
   build-and-push:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -65,8 +66,51 @@ jobs:
       - name: Image digest
         run: echo "Built ${{ matrix.image }}:latest"
 
+  # Job que valida build en cualquier PR (no hace push)
+  build-validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: facial-service-redis
+            context: ./facial-service/redis
+            dockerfile: ./facial-service/redis/Dockerfile
+
+          - service: facial-service
+            context: ./facial-service
+            dockerfile: ./facial-service/Dockerfile
+
+          - service: backend-v1
+            context: ./backend-v1
+            dockerfile: ./backend-v1/Dockerfile
+
+          - service: frontend-v2
+            context: ./frontend-v2
+            dockerfile: ./frontend-v2/Dockerfile
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.service }} (validation only)
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: ✅ Build validation passed for ${{ matrix.service }}
+        run: echo "Dockerfile compiles successfully"
+
+  # Job que verifica los pushes (solo se ejecuta si build-and-push se ejecutó)
   deploy-verification:
     needs: build-and-push
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
     runs-on: ubuntu-latest
     steps:
       - name: Verify images on Docker Hub
