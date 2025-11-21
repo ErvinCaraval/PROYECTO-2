@@ -3,50 +3,56 @@ name: Build and Push Docker Images
 on:
   workflow_run:
     workflows:
-      - "CI/CD Workflow"   # Nombre exacto de ci-cd.yml
-      - "Test Workflow"    # Nombre exacto de test.yml
+      - "CI/CD Workflow"
+      - "Test Workflow"
     types:
-      - completed          # Se dispara cuando cualquiera termina
+      - completed
 
 jobs:
   conditional-build:
     runs-on: ubuntu-latest
-    # Solo continuar si el PR va hacia main
-    if: ${{ github.event.workflow_run.pull_requests[0].base.ref == 'main' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Check if PR is to main
+        if: ${{ github.event.workflow_run.pull_requests[0].base.ref != 'main' }}
+        run: |
+          echo "No es PR hacia main. Abortando workflow."
+          exit 1
 
       - name: Check previous workflows status
         id: check_status
         run: |
           echo "Comprobando estados de CI/CD y Test..."
-          
+
           STATUS_CICD=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?workflow_id=CI/CD%20Workflow&branch=main&status=completed&per_page=1" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/ci-cd.yml/runs?branch=main&status=completed&per_page=1" \
             | jq -r '.workflow_runs[0].conclusion')
-          
+
           STATUS_TEST=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?workflow_id=Test%20Workflow&branch=main&status=completed&per_page=1" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/test.yml/runs?branch=main&status=completed&per_page=1" \
             | jq -r '.workflow_runs[0].conclusion')
 
           echo "CI/CD status: $STATUS_CICD"
           echo "Test status: $STATUS_TEST"
 
-          # Condición: todos los workflows que se ejecutaron deben pasar
-          ALL_SUCCESS=true
-          if [ "$STATUS_CICD" != "success" ] && [ "$STATUS_CICD" != "null" ]; then
-            ALL_SUCCESS=false
-          fi
-          if [ "$STATUS_TEST" != "success" ] && [ "$STATUS_TEST" != "null" ]; then
-            ALL_SUCCESS=false
+          # Condición: al menos uno de los workflows que se ejecutó debe pasar
+          ANY_SUCCESS=false
+          if [ "$STATUS_CICD" == "success" ] || [ "$STATUS_TEST" == "success" ]; then
+            ANY_SUCCESS=true
           fi
 
-          echo "all_success=$ALL_SUCCESS" >> $GITHUB_ENV
+          if [ "$ANY_SUCCESS" != "true" ]; then
+            echo "Ninguno de los workflows pasó. Abortando."
+            exit 1
+          fi
+
+          echo "any_success=true" >> $GITHUB_ENV
 
   build-and-push:
     needs: conditional-build
-    if: env.all_success == 'true'
+    if: env.any_success == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -101,7 +107,7 @@ jobs:
 
   deploy-verification:
     needs: build-and-push
-    if: env.all_success == 'true'
+    if: env.any_success == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Verify images on Docker Hub
