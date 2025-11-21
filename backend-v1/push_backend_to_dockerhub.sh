@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Script para construir y subir backend-v1 a Docker Hub
-# Uso: ./push_backend_to_dockerhub.sh [tag]..
+# Uso: ./push_backend_to_dockerhub.sh [tag].....
 
 set -e
 
-# Colores para output
+# Colores para output.
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
