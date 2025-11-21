@@ -30,7 +30,7 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Verificar que estamos en el directorio correcto
+# Verificar que estamos en el directorio correcto.
 if [ ! -f "package.json" ]; then
     echo -e "${RED}❌ Error: package.json no encontrado${NC}"
     echo -e "${YELLOW}   Ejecuta este script desde la carpeta frontend-v2${NC}"
