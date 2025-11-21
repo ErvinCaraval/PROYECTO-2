@@ -1,19 +1,52 @@
 name: Build and Push Docker Images
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'backend-v1/**'
-      - 'frontend-v2/**'
-      - 'facial-service/**'
-      - '.github/workflows/docker-build-push.yml'
+  workflow_run:
+    workflows:
+      - "CI/CD Workflow"   # Nombre exacto de ci-cd.yml
+      - "Test Workflow"    # Nombre exacto de test.yml
+    types:
+      - completed          # Se dispara cuando cualquiera termina
 
 jobs:
-  # Job que construye y hace push de las imágenes solo en PR a main
+  conditional-build:
+    runs-on: ubuntu-latest
+    # Solo continuar si el PR va hacia main
+    if: ${{ github.event.workflow_run.pull_requests[0].base.ref == 'main' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check previous workflows status
+        id: check_status
+        run: |
+          echo "Comprobando estados de CI/CD y Test..."
+          
+          STATUS_CICD=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?workflow_id=CI/CD%20Workflow&branch=main&status=completed&per_page=1" \
+            | jq -r '.workflow_runs[0].conclusion')
+          
+          STATUS_TEST=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?workflow_id=Test%20Workflow&branch=main&status=completed&per_page=1" \
+            | jq -r '.workflow_runs[0].conclusion')
+
+          echo "CI/CD status: $STATUS_CICD"
+          echo "Test status: $STATUS_TEST"
+
+          # Condición: todos los workflows que se ejecutaron deben pasar
+          ALL_SUCCESS=true
+          if [ "$STATUS_CICD" != "success" ] && [ "$STATUS_CICD" != "null" ]; then
+            ALL_SUCCESS=false
+          fi
+          if [ "$STATUS_TEST" != "success" ] && [ "$STATUS_TEST" != "null" ]; then
+            ALL_SUCCESS=false
+          fi
+
+          echo "all_success=$ALL_SUCCESS" >> $GITHUB_ENV
+
   build-and-push:
-    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    needs: conditional-build
+    if: env.all_success == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -64,53 +97,11 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Image digest
-        run: echo "Built ${{ matrix.image }}:latest"
+        run: echo "Built ${{ matrix.service }}:latest"
 
-  # Job que valida build en cualquier PR (no hace push)
-  build-validate:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - service: facial-service-redis
-            context: ./facial-service/redis
-            dockerfile: ./facial-service/redis/Dockerfile
-
-          - service: facial-service
-            context: ./facial-service
-            dockerfile: ./facial-service/Dockerfile
-
-          - service: backend-v1
-            context: ./backend-v1
-            dockerfile: ./backend-v1/Dockerfile
-
-          - service: frontend-v2
-            context: ./frontend-v2
-            dockerfile: ./frontend-v2/Dockerfile
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build ${{ matrix.service }} (validation only)
-        uses: docker/build-push-action@v5
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: ✅ Build validation passed for ${{ matrix.service }}
-        run: echo "Dockerfile compiles successfully"
-
-  # Job que verifica los pushes (solo se ejecuta si build-and-push se ejecutó)
   deploy-verification:
     needs: build-and-push
-    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    if: env.all_success == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Verify images on Docker Hub
