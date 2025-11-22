@@ -588,6 +588,18 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
             ℹ️ Puedes editar la pregunta manualmente. Es importante que completes todos los campos correctamente.
           </p>
 
+          {/* Show saved questions counter and add another option - VISIBLE BEFORE CONFIRMING */}
+          {savedQuestions.length > 0 && (
+            <div className="p-3 bg-gradient-to-r from-bb-primary/20 to-bb-primary/10 rounded-lg border border-bb-primary/40">
+              <p className="text-sm font-semibold text-white mb-2">
+                ✅ {savedQuestions.length} pregunta{savedQuestions.length !== 1 ? 's' : ''} guardada{savedQuestions.length !== 1 ? 's' : ''} - Puedes guardar esta y agregar más
+              </p>
+              <div className="flex gap-2">
+                <span className="text-xs text-bb-primary/80">💡 Confirma y luego agrega otra</span>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-2">
             <div className="flex gap-3">
               <Button
@@ -618,25 +630,6 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
                 Atrás
               </Button>
             </div>
-            
-            {/* Show "Add another question" button if questions have been saved */}
-            {savedQuestions.length > 0 && (
-              <div className="p-3 bg-bb-primary/10 rounded-lg border border-bb-primary/30">
-                <p className="text-sm text-white mb-2">
-                  ✅ {savedQuestions.length} pregunta{savedQuestions.length !== 1 ? 's' : ''} guardada{savedQuestions.length !== 1 ? 's' : ''}
-                </p>
-                <Button
-                  variant="secondary"
-                  onClick={resetForm}
-                  disabled={loading}
-                  className="w-full"
-                  onFocus={() => isVoiceModeEnabled && speak('Agregar otra pregunta', { force: true })}
-                  onMouseEnter={() => isVoiceModeEnabled && speak('Agregar otra pregunta', { force: true })}
-                >
-                  ➕ Agregar otra pregunta
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       )}
