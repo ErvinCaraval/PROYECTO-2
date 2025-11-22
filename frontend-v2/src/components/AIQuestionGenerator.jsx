@@ -166,7 +166,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
 
   return (
     <Modal open={true} title="🤖 Generador de Preguntas" onClose={onClose}>
-      {isVoiceModeEnabled && (!showManualForm) && (
+      {isVoiceModeEnabled && (!showManualForm && !showOCRForm) && (
         <div className="flex justify-end mb-2">
           <Button
             variant="outline"
