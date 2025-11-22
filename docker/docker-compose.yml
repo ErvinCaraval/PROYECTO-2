@@ -76,6 +76,8 @@ services:
       DEEPFACE_SERVICE_URL: http://facial-recognition-service:5001
       REDIS_URL: redis://facial-service-redis:6379/0
       CORS_ORIGIN: http://localhost:80,http://frontend:80
+      AZURE_CV_API_KEY: 94kkjFlqrVEtP9KRV1mMZur5szubdMBcYGAe1Wo0WMI09JZLlwXNJQQJ99BKACZoyfiXJ3w3AAAFACOGNvd9
+      AZURE_CV_ENDPOINT: https://visionxporxcomputadora.cognitiveservices.azure.com/
       # Variables públicas adicionales si aplica
     secrets:
       - db_credentials
