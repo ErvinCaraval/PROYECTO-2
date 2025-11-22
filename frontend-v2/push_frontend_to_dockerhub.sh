@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script para construir y subir frontend-v2 a Docker Hub
-# Uso: ./push_frontend_to_dockerhub.sh [tag]
+# Uso: ./push_frontend_to_dockerhub.sh [tag]..
 
 set -e
 
