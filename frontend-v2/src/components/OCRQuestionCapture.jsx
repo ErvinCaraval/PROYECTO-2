@@ -9,12 +9,10 @@ import Spinner from './ui/Spinner';
 const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
   const { isVoiceModeEnabled, speak } = useVoice();
   const { user } = useAuth();
-  const [mode, setMode] = useState(null); // 'upload', 'camera', or 'manual'
+  const [mode, setMode] = useState(null); // 'upload' or 'manual'
   const [selectedTopic, setSelectedTopic] = useState(topics[0] || '');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [cameraStream, setCameraStream] = useState(null);
-  const [videoRef, setVideoRef] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -23,7 +21,6 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState(0); // Track which option is correct
   const [savedQuestions, setSavedQuestions] = useState([]); // Track saved questions
   const fileInputRef = useRef(null);
-  const cameraVideoRef = useRef(null);
 
   const apiBase = import.meta.env.VITE_API_URL;
 
@@ -62,73 +59,7 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
     }
   };
 
-  /**
-   * Start camera stream
-   */
-  const startCamera = async () => {
-    try {
-      setError('');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
-      
-      if (cameraVideoRef.current) {
-        cameraVideoRef.current.srcObject = stream;
-        setCameraStream(stream);
-        
-        if (isVoiceModeEnabled) {
-          speak('Cámara iniciada. Apunta a la pregunta y presiona tomar foto.', { force: true });
-        }
-      }
-    } catch (err) {
-      setError('No se pudo acceder a la cámara. Verifica los permisos.');
-      console.error('Camera error:', err);
-    }
-  };
 
-  /**
-   * Stop camera stream
-   */
-  const stopCamera = () => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
-      setCameraStream(null);
-    }
-  };
-
-  /**
-   * Capture photo from camera
-   */
-  const capturePhoto = () => {
-    if (!cameraVideoRef.current) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = cameraVideoRef.current.videoWidth;
-    canvas.height = cameraVideoRef.current.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(cameraVideoRef.current, 0, 0);
-
-    canvas.toBlob((blob) => {
-      if (blob) {
-        setImageFile(blob);
-        
-        // Create preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setImagePreview(e.target.result);
-        };
-        reader.readAsDataURL(blob);
-
-        stopCamera();
-        setMode(null);
-
-        if (isVoiceModeEnabled) {
-          speak('Foto capturada. Presiona procesar para extraer la pregunta.', { force: true });
-        }
-      }
-    }, 'image/jpeg', 0.9);
-  };
 
   /**
    * Process image using OCR
@@ -369,18 +300,6 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
               variant="secondary"
               size="lg"
               onClick={() => {
-                setMode('camera');
-                startCamera();
-              }}
-              onFocus={() => isVoiceModeEnabled && speak('Tomar foto', { force: true })}
-              onMouseEnter={() => isVoiceModeEnabled && speak('Tomar foto', { force: true })}
-            >
-              📷 Tomar foto
-            </Button>
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={() => {
                 setMode('manual');
                 setProcessedQuestion({ pregunta: '', opciones: { a: '', b: '', c: '', d: '' } });
               }}
@@ -404,41 +323,6 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
             onChange={handleFileSelect}
             className="block w-full rounded-xl border-2 border-white/10 bg-white/5 px-4 py-3 text-white"
           />
-        </div>
-      )}
-
-      {/* Camera mode */}
-      {mode === 'camera' && !processedQuestion && (
-        <div className="grid gap-3">
-          <h3 className="text-lg font-bold">Tomar foto</h3>
-          <video
-            ref={cameraVideoRef}
-            autoPlay
-            playsInline
-            className="w-full rounded-xl border-2 border-white/10 bg-black"
-            style={{ maxHeight: '500px', objectFit: 'cover' }}
-          />
-          <div className="flex gap-3">
-            <Button
-              onClick={capturePhoto}
-              size="lg"
-              onFocus={() => isVoiceModeEnabled && speak('Capturar foto', { force: true })}
-              onMouseEnter={() => isVoiceModeEnabled && speak('Capturar foto', { force: true })}
-            >
-              📸 Capturar
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                stopCamera();
-                setMode(null);
-              }}
-              onFocus={() => isVoiceModeEnabled && speak('Cancelar', { force: true })}
-              onMouseEnter={() => isVoiceModeEnabled && speak('Cancelar', { force: true })}
-            >
-              Cancelar
-            </Button>
-          </div>
         </div>
       )}
 
