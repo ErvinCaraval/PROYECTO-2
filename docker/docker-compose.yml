@@ -1,5 +1,7 @@
 services:
-  # Base de datos Redis para embeddings faciales
+  ## -----------------------------------------------------------
+  ## Redis: almacenamiento para embeddings faciales
+  ## -----------------------------------------------------------
   facial-service-redis:
     image: redis:6-alpine
     container_name: facial-service-redis
@@ -8,7 +10,10 @@ services:
     volumes:
       - redis_data:/data
       - ../facial-service/redis.conf:/usr/local/etc/redis/redis.conf
-    command: redis-server /usr/local/etc/redis/redis.conf
+    environment:
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - redis_password
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -18,7 +23,9 @@ services:
       - app-network
     restart: unless-stopped
 
-  # Microservicio de reconocimiento facial
+  ## -----------------------------------------------------------
+  ## Microservicio de reconocimiento facial
+  ## -----------------------------------------------------------
   facial-recognition-service:
     build:
       context: ../facial-service
@@ -27,14 +34,14 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - FLASK_ENV=production
-      - PYTHONUNBUFFERED=1
-      - USE_REDIS=1
-      - REDIS_URL=redis://facial-service-redis:6379/0
-      - CACHE_MAX_SIZE=1000
-      - CACHE_TTL_SECONDS=3600
-      - MAX_WORKERS=3
-      - LOG_LEVEL=INFO
+      FLASK_ENV: production
+      PYTHONUNBUFFERED: "1"
+      USE_REDIS: "1"
+      REDIS_URL: redis://facial-service-redis:6379/0
+      CACHE_MAX_SIZE: 1000
+      CACHE_TTL_SECONDS: 3600
+      MAX_WORKERS: 3
+      LOG_LEVEL: INFO
     depends_on:
       facial-service-redis:
         condition: service_healthy
@@ -47,8 +54,15 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Backend API
+  ## -----------------------------------------------------------
+  ## Backend Node.js
+  ## -----------------------------------------------------------
   backend-api:
     build:
       context: ../backend-v1
@@ -57,12 +71,16 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - NODE_ENV=production
-      - PORT=5000
-      - DEEPFACE_SERVICE_URL=http://facial-recognition-service:5001
-      - REDIS_URL=redis://facial-service-redis:6379/0
-      - CORS_ORIGIN=http://localhost:80,http://localhost:5000,http://localhost,http://127.0.0.1:80,http://127.0.0.1:5000,http://frontend,http://frontend:80
-      # Agrega aquí otras variables de entorno del backend
+      NODE_ENV: production
+      PORT: 5000
+      DEEPFACE_SERVICE_URL: http://facial-recognition-service:5001
+      REDIS_URL: redis://facial-service-redis:6379/0
+      CORS_ORIGIN: http://localhost:80,http://frontend:80
+      # Variables públicas adicionales si aplica
+    secrets:
+      - db_credentials
+      - api_keys
+      - firebase_config
     depends_on:
       facial-recognition-service:
         condition: service_healthy
@@ -73,12 +91,19 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:5000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      interval: 20s
+      timeout: 5s
+      retries: 10
       start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Frontend
+  ## -----------------------------------------------------------
+  ## Frontend (Vite + Nginx)
+  ## -----------------------------------------------------------
   frontend:
     build:
       context: ../frontend-v2
@@ -87,8 +112,8 @@ services:
     ports:
       - "80:80"
     environment:
-      - VITE_API_URL=http://localhost:5000/api
-      - VITE_SOCKET_URL=http://localhost:5000
+      VITE_API_URL: http://backend-api:5000/api
+      VITE_SOCKET_URL: http://backend-api:5000
     depends_on:
       backend-api:
         condition: service_healthy
@@ -96,16 +121,40 @@ services:
       - app-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+## -----------------------------------------------------------
+## Volúmenes
+## -----------------------------------------------------------
 volumes:
   redis_data:
     driver: local
 
+## -----------------------------------------------------------
+## Secretos (requiere Docker Swarm / stack deploy)
+## -----------------------------------------------------------
+secrets:
+  redis_password:
+    file: ./secrets/redis_password.txt
+  db_credentials:
+    file: ./secrets/db_credentials.txt
+  api_keys:
+    file: ./secrets/api_keys.txt
+  firebase_config:
+    file: ./secrets/firebase_config.json
+
+## -----------------------------------------------------------
+## Red
+## -----------------------------------------------------------
 networks:
   app-network:
     driver: bridge
