@@ -268,6 +268,40 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
       {error && <Alert intent="error">{error}</Alert>}
       {successMessage && <Alert intent="success">{successMessage}</Alert>}
 
+      {/* Show counter of saved questions at top when returning to image selection */}
+      {savedQuestions.length > 0 && !processedQuestion && (
+        <div className="p-3 bg-gradient-to-r from-green-500/20 to-green-500/10 rounded-lg border border-green-400/30">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-semibold text-white">
+                ✅ {savedQuestions.length} pregunta{savedQuestions.length !== 1 ? 's' : ''} guardada{savedQuestions.length !== 1 ? 's' : ''}
+              </p>
+              <p className="text-xs text-green-300 mt-1">💡 Puedes agregar más o finalizar</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setMode('upload')}
+              onFocus={() => isVoiceModeEnabled && speak('Subir otra imagen', { force: true })}
+              onMouseEnter={() => isVoiceModeEnabled && speak('Subir otra imagen', { force: true })}
+            >
+              📷 Otra imagen
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onCancel}
+              onFocus={() => isVoiceModeEnabled && speak('Finalizar y cerrar', { force: true })}
+              onMouseEnter={() => isVoiceModeEnabled && speak('Finalizar y cerrar', { force: true })}
+            >
+              ✓ Finalizar
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Mode selection */}
       {!mode && !imageFile && !processedQuestion && (
         <div className="grid gap-3">
