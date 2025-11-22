@@ -237,11 +237,13 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
     setSuccessMessage('');
   };
 
+  useEffect(() => {
   if (isVoiceModeEnabled && !mode && !imageFile) {
-    useEffect(() => {
-      speak('Formulario de captura de pregunta. Selecciona una imagen o toma una foto.', { force: true });
-    }, []);
+    // Don't include 'speak' in dependencies to avoid infinite loops
+    speak('Formulario de captura de pregunta. Selecciona una imagen o toma una foto.', { force: true });
   }
+}, [isVoiceModeEnabled, mode, imageFile]);
+
 
   return (
     <div className="grid gap-4 p-4">
