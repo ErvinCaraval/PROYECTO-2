@@ -1,5 +1,21 @@
-# BrainBlitz - Plan de Implementación de Funcionalidades de Accesibilidad   
+---
 
+# 🚀 BrainBlitz - Product Backlog & Release Plan
+## Proyecto de Visión Computacional con Azure
+
+---
+
+## 📋 Índice
+
+1. [Descripción del Proyecto](#descripción-del-proyecto)
+2. [Product Backlog](#product-backlog)
+3. [Historias de Usuario (HU)](#historias-de-usuario-hu)
+4. [Clasificación de HUs según Uso de IA](#clasificación-de-hus-según-uso-de-ia)
+5. [Release Plan](#release-plan)
+6. [Arquitectura Técnica](#arquitectura-técnica)
+7. [Configuración del Proyecto](#configuración-del-proyecto)
+
+---
 ## 🚀 Inicio Rápido
 
 ### Dar permisos a los scripts
@@ -23,1218 +39,1161 @@ bash scripts/cleanup-docker.sh
 # Push - Sube todas las imágenes (backend, frontend, facial-service, redis) a Docker Hub
 bash scripts/push-all-to-dockerhub.sh
 ```
+## 📝 Descripción del Proyecto
+
+**BrainBlitz** es una plataforma de trivia interactiva que integra funcionalidades avanzadas de **Visión Computacional** utilizando **Azure Computer Vision** y **DeepFace** para mejorar la experiencia de creación de preguntas y autenticación de usuarios.
+
+### Objetivos Principales:
+- ✅ Implementar autenticación biométrica mediante reconocimiento facial
+- ✅ Automatizar la extracción de texto de imágenes (OCR)
+- ✅ Analizar imágenes para generar preguntas automáticamente
+- ✅ Detectar objetos en imágenes para crear preguntas visuales interactivas
+
+### Tecnologías Utilizadas:
+- **Backend:** Node.js, Express, Firebase
+- **Frontend:** React, TailwindCSS
+- **IA y Visión Computacional:**
+  - Azure Computer Vision (OCR, Analyze Image, Object Detection)
+  - DeepFace (Reconocimiento Facial)
+  - Azure Container Instances (Despliegue de microservicios)
+- **DevOps:** GitHub Actions, Docker
 
 ---
 
-## 📋 Resumen del Proyecto
+## 📊 Product Backlog
 
-Este documento describe el plan de implementación para agregar funcionalidades integrales de accesibilidad a BrainBlitz, un juego de trivia multijugador. El proyecto involucra 5 desarrolladores: 1 Desarrollador Backend y 4 Desarrolladores Frontend.
+### Sprint Semana 1: 17-19 Noviembre 2025
+**Enfoque:** OCR y Reconocimiento Facial
 
-**Nota importante (arquitectura reciente)**: el almacenamiento de datos faciales (imágenes Base64 y embeddings) ya no se guarda en Firestore. Todas las operaciones relacionadas con registro, verificación y persistencia de embeddings se realizan en el microservicio `facial-service` que usa Redis como almacenamiento persistente. Firebase Auth sigue usándose solo para la gestión de cuentas y tokens.
+| ID | Historia de Usuario | Puntos | Prioridad | Fecha | IA |
+|----|-------------------|--------|-----------|-------|-----|
+| HU-VC2 | [BE] OCR - Extracción de Texto de Imágenes | 8 SP | Media | 17 Nov | ✅ |
+| HU-VC1 | [BE] Reconocimiento Facial para Login y Registro | 13 SP | Alta | 18 Nov | ✅ |
 
-### Estructura Actual del Proyecto
-- **Backend**: Node.js + Express + Socket.io + Firebase (Firestore + Auth)
-- **Frontend**: React + Vite + TailwindCSS + Firebase Auth
-- **Base de Datos**: Firebase Firestore con colecciones: `users`, `games`, `questions`
-- **Autenticación**: Firebase Auth con email/contraseña
-- **Flujo de Juego**: Multijugador en tiempo real vía WebSockets
-
----
-
-## 🎯 Objetivos del Proyecto 
-
-Implementar funcionalidades de accesibilidad para permitir que usuarios con discapacidades visuales participen completamente en juegos de trivia multijugador a través de funcionalidades de modo de voz.
-
-### Funcionalidades Clave a Implementar:
-- Preferencia de dificultad visual durante el registro
-- Activación automática del modo de voz
-- Lectura de preguntas mediante Text-to-Speech
-- Configuración de ajustes de voz
-- Almacenamiento del historial de interacciones de voz
-- Sistema de tutorial de audio
-- Controles administrativos de accesibilidad
-- Integración del modo de voz con el juego
+**Total Sprint 1:** 21 Story Points
 
 ---
 
-## 👥 Estructura del Equipo y Responsabilidades
+### Sprint Semana 2: 20-24 Noviembre 2025
+**Enfoque:** Análisis de Imágenes y Detección de Objetos
 
-### Desarrollador Backend (1 persona)
-**Responsabilidades Principales:**
-- Modificaciones del esquema de base de datos
-- Desarrollo de endpoints de API
-- Registro de interacciones de voz
-- Controles administrativos
-- Análisis de datos y reportes
+| ID | Historia de Usuario | Puntos | Prioridad | Fecha | IA |
+|----|-------------------|--------|-----------|-------|-----|
+| HU-VC3 | [BE] Análisis Inteligente de Imágenes | 10 SP | Media | 20 Nov | ✅ |
+| HU-VC4 | [BE] Detección de Objetos en Imágenes | 10 SP | Media | 21 Nov | ✅ |
 
-### Desarrolladores Frontend (4 personas) 
-**Responsabilidades Principales:**
-- Implementación de UI/UX
-- Integración del modo de voz
-- Funcionalidad de Text-to-Speech
-- Componentes de interfaz de usuario
-- Gestión de estado del lado del cliente
+**Total Sprint 2:** 20 Story Points
 
 ---
 
-## 📊 Historias de Usuario (Formato CONESSA)
-
-### US1: Registro de Preferencia de Dificultad Visual
-**C (Contexto)**: Durante el registro de usuario, los nuevos jugadores necesitan indicar si tienen dificultades visuales para asegurar el soporte adecuado de accesibilidad.
-
-**O (Objetivo)**: Permitir a los usuarios especificar sus necesidades de accesibilidad visual durante la creación de cuenta.
-
-**N (Necesidad)**: Habilitar funcionalidades de accesibilidad personalizadas desde el momento del registro.
-
-**E (Entidad)**: Formulario de registro de usuario y datos de perfil de usuario.
-
-**S (Soporte)**: Campo backend `visualDifficulty` (boolean) en la colección de usuarios de Firebase, checkbox frontend en RegisterPage.jsx y CompleteProfilePage.jsx.
-
-**S (Suposición)**: Los usuarios indicarán honestamente sus necesidades de accesibilidad, el esquema de Firebase puede ser extendido.
-
-**A (Criterios de Aceptación)**:
-- El formulario de registro incluye checkbox "Tengo dificultades visuales"
-- El backend almacena `visualDifficulty: boolean` en el documento de usuario
-- CompleteProfilePage también incluye esta opción para usuarios existentes
-- El valor por defecto es `false` para usuarios que no lo seleccionen
-- El campo es validado y almacenado en Firebase Firestore
-- Probado en al menos 2 navegadores y dispositivos
+**Total del Proyecto:** 41 Story Points
 
 ---
 
-### US2: Activación Automática del Modo de Voz
-**C (Contexto)**: Los usuarios con dificultades visuales necesitan activación automática del modo de voz cuando inician sesión en la aplicación.
+## 📖 Historias de Usuario (HU)
 
-**O (Objetivo)**: Habilitar automáticamente el modo de voz para usuarios que indicaron dificultades visuales durante el registro.
+### HU-VC1: Reconocimiento Facial para Login y Registro
+**📅 Fecha Objetivo:** Martes 18 Noviembre 2025  
+**🔢 Estimación:** 13 Story Points  
+**🎯 Prioridad:** Alta  
+**🤖 Requiere IA:** ✅ Sí (DeepFace + VGG-Face)
 
-**N (Necesidad)**: Proporcionar una experiencia de accesibilidad fluida sin configuración manual.
+#### Contexto (C):
+Los usuarios de BrainBlitz necesitan una forma segura y moderna de autenticarse sin depender únicamente de contraseñas. El sistema actual permite registro e inicio de sesión con email/contraseña, pero se requiere implementar autenticación biométrica mediante reconocimiento facial.
 
-**E (Entidad)**: Flujo de autenticación de usuario y gestión de estado de la aplicación.
+#### Objetivo (O):
+Permitir que los usuarios se registren e inicien sesión usando reconocimiento facial como método de autenticación alternativo o principal, mejorando la seguridad y la experiencia de usuario.
 
-**S (Soporte)**: Modificación de AuthContext.jsx para verificar la preferencia `visualDifficulty` del usuario y activar el modo de voz automáticamente.
+#### Necesidad (N):
+Proporcionar una opción de autenticación sin contraseña que sea rápida, segura y accesible desde dispositivos con cámara, reduciendo la fricción en el proceso de login y mejorando la seguridad mediante biometría.
 
-**S (Suposición)**: La preferencia del usuario se almacena correctamente en Firebase, existe el componente de modo de voz.
+#### Entidades (E):
+- Sistema de autenticación facial
+- Base de datos de usuarios
+- Servicio de reconocimiento facial (DeepFace)
+- Frontend con acceso a cámara
+- Backend con endpoints de registro y login facial
 
-**A (Criterios de Aceptación)**:
-- El modo de voz se activa automáticamente cuando un usuario con `visualDifficulty: true` inicia sesión
-- El modo de voz persiste a través de la navegación de páginas
-- El modo de voz puede ser deshabilitado manualmente si es necesario
-- La activación ocurre antes de que se muestre cualquier contenido del juego
-- Funciona consistentemente en todas las páginas de la aplicación
-- Probado con usuarios que tienen y no tienen dificultades visuales
+#### Soporte (S):
+- **Microservicio:** `facial-service` usando DeepFace
+- **Endpoints Backend:** 
+  - `POST /api/face/register`
+  - `POST /api/face/login`
+- **Frontend:** 
+  - `FaceRegister.jsx`
+  - `FaceLogin.jsx`
+- **Base de Datos:** Firebase Firestore (embeddings faciales)
+- **Despliegue:** Azure Container Instances
 
----
+#### Suposiciones (S):
+- Los usuarios tienen acceso a dispositivos con cámara web
+- El navegador soporta acceso a la cámara (getUserMedia API)
+- El servicio de reconocimiento facial está desplegado y accesible
+- Los usuarios están dispuestos a registrar su rostro para autenticación
 
-### US3: Lectura de Preguntas mediante Text-to-Speech
-**C (Contexto)**: Durante el juego, los usuarios en modo de voz necesitan que las preguntas y opciones de respuesta sean leídas en voz alta mediante Text-to-Speech.
+#### Criterios de Aceptación (A):
 
-**O (Objetivo)**: Implementar funcionalidad TTS para leer preguntas y opciones durante los juegos.
+**1. Registro Facial:**
+- ✅ Endpoint `POST /api/face/register` que acepta imagen Base64 y token Firebase
+- ✅ Validación de rostro visible usando DeepFace
+- ✅ Generación de embeddings faciales con modelo VGG-Face
+- ✅ Almacenamiento de embeddings en Firestore asociados al userId
+- ✅ Prevención de duplicados (un usuario = un registro facial)
+- ✅ Respuesta exitosa: `{ success: true, message: 'Cara registrada exitosamente' }`
+- ✅ Manejo de errores: rostro no detectado, token inválido, usuario ya registrado
 
-**N (Necesidad)**: Habilitar acceso de audio al contenido del juego para usuarios con discapacidades visuales.
+**2. Login Facial:**
+- ✅ Endpoint `POST /api/face/login` que acepta imagen Base64 y email
+- ✅ Búsqueda de usuario por email en Firebase Auth
+- ✅ Verificación de registro facial previo
+- ✅ Comparación facial con embedding almacenado
+- ✅ Umbral de confianza mínimo (ej: 0.7)
+- ✅ Generación de token personalizado de Firebase si verificación exitosa
+- ✅ Respuesta: `{ success: true, verified: true, customToken, userId, confidence }`
+- ✅ Manejo de errores: rostro no detectado, usuario no encontrado, verificación fallida
 
-**E (Entidad)**: Componentes GamePage.jsx y Question.jsx, Web Speech API.
+**3. Frontend - Registro Facial:**
+- ✅ Componente `FaceRegister.jsx` con:
+  - Vista previa de cámara en tiempo real
+  - Captura de foto del rostro
+  - Conversión a Base64
+  - Envío al endpoint `/api/face/register`
+  - Mensajes de éxito/error
+- ✅ Solicitud de permisos de cámara con `navigator.mediaDevices.getUserMedia()`
+- ✅ Indicador visual cuando se detecta un rostro
+- ✅ Manejo de errores: sin cámara, permisos denegados, registro fallido
 
-**S (Soporte)**: Implementación frontend usando Web Speech API (speechSynthesis), integración con el componente Question existente.
+**4. Frontend - Login Facial:**
+- ✅ Componente `FaceLogin.jsx` con:
+  - Campo de email del usuario
+  - Vista previa de cámara
+  - Captura de foto
+  - Envío al endpoint `/api/face/login`
+  - Autenticación con token recibido
+- ✅ Integración con `AuthContext`
+- ✅ Redirección a página principal después de login exitoso
 
-**S (Suposición)**: El navegador soporta Web Speech API, el modo de voz está correctamente activado.
+**5. Seguridad:**
+- ✅ Registro facial requiere token Firebase válido
+- ✅ Verificación de token antes de procesar registro
+- ✅ Almacenamiento seguro de embeddings en Firestore
+- ✅ Rate limiting en endpoints para prevenir ataques
 
-**A (Criterios de Aceptación)**:
-- Las preguntas se leen automáticamente cuando se muestran
-- Todas las opciones de respuesta se leen en secuencia
-- El TTS puede ser pausado/reanudado por el usuario
-- La velocidad de lectura es ajustable
-- Funciona tanto para preguntas manuales como generadas por IA
-- La calidad del audio es clara y comprensible
-- Probado en Chrome, Firefox y Safari
+**6. Despliegue:**
+- ✅ Microservicio facial desplegado en Azure Container Instances
+- ✅ URL configurada en `.env` como `DEEPFACE_SERVICE_URL`
+- ✅ Health check: `GET /health` responde correctamente
 
----
+**7. Pruebas:**
+- ✅ Pruebas unitarias para controladores de registro y login
+- ✅ Pruebas de integración de flujos completos
+- ✅ Pruebas manuales en Chrome, Firefox y Edge
 
-### US4: Configuración de Ajustes de Voz
-**C (Contexto)**: Los usuarios necesitan personalizar los ajustes de voz (tipo de voz, velocidad, volumen) para una experiencia auditiva óptima.
-
-**O (Objetivo)**: Proporcionar controles de personalización de voz para una experiencia de audio personalizada.
-
-**N (Necesidad)**: Permitir a los usuarios ajustar parámetros TTS según sus preferencias.
-
-**E (Entidad)**: Panel de ajustes de voz y configuración TTS.
-
-**S (Soporte)**: Componente de ajustes de voz frontend con controles para selección de voz, velocidad (0.5x-2x), y volumen (0-100%).
-
-**S (Suposición)**: Web Speech API soporta personalización de voz, los ajustes pueden ser persistidos.
-
-**A (Criterios de Aceptación)**:
-- El panel de ajustes de voz es accesible desde la navegación principal
-- Los usuarios pueden seleccionar entre voces del sistema disponibles
-- El ajuste de velocidad va de 0.5x a 2x la velocidad normal
-- El control de volumen funciona independientemente del volumen del sistema
-- Los ajustes se guardan en localStorage
-- Los cambios se aplican inmediatamente al TTS en curso
-- Los ajustes persisten a través de sesiones del navegador
-- Probado con múltiples opciones de voz
-
----
-
-### US5: Almacenamiento del Historial de Interacciones de Voz
-**C (Contexto)**: Los usuarios necesitan rastrear sus interacciones en modo de voz para análisis y propósitos de mejora.
-
-**O (Objetivo)**: Almacenar y gestionar el historial de interacciones de voz para sesiones de usuario.
-
-**N (Necesidad)**: Habilitar el seguimiento de patrones de uso del modo de voz y preferencias de usuario.
-
-**E (Entidad)**: Registros de interacciones de voz y datos de sesión de usuario.
-
-**S (Soporte)**: Nueva colección backend `voiceInteractions` en Firebase, servicio de registro frontend para eventos de voz.
-
-**S (Suposición)**: Firebase puede manejar colecciones adicionales, las regulaciones de privacidad permiten el registro de interacciones.
-
-**A (Criterios de Aceptación)**:
-- Las interacciones de voz se registran con timestamp
-- Los registros incluyen: ID de pregunta, duración de lectura, interacciones del usuario
-- El historial es accesible a los usuarios en su perfil
-- Los datos se almacenan de forma segura en Firebase
-- Los usuarios pueden ver sus estadísticas de uso del modo de voz
-- El historial puede ser exportado o eliminado por el usuario
-- Cumple con regulaciones de privacidad de datos
-- Probado con múltiples sesiones de usuario
-
----
-
-### US6: Sistema de Tutorial de Audio
-**C (Contexto)**: Los nuevos usuarios con dificultades visuales necesitan un tutorial accesible que explique cómo usar la aplicación.
-
-**O (Objetivo)**: Proporcionar tutorial de audio integral para usuarios en modo de voz.
-
-**N (Necesidad)**: Asegurar que los usuarios con discapacidades visuales puedan aprender las funcionalidades de la aplicación a través de guía de audio.
-
-**E (Entidad)**: Sistema de tutorial y entrega de contenido de audio.
-
-**S (Soporte)**: Componente de tutorial de audio frontend con instrucciones pregrabadas o generadas por TTS, gestión de contenido de tutorial backend.
-
-**S (Suposición)**: El contenido de audio puede ser creado y almacenado, el sistema de tutorial se integra con el onboarding existente.
-
-**A (Criterios de Aceptación)**:
-- El tutorial de audio cubre: registro, creación de juego, responder preguntas, ajustes de voz
-- El tutorial se ofrece automáticamente a usuarios con dificultades visuales
-- Los usuarios pueden repetir secciones del tutorial
-- El tutorial puede ser omitido o pausado
-- La calidad del audio es profesional y clara
-- El tutorial se adapta a los ajustes de voz del usuario
-- Disponible en múltiples idiomas
-- Probado con usuarios con discapacidades visuales reales
+#### Tecnologías:
+- DeepFace
+- VGG-Face (modelo de embeddings)
+- Azure Container Instances
+- Firebase Auth
+- React
+- getUserMedia API
 
 ---
 
-### US7: Configuración Administrativa de Accesibilidad
-**C (Contexto)**: Los administradores necesitan configurar ajustes de accesibilidad y monitorear el uso del modo de voz en toda la plataforma.
+### HU-VC2: OCR - Extracción de Texto de Imágenes
+**📅 Fecha Objetivo:** Lunes 17 Noviembre 2025  
+**🔢 Estimación:** 8 Story Points  
+**🎯 Prioridad:** Media  
+**🤖 Requiere IA:** ✅ Sí (Azure Computer Vision OCR)
 
-**O (Objetivo)**: Proporcionar controles administrativos para funcionalidades de accesibilidad y análisis de uso.
+#### Contexto (C):
+Los usuarios y administradores de BrainBlitz necesitan una forma de convertir imágenes con texto (pantallas, documentos, carteles, capturas) en texto editable para generar preguntas automáticamente o procesar contenido visual. Actualmente, el sistema requiere que las preguntas se ingresen manualmente, lo cual es lento y propenso a errores.
 
-**N (Necesidad)**: Habilitar gestión y monitoreo de accesibilidad a nivel de plataforma.
+#### Objetivo (O):
+Implementar un sistema de reconocimiento óptico de caracteres (OCR) que permita extraer texto de imágenes subidas por usuarios o administradores, facilitando la creación de preguntas y el procesamiento de contenido visual.
 
-**E (Entidad)**: Panel administrativo y sistema de configuración de accesibilidad.
+#### Necesidad (N):
+Automatizar la extracción de texto de imágenes para reducir el tiempo de creación de preguntas, permitir que usuarios suban imágenes con preguntas y convertirlas automáticamente, y mejorar la accesibilidad del contenido visual.
 
-**S (Soporte)**: Endpoints administrativos backend para ajustes de accesibilidad, extensión de AdminPage.jsx frontend con controles de accesibilidad.
+#### Entidades (E):
+- Servicio de OCR (Azure Computer Vision)
+- Endpoint backend para procesamiento de imágenes
+- Frontend para subir imágenes
+- Base de datos para almacenar texto extraído
+- Sistema de validación y limpieza de texto
 
-**S (Suposición)**: Los usuarios administrativos tienen permisos adecuados, los datos de análisis están disponibles.
+#### Soporte (S):
+- **Servicio:** Azure Computer Vision API con OCR
+- **Endpoint Backend:** `POST /api/vision/extract-text`
+- **Frontend:** Componente para subir imágenes y mostrar texto extraído
+- **Variables de Entorno:** 
+  - `AZURE_COMPUTER_VISION_KEY`
+  - `AZURE_COMPUTER_VISION_ENDPOINT`
+- **Biblioteca:** `@azure/cognitiveservices-computervision` o HTTP REST
 
-**A (Criterios de Aceptación)**:
-- El panel administrativo incluye sección de ajustes de accesibilidad
-- Los administradores pueden habilitar/deshabilitar el modo de voz globalmente
-- Las estadísticas de uso muestran tasas de adopción del modo de voz
-- Los administradores pueden configurar ajustes de voz por defecto
-- El sistema puede generar reportes de uso de accesibilidad
-- Los controles administrativos están adecuadamente protegidos
-- Los cambios se aplican a todos los usuarios inmediatamente
-- Probado con cuentas administrativas y de usuario regular
+#### Suposiciones (S):
+- Azure Computer Vision está configurado y tiene créditos disponibles
+- Las imágenes subidas contienen texto legible
+- Los usuarios tienen permisos para subir imágenes
+- El texto extraído puede requerir limpieza y validación
+
+#### Criterios de Aceptación (A):
+
+**1. Configuración de Azure:**
+- ✅ Cuenta Azure con Computer Vision habilitado
+- ✅ API Key de Azure Computer Vision disponible
+- ✅ URL del endpoint de Azure Computer Vision
+- ✅ Variables `AZURE_COMPUTER_VISION_KEY` y `AZURE_COMPUTER_VISION_ENDPOINT` en `.env`
+- ✅ Instalación de `@azure/cognitiveservices-computervision` o uso de `axios`/`fetch`
+
+**2. Endpoint Backend:**
+- ✅ Ruta `POST /api/vision/extract-text` en `backend-v1/routes/vision.routes.js`
+- ✅ Controlador `visionController.js` con método `extractText`
+- ✅ Middleware de autenticación `authenticate.js`
+- ✅ Validación de imagen en Base64 o archivo
+- ✅ Límite de tamaño de 4MB (límite de Azure)
+
+**3. Integración con Azure OCR:**
+- ✅ Conversión de Base64 a buffer binario
+- ✅ POST a `https://{endpoint}/vision/v3.2/read/analyze`
+- ✅ Headers: `Ocp-Apim-Subscription-Key` y `Content-Type: application/octet-stream`
+- ✅ Manejo de procesamiento asíncrono de Azure (analyze → get results)
+- ✅ Extracción de todas las líneas de texto de la respuesta
+- ✅ Formato de respuesta limpio y estructurado
+
+**4. Respuesta del Endpoint:**
+- ✅ Formato JSON: `{ success: true, text: string, language: string, confidence: number, lines: array }`
+- ✅ Texto completo concatenado
+- ✅ Array con cada línea de texto detectada
+- ✅ Idioma detectado (es, en, etc.)
+- ✅ Nivel de confianza promedio
+
+**5. Manejo de Errores:**
+- ✅ Error 400 si imagen inválida
+- ✅ Mensaje claro si no se detecta texto
+- ✅ Manejo de errores de Azure (401, 429, 500)
+- ✅ Manejo de timeouts con reintentos
+- ✅ Logging de errores para debugging
+
+**6. Pruebas:**
+- ✅ Prueba unitaria de función de extracción
+- ✅ Prueba de integración del endpoint completo
+- ✅ Prueba de manejo de errores
+- ✅ Prueba manual con JPG, PNG, PDF
+
+**7. Integración con el Juego - Frontend:**
+- ✅ Componente `OCRQuestionCreator.jsx` con:
+  - Subida de imagen (drag & drop o botón)
+  - Preview de imagen subida
+  - Botón "Extraer Texto" → llamada a `/api/vision/extract-text`
+  - Spinner de carga
+  - Textarea editable con texto extraído
+  - Botón "Usar como Pregunta" → pre-llena formulario
+- ✅ Integración con `AIQuestionGenerator.jsx`:
+  - Texto extraído pasa al campo de pregunta
+  - Usuario edita texto antes de crear pregunta
+  - Usuario completa opciones y selecciona respuesta correcta
+  - Creación de pregunta con flujo existente
+- ✅ Flujo de Usuario Completo:
+  1. Usuario va a "Crear Juego" o "Generar Preguntas"
+  2. Ve opción "Crear desde Imagen con Texto"
+  3. Sube imagen con texto
+  4. Sistema extrae texto automáticamente
+  5. Texto aparece en formulario editable
+  6. Usuario edita y completa opciones
+  7. Crea pregunta normalmente
+- ✅ Resultado Final:
+  - Preguntas creadas desde OCR aparecen en juegos normalmente
+  - No hay diferencia visual entre preguntas manuales u OCR
+  - Texto extraído se guarda como texto de pregunta
+  - Jugadores ven y responden pregunta normalmente
+
+**8. Documentación:**
+- ✅ Endpoint documentado en `swagger.yaml`
+- ✅ Instrucciones de configuración de Azure en README
+- ✅ Ejemplos de uso del endpoint
+
+#### Tecnologías:
+- Azure Computer Vision OCR
+- Node.js
+- Express
+- React
+- Base64 encoding
 
 ---
 
-### US8: Integración del Modo de Voz con el Juego
-**C (Contexto)**: El modo de voz debe integrarse perfectamente con el sistema de juego multijugador en tiempo real existente.
+### HU-VC3: Análisis Inteligente de Imágenes
+**📅 Fecha Objetivo:** Jueves 20 Noviembre 2025  
+**🔢 Estimación:** 10 Story Points  
+**🎯 Prioridad:** Media  
+**🤖 Requiere IA:** ✅ Sí (Azure Computer Vision Analyze)
 
-**O (Objetivo)**: Asegurar que el modo de voz funcione correctamente con el gameplay multijugador basado en WebSocket.
+#### Contexto (C):
+Los usuarios y administradores de BrainBlitz necesitan generar preguntas automáticamente a partir de imágenes. Actualmente, las preguntas se crean manualmente o mediante IA basada en texto. Se requiere un sistema que analice imágenes y genere descripciones, tags y categorías automáticamente para facilitar la creación de preguntas visuales.
 
-**N (Necesidad)**: Mantener la funcionalidad del juego mientras se proporciona accesibilidad de audio.
+#### Objetivo (O):
+Implementar un sistema de análisis inteligente de imágenes que genere descripciones automáticas, tags, categorías y metadatos de imágenes, permitiendo crear preguntas de trivia basadas en contenido visual de forma automática.
 
-**E (Entidad)**: Flujo del juego, eventos WebSocket, y sincronización del modo de voz.
+#### Necesidad (N):
+Automatizar la generación de contenido para preguntas visuales, mejorar la accesibilidad describiendo imágenes, y permitir búsqueda y categorización automática de imágenes por contenido.
 
-**S (Soporte)**: Modificación de GamePage.jsx frontend para manejar el modo de voz durante el gameplay en tiempo real, compatibilidad backend con eventos de modo de voz.
+#### Entidades (E):
+- Servicio de análisis de imágenes (Azure Computer Vision)
+- Endpoint backend para análisis
+- Frontend para subir y visualizar análisis
+- Base de datos para almacenar metadatos de imágenes
+- Sistema de generación de preguntas basado en análisis
 
-**S (Suposición)**: El sistema WebSocket puede manejar eventos de modo de voz, la lógica del juego permanece sin cambios.
+#### Soporte (S):
+- **Servicio:** Azure Computer Vision API Analyze Image
+- **Endpoint Backend:** `POST /api/vision/analyze-image`
+- **Frontend:** Componente para subir imágenes y mostrar análisis
+- **Variables de Entorno:** 
+  - `AZURE_COMPUTER_VISION_KEY`
+  - `AZURE_COMPUTER_VISION_ENDPOINT`
+- **Biblioteca:** `@azure/cognitiveservices-computervision` o HTTP REST
 
-**A (Criterios de Aceptación)**:
-- El modo de voz funciona durante juegos multijugador en tiempo real
-- Las preguntas se leen cuando se reciben vía WebSocket
-- El modo de voz no interfiere con el tiempo del juego
-- Todos los jugadores pueden participar independientemente del estado del modo de voz
-- El modo de voz se sincroniza con cambios de estado del juego
-- El rendimiento no se degrada por las funcionalidades de voz
-- Funciona tanto con preguntas manuales como generadas por IA
-- Probado con grupos mixtos (usuarios con y sin modo de voz)
+#### Suposiciones (S):
+- Azure Computer Vision está configurado
+- Las imágenes contienen contenido reconocible
+- Los usuarios tienen permisos para subir imágenes
+- El análisis puede usarse para generar preguntas automáticamente
 
-### US9: Reconocimiento de Respuestas por Voz
+#### Criterios de Aceptación (A):
 
-**C (Contexto)**: Los usuarios en modo de voz necesitan responder a las preguntas del juego mediante comandos de voz en lugar de hacer clic en las opciones.
+**1. Configuración de Azure:**
+- ✅ Variable `AZURE_COMPUTER_VISION_KEY` en `.env`
+- ✅ Variable `AZURE_COMPUTER_VISION_ENDPOINT` en `.env`
+- ✅ Dependencias instaladas
 
-**O (Objetivo)**: Permitir que los usuarios respondan a las preguntas del juego usando reconocimiento de voz para una experiencia completamente hands-free.
+**2. Endpoint Backend:**
+- ✅ Ruta `POST /api/vision/analyze-image` en `backend-v1/routes/vision.routes.js`
+- ✅ Método `analyzeImage` en `visionController.js`
+- ✅ Autenticación requerida
+- ✅ Validación de imagen Base64 o archivo, máximo 4MB
 
-**N (Necesidad)**: Habilitar participación completa de usuarios con discapacidades visuales que no pueden ver las opciones de respuesta en pantalla.
+**3. Integración con Azure Analyze Image:**
+- ✅ POST a `https://{endpoint}/vision/v3.2/analyze?visualFeatures=Description,Tags,Categories,Objects,Color`
+- ✅ Headers: `Ocp-Apim-Subscription-Key` y `Content-Type: application/octet-stream`
+- ✅ Parámetros visuales: Description, Tags, Categories, Objects, Color
+- ✅ Procesamiento correcto de respuesta JSON
 
-**E (Entidad)**: Sistema de reconocimiento de voz, respuestas de usuario, y validación de respuestas.
+**4. Extracción de Datos:**
+- ✅ Descripción principal y descripciones alternativas
+- ✅ Tags con niveles de confianza
+- ✅ Categorías detectadas (abstract, people, outdoor, etc.)
+- ✅ Objetos detectados con bounding boxes
+- ✅ Colores dominantes y acento de color
+- ✅ Metadatos: dimensiones, formato
 
-**S (Soporte)**: Implementación frontend con Web Speech API para reconocimiento de voz, backend para procesamiento y validación de respuestas habladas, integración con el sistema de juego existente.
+**5. Respuesta del Endpoint:**
+- ✅ Objeto JSON estructurado con descripción, tags, categorías, objetos y colores
+- ✅ Niveles de confianza incluidos
+- ✅ Tags y categorías ordenados por confianza descendente
 
-**S (Suposición)**: El navegador soporta Web Speech API, los usuarios pueden hablar claramente, el sistema puede distinguir entre opciones de respuesta.
+**6. Manejo de Errores:**
+- ✅ Error 400 con mensaje claro para imagen inválida
+- ✅ Mensaje si no se detecta contenido reconocible
+- ✅ Manejo de 401, 429, 500 con mensajes apropiados
+- ✅ Manejo de timeouts con reintentos
+- ✅ Logging de errores
 
-**A (Criterios de Aceptación)**:
-- Los usuarios pueden responder diciendo "A", "B", "C", "D" o "primera opción", "segunda opción", etc.
-- El sistema reconoce correctamente las respuestas de voz con al menos 90% de precisión
-- Se proporciona feedback visual y auditivo cuando el sistema está escuchando
-- El sistema confirma la respuesta reconocida antes de enviarla
-- Los usuarios pueden repetir su respuesta si no fue reconocida correctamente
-- El reconocimiento de voz funciona en tiempo real sin afectar el tiempo del juego
-- Se registra el uso del reconocimiento de voz en el historial de interacciones
-- Funciona en navegadores Chrome, Edge y Firefox
-- Probado con diferentes acentos y niveles de ruido de fondo
-- Integración completa con el sistema de puntuación y ranking existente
+**7. Pruebas:**
+- ✅ Prueba unitaria con imagen de prueba
+- ✅ Prueba de integración del endpoint
+- ✅ Prueba con imágenes de arte, geografía, objetos, personas
+- ✅ Verificación de manejo de errores
 
-### 🔧 **Detalles Técnicos de Implementación - US9: Reconocimiento de Respuestas por Voz**
+**8. Integración con el Juego - Frontend:**
+- ✅ Componente `ImageAnalysisQuestionCreator.jsx` con:
+  - Subida de imagen (drag & drop o botón)
+  - Preview de imagen
+  - Botón "Analizar Imagen" → llamada a `/api/vision/analyze-image`
+  - Spinner de carga
+  - Resultados en secciones:
+    - Descripción Principal (texto destacado)
+    - Tags Detectados (chips/badges, confianza mínima 0.7)
+    - Categorías (lista)
+    - Objetos Detectados (lista con confianza)
+- ✅ Generación Automática de Preguntas:
+  - Botón "Generar Pregunta desde Análisis":
+    1. Usa descripción como base para pregunta
+    2. Usa tags para sugerir categoría
+    3. Pre-llena campo: "¿Qué se muestra en esta imagen?"
+    4. Sugiere opciones basadas en tags y objetos
+  - Usuario puede editar antes de guardar
+- ✅ Integración con `AIQuestionGenerator`:
+  - Opción "Crear desde Análisis de Imagen"
+  - Análisis pre-llena formulario
+  - Usuario completa/edita y crea pregunta
+- ✅ Flujo de Usuario Completo:
+  1. Usuario va a "Crear Juego" o "Generar Preguntas"
+  2. Selecciona "Crear desde Análisis de Imagen"
+  3. Sube imagen (monumento, obra de arte, paisaje, objeto)
+  4. Sistema analiza y muestra resultados
+  5. Usuario revisa descripción, tags y objetos
+  6. Clic en "Generar Pregunta"
+  7. Sistema pre-llena formulario con pregunta sugerida
+  8. Usuario edita pregunta y opciones
+  9. Usuario selecciona respuesta correcta y crea pregunta
+- ✅ Resultado Final en el Juego:
+  - Preguntas aparecen con imagen asociada
+  - Durante juego, jugadores ven:
+    - Imagen en la pregunta
+    - Texto de pregunta generada desde análisis
+    - Opciones de respuesta
+  - Ejemplo: "¿Qué monumento histórico se muestra en la imagen?" con opciones basadas en tags
+  - Validación de respuesta correcta normal
 
-#### **Frontend (Web Speech API)**
-```javascript
-// Implementación en frontend-v2/src/services/voiceRecognition.js
-class VoiceRecognitionService {
-  constructor() {
-    this.recognition = new webkitSpeechRecognition();
-    this.recognition.lang = 'es-ES';
-    this.recognition.continuous = false;
-    this.recognition.interimResults = false;
-  }
+**9. Documentación:**
+- ✅ Endpoint documentado en Swagger
+- ✅ Ejemplos de imágenes y respuestas esperadas
+- ✅ Guía de integración para generar preguntas
 
-  async recognizeAnswer(questionOptions) {
-    return new Promise((resolve, reject) => {
-      this.recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.toLowerCase();
-        const matchedOption = this.matchAnswer(transcript, questionOptions);
-        resolve(matchedOption);
-      };
-      
-      this.recognition.onerror = reject;
-      this.recognition.start();
-    });
-  }
+#### Tecnologías:
+- Azure Computer Vision Analyze Image
+- Node.js
+- Express
+- React
 
-  matchAnswer(transcript, options) {
-    // Buscar coincidencias directas: "A", "B", "C", "D"
-    const directMatch = options.find(option => 
-      transcript.includes(option.toLowerCase())
-    );
-    
-    // Buscar coincidencias por posición: "primera", "segunda", etc.
-    const positionMatch = this.matchByPosition(transcript, options);
-    
-    return directMatch || positionMatch || transcript;
-  }
-}
-```
+---
 
-#### **Backend (Procesamiento y Validación)**
-```javascript
-// Implementación en backend-v1/controllers/voiceController.js
-exports.validateVoiceResponse = async (req, res) => {
-  const { userId, questionId, voiceResponse, questionOptions } = req.body;
+### HU-VC4: Detección de Objetos en Imágenes
+**📅 Fecha Objetivo:** Viernes 21 Noviembre 2025  
+**🔢 Estimación:** 10 Story Points  
+**🎯 Prioridad:** Media  
+**🤖 Requiere IA:** ✅ Sí (Azure Computer Vision Object Detection)
+
+#### Contexto (C):
+Los usuarios de BrainBlitz necesitan crear preguntas visuales donde se identifiquen objetos específicos en imágenes. Por ejemplo, "¿Qué objeto aparece en esta imagen?" o "¿Cuántos objetos de tipo X hay en la imagen?". Actualmente, no existe funcionalidad para detectar y localizar objetos en imágenes.
+
+#### Objetivo (O):
+Implementar un sistema de detección de objetos que identifique y localice objetos específicos dentro de imágenes, permitiendo crear preguntas interactivas basadas en la detección de objetos y mejorar la experiencia de preguntas visuales.
+
+#### Necesidad (N):
+Habilitar la creación de preguntas visuales interactivas, permitir búsqueda de objetos en imágenes, y mejorar la accesibilidad describiendo qué objetos están presentes en una imagen.
+
+#### Entidades (E):
+- Servicio de detección de objetos (Azure Computer Vision)
+- Endpoint backend para detección
+- Frontend para visualizar objetos detectados
+- Base de datos para almacenar detecciones
+- Sistema de preguntas basadas en objetos
+
+#### Soporte (S):
+- **Servicio:** Azure Computer Vision API Object Detection
+- **Endpoint Backend:** `POST /api/vision/detect-objects`
+- **Frontend:** Componente para mostrar objetos con bounding boxes
+- **Variables de Entorno:** 
+  - `AZURE_COMPUTER_VISION_KEY`
+  - `AZURE_COMPUTER_VISION_ENDPOINT`
+- **Biblioteca:** `@azure/cognitiveservices-computervision` o HTTP REST
+
+#### Suposiciones (S):
+- Azure Computer Vision soporta detección de objetos
+- Las imágenes contienen objetos reconocibles
+- Los usuarios necesitan crear preguntas basadas en objetos detectados
+
+#### Criterios de Aceptación (A):
+
+**1. Configuración de Azure:**
+- ✅ Variable `AZURE_COMPUTER_VISION_KEY` configurada
+- ✅ Variable `AZURE_COMPUTER_VISION_ENDPOINT` configurada
+- ✅ Librería de Azure instalada o HTTP REST
+
+**2. Endpoint Backend:**
+- ✅ Ruta `POST /api/vision/detect-objects` en `backend-v1/routes/vision.routes.js`
+- ✅ Método `detectObjects` en `visionController.js`
+- ✅ Autenticación requerida
+- ✅ Validación de imagen Base64 o archivo, máximo 4MB
+
+**3. Integración con Azure Object Detection:**
+- ✅ POST a `https://{endpoint}/vision/v3.2/detect`
+- ✅ Headers: `Ocp-Apim-Subscription-Key` y `Content-Type: application/octet-stream`
+- ✅ Procesamiento de respuesta JSON con objetos detectados
+
+**4. Extracción de Objetos:**
+- ✅ Lista de objetos con nombre, confianza, bounding box y área
+- ✅ Filtrado opcional por confianza < 0.5
+- ✅ Ordenamiento por confianza descendente o área
+
+**5. Respuesta del Endpoint:**
+- ✅ Formato JSON con array de objetos, total y dimensiones de imagen
+- ✅ Metadatos: total de objetos y dimensiones
+- ✅ Bounding boxes en píxeles o normalizados (0-1)
+
+**6. Funcionalidades Adicionales:**
+- ✅ Parámetro opcional `objectName` para buscar objeto específico
+- ✅ Conteo de cada tipo de objeto
+- ✅ Agrupación de objetos del mismo tipo
+
+**7. Manejo de Errores:**
+- ✅ Error 400 con mensaje claro para imagen inválida
+- ✅ Lista vacía si no se detectan objetos (no error)
+- ✅ Manejo de errores de API con mensajes apropiados
+- ✅ Manejo de timeouts
+- ✅ Logging de errores
+
+**8. Pruebas:**
+- ✅ Prueba unitaria con imagen de prueba
+- ✅ Prueba de integración del endpoint
+- ✅ Verificación de detección de múltiples objetos
+- ✅ Verificación de precisión
+- ✅ Verificación de manejo de errores
+
+**9. Integración con el Juego - Frontend:**
+- ✅ Componente `ObjectDetectionQuestionCreator.jsx` con:
+  - Subida de imagen (drag & drop o botón)
+  - Preview de imagen
+  - Botón "Detectar Objetos" → llamada a `/api/vision/detect-objects`
+  - Spinner de carga
+  - Imagen con bounding boxes dibujados sobre objetos
+  - Lista de objetos con:
+    - Nombre del objeto
+    - Nivel de confianza (barra o porcentaje)
+    - Posición (coordenadas)
+- ✅ Visualización Interactiva:
+  - Hover sobre objeto en lista → resalta bounding box
+  - Clic en bounding box → resalta en lista
+  - Filtro por confianza mínima (slider)
+  - Contador por tipo (ej: "3 guitarras", "1 persona", "2 sillas")
+- ✅ Generación Automática de Preguntas:
+  - Botón "Crear Pregunta de Objetos":
+    1. Genera: "¿Qué objeto aparece en esta imagen?" o "¿Cuántos [objeto] hay?"
+    2. Usa objetos detectados como opciones
+    3. Marca objeto con mayor confianza como correcto
+    4. Pre-llena formulario
+  - Opción para preguntas de conteo:
+    - "¿Cuántos [objeto] hay en la imagen?"
+    - Sistema cuenta objetos del mismo tipo
+    - Genera opciones numéricas (0, 1, 2, 3, 4+)
+- ✅ Integración con `AIQuestionGenerator`:
+  - Opción "Crear Pregunta de Detección de Objetos"
+  - Imagen con objetos se guarda asociada a pregunta
+  - Formulario pre-llenado con pregunta y opciones
+- ✅ Flujo de Usuario Completo:
+  1. Usuario va a "Crear Juego" o "Generar Preguntas"
+  2. Selecciona "Crear Pregunta de Detección de Objetos"
+  3. Sube imagen con objetos (instrumentos, animales, objetos)
+  4. Sistema detecta objetos y muestra resultados visuales
+  5. Usuario revisa objetos y ajusta filtro de confianza
+  6. Usuario selecciona tipo de pregunta:
+     - "¿Qué objeto es este?" (identificación)
+     - "¿Cuántos [objeto] hay?" (conteo)
+  7. Sistema genera pregunta y opciones automáticamente
+  8. Usuario edita si es necesario
+  9. Usuario confirma respuesta correcta y crea pregunta
+- ✅ Resultado Final en el Juego:
+  - Preguntas muestran:
+    - Imagen original (sin bounding boxes)
+    - Texto de pregunta (ej: "¿Qué objeto musical aparece?")
+    - Opciones de respuesta (objetos detectados)
+  - Durante juego, jugadores:
+    1. Ven imagen de pregunta
+    2. Leen pregunta sobre objeto a identificar/contar
+    3. Seleccionan respuesta entre opciones
+    4. Sistema valida respuesta correcta
+  - Ejemplo:
+    - Imagen: Foto de guitarra, piano y violín
+    - Pregunta: "¿Qué instrumento musical aparece en la imagen?"
+    - Opciones: ["Guitarra", "Piano", "Violín", "Batería"]
+    - Respuesta correcta: "Guitarra" (objeto con mayor confianza)
+
+**10. Documentación:**
+- ✅ Endpoint documentado en Swagger
+- ✅ Ejemplos visuales de imágenes y objetos detectados
+- ✅ Guía de uso para crear preguntas
+
+#### Tecnologías:
+- Azure Computer Vision Object Detection
+- Node.js
+- Express
+- React
+- Canvas API (para dibujar bounding boxes)
+
+---
+
+## 🤖 Clasificación de HUs según Uso de IA
+
+### ✅ Historias que REQUIEREN IA (4/4 - 100%)
+
+Todas las historias de usuario en este proyecto utilizan servicios de Inteligencia Artificial:
+
+| ID | Historia de Usuario | Servicio de IA | Modelo/Algoritmo |
+|----|-------------------|----------------|------------------|
+| **HU-VC1** | Reconocimiento Facial | DeepFace | VGG-Face (embeddings faciales) |
+| **HU-VC2** | OCR - Extracción de Texto | Azure Computer Vision | OCR v3.2 |
+| **HU-VC3** | Análisis de Imágenes | Azure Computer Vision | Analyze Image API |
+| **HU-VC4** | Detección de Objetos | Azure Computer Vision | Object Detection API |
+
+### 📊 Análisis por Tipo de IA:
+
+**1. Visión Computacional con Azure (3 HUs):**
+- HU-VC2: OCR para extracción de texto
+- HU-VC3: Análisis inteligente de imágenes (descripción, tags, categorías)
+- HU-VC4: Detección y localización de objetos
+
+**2. Reconocimiento Facial con DeepFace (1 HU):**
+- HU-VC1: Autenticación biométrica mediante reconocimiento facial
+
+### 🎯 Distribución de Story Points por IA:
+
+- **DeepFace (Reconocimiento Facial):** 13 SP (31.7%)
+- **Azure OCR:** 8 SP (19.5%)
+- **Azure Analyze Image:** 10 SP (24.4%)
+- **Azure Object Detection:** 10 SP (24.4%)
+
+**Total:** 41 Story Points implementando servicios de IA
+
+---
+
+## 📅 Release Plan
+
+### 🚀 Release 1.0: "Computer Vision Foundation"
+**Fecha de Lanzamiento:** 24 Noviembre 2025  
+**Duración:** 2 Sprints (8 días laborables)
+
+---
+
+### Sprint 1: "Autenticación y Extracción" (17-19 Noviembre 2025)
+**Objetivo:** Implementar funcionalidades core de autenticación biométrica y procesamiento de texto
+
+#### 📦 Entregables:
+
+**Lunes 17 Noviembre:**
+- ✅ **HU-VC2: OCR - Extracción de Texto** (8 SP)
+  - Endpoint `/api/vision/extract-text` funcional
+  - Integración con Azure Computer Vision OCR
+  - Componente frontend `OCRQuestionCreator.jsx`
+  - Flujo completo de creación de preguntas desde imágenes con texto
+  - Pruebas unitarias e integración
+  - Documentación Swagger
+
+**Martes 18 Noviembre:**
+- ✅ **HU-VC1: Reconocimiento Facial** (13 SP)
+  - Microservicio `facial-service` con DeepFace desplegado en Azure
+  - Endpoints `/api/face/register` y `/api/face/login`
+  - Componentes frontend `FaceRegister.jsx` y `FaceLogin.jsx`
+  - Integración con Firebase Auth
+  - Sistema de embeddings faciales
+  - Pruebas de seguridad y autenticación
+  - Documentación completa
+
+**Miércoles 19 Noviembre:**
+- 🔧 Testing y refinamiento del Sprint 1
+- 📝 Documentación de usuario
+- 🐛 Bug fixing
+- 🎨 Mejoras de UX/UI
+
+#### 📈 Métricas del Sprint 1:
+- **Story Points:** 21 SP
+- **Historias Completadas:** 2
+- **Endpoints API Nuevos:** 3
+- **Componentes Frontend Nuevos:** 3
+- **Servicios de IA Integrados:** 2 (DeepFace, Azure OCR)
+
+---
+
+### Sprint 2: "Análisis Visual Avanzado" (20-24 Noviembre 2025)
+**Objetivo:** Implementar análisis inteligente y detección de objetos para preguntas visuales
+
+#### 📦 Entregables:
+
+**Jueves 20 Noviembre:**
+- ✅ **HU-VC3: Análisis Inteligente de Imágenes** (10 SP)
+  - Endpoint `/api/vision/analyze-image` funcional
+  - Integración con Azure Computer Vision Analyze
+  - Componente frontend `ImageAnalysisQuestionCreator.jsx`
+  - Extracción de descripción, tags, categorías, objetos y colores
+  - Generación automática de preguntas desde análisis
+  - Integración con `AIQuestionGenerator`
+  - Pruebas con diferentes tipos de imágenes
+  - Documentación y ejemplos
+
+**Viernes 21 Noviembre:**
+- ✅ **HU-VC4: Detección de Objetos** (10 SP)
+  - Endpoint `/api/vision/detect-objects` funcional
+  - Integración con Azure Object Detection
+  - Componente frontend `ObjectDetectionQuestionCreator.jsx`
+  - Visualización de bounding boxes
+  - Generación de preguntas de identificación y conteo
+  - Funcionalidades interactivas (hover, filtros)
+  - Pruebas de precisión
+  - Documentación completa
+
+**Sábado-Domingo 22-23 Noviembre:**
+- 🔧 Testing integral de todas las funcionalidades
+- 📝 Documentación de usuario final
+- 🐛 Bug fixing y optimización
+- 🎨 Refinamiento de UX/UI
+- 🔒 Revisión de seguridad
+
+**Lunes 24 Noviembre:**
+- 🚀 **Despliegue a Producción**
+- ✅ Validación de todas las funcionalidades en producción
+- 📊 Configuración de monitoring y alertas
+- 📢 Anuncio de Release 1.0
+
+#### 📈 Métricas del Sprint 2:
+- **Story Points:** 20 SP
+- **Historias Completadas:** 2
+- **Endpoints API Nuevos:** 2
+- **Componentes Frontend Nuevos:** 2
+- **Servicios de IA Integrados:** 1 (Azure Computer Vision - 2 APIs)
+
+---
+
+### 📊 Resumen General del Release 1.0
+
+#### Story Points Totales: 41 SP
+- Sprint 1: 21 SP (51.2%)
+- Sprint 2: 20 SP (48.8%)
+
+#### Componentes Entregados:
+- **Backend:**
+  - 5 Endpoints API nuevos
+  - 1 Microservicio de reconocimiento facial
+  - 5 Controladores nuevos
+  - Sistema de validación y manejo de errores
   
-  try {
-    // Validar respuesta de voz contra opciones
-    const validation = await validateResponse(voiceResponse, questionOptions);
-    
-    // Registrar interacción de voz
-    await db.collection('voiceInteractions').add({
-      userId,
-      questionId,
-      voiceResponse,
-      validation,
-      timestamp: new Date(),
-      accuracy: validation.confidence
-    });
-    
-    res.json({ 
-      valid: validation.isValid, 
-      matchedOption: validation.matchedOption,
-      confidence: validation.confidence 
-    });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-```
-
-#### **Integración con WebSocket**
-```javascript
-// Eventos WebSocket para respuestas de voz
-socket.on('voice-answer', async (data) => {
-  const { userId, questionId, voiceResponse } = data;
+- **Frontend:**
+  - 5 Componentes React nuevos
+  - Integración con cámara web
+  - Visualización de análisis de IA
+  - Sistema de generación automática de preguntas
   
-  // Procesar respuesta de voz
-  const validation = await voiceController.validateVoiceResponse({
-    userId, questionId, voiceResponse
-  });
+- **Integraciones de IA:**
+  - DeepFace (VGG-Face)
+  - Azure Computer Vision OCR
+  - Azure Computer Vision Analyze
+  - Azure Computer Vision Object Detection
   
-  // Enviar resultado a todos los jugadores
-  socket.broadcast.emit('voice-answer-result', {
-    userId, validation, timestamp: new Date()
-  });
-});
+- **Infraestructura:**
+  - Azure Container Instances (microservicio facial)
+  - Firebase Firestore (embeddings faciales)
+  - Azure Cognitive Services (3 APIs)
+
+#### Capacidades Nuevas para Usuarios:
+1. ✅ Autenticación sin contraseña mediante rostro
+2. ✅ Creación de preguntas desde imágenes con texto
+3. ✅ Generación automática de preguntas desde análisis de imágenes
+4. ✅ Creación de preguntas visuales con detección de objetos
+5. ✅ Mejora de accesibilidad con descripción automática de imágenes
+
+---
+
+### 🔄 Post-Release Activities (25-30 Noviembre 2025)
+
+**Lunes 25 Noviembre:**
+- 📊 Análisis de métricas de uso
+- 📝 Recolección de feedback de usuarios
+- 🐛 Identificación de bugs críticos
+
+**Martes 26 - Viernes 29 Noviembre:**
+- 🔧 Hotfixes según prioridad
+- 📈 Optimización de rendimiento
+- 🎨 Mejoras de UX basadas en feedback
+- 📚 Actualización de documentación
+
+**Sábado 30 Noviembre:**
+- 📊 Reporte final de Release 1.0
+- 🎯 Planificación de Release 2.0
+- 🏆 Retrospectiva del proyecto
+
+---
+
+## 🏗️ Arquitectura Técnica
+
+### Arquitectura General del Sistema
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        FRONTEND (React)                      │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐│
+│  │ FaceRegister │ │  FaceLogin   │ │ OCRQuestionCreator   ││
+│  │              │ │              │ │                      ││
+│  └──────────────┘ └──────────────┘ └──────────────────────┘│
+│  ┌────────────────────────────┐ ┌──────────────────────────┐│
+│  │ ImageAnalysisQuestionCreator│ │ObjectDetectionCreator    ││
+│  │                            │ │                          ││
+│  └────────────────────────────┘ └──────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            │ HTTPS/REST API
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    BACKEND (Node.js/Express)                 │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐│
+│  │ /face/       │ │ /vision/     │ │ /vision/             ││
+│  │  register    │ │  extract-text│ │  analyze-image       ││
+│  │  login       │ │              │ │                      ││
+│  └──────────────┘ └──────────────┘ └──────────────────────┘│
+│  ┌──────────────────────────────┐                          │
+│  │ /vision/detect-objects       │                          │
+│  │                              │                          │
+│  └──────────────────────────────┘                          │
+└─────────────────────────────────────────────────────────────┘
+         │                                    │
+         │                                    │
+         ▼                                    ▼
+┌─────────────────────┐        ┌──────────────────────────────┐
+│  FACIAL SERVICE     │        │   AZURE COGNITIVE SERVICES   │
+│  (DeepFace)         │        │                              │
+│                     │        │  ┌────────────────────────┐  │
+│  ┌───────────────┐  │        │  │ Computer Vision OCR    │  │
+│  │ VGG-Face      │  │        │  │                        │  │
+│  │ Embeddings    │  │        │  └────────────────────────┘  │
+│  └───────────────┘  │        │  ┌────────────────────────┐  │
+│                     │        │  │ Analyze Image API      │  │
+│  Azure Container    │        │  │                        │  │
+│  Instances          │        │  └────────────────────────┘  │
+└─────────────────────┘        │  ┌────────────────────────┐  │
+         │                     │  │ Object Detection API   │  │
+         │                     │  │                        │  │
+         ▼                     │  └────────────────────────┘  │
+┌─────────────────────┐        └──────────────────────────────┘
+│  FIREBASE           │
+│  ┌───────────────┐  │
+│  │ Auth          │  │
+│  └───────────────┘  │
+│  ┌───────────────┐  │
+│  │ Firestore     │  │
+│  │ (Embeddings)  │  │
+│  └───────────────┘  │
+└─────────────────────┘
 ```
 
-#### **Esquema de Base de Datos**
-```javascript
-// Colección: voiceInteractions
-{
-  userId: "string",
-  questionId: "string", 
-  voiceResponse: "string",
-  matchedOption: "string",
-  confidence: "number",
-  timestamp: "Date",
-  gameId: "string",
-  sessionId: "string"
-}
+### Flujo de Datos por Funcionalidad
+
+#### 1. Reconocimiento Facial (HU-VC1)
+
+**Registro:**
+```
+Usuario → Cámara Web → Base64 → /api/face/register
+    → Facial Service (DeepFace) → Embedding VGG-Face
+    → Firebase Firestore → Confirmación
 ```
 
----
-
-## 📋 Backlog del Producto
-
-| ID | Historia de Usuario | Prioridad | Estimación | Responsable | Ubicación de Implementación | Notas |
-|-----|------------|----------|------------|---------------------|--------------------------|-------|
-| US1 | Registro de preferencia de accesibilidad | Alta | 3SP | Desarrollador Backend | Backend | Agregar campo boolean `visualDifficulty` a la colección de usuarios de Firebase |
-| US2 | Activación automática del modo de voz | Alta | 5SP | Desarrollador Frontend | Frontend | Modificar AuthContext.jsx para verificar preferencia del usuario y activar modo de voz |
-| US3 | Lectura de preguntas mediante Text-to-Speech | Alta | 8SP | Desarrollador Frontend | Frontend | Implementar integración Web Speech API en Question.jsx y GamePage.jsx |
-| US4 | Configuración de ajustes de voz | Media | 5SP | Desarrollador Frontend | Frontend | Crear componente de ajustes de voz con controles de voz, velocidad, volumen |
-| US5 | Almacenamiento del historial de interacciones de voz | Media | 6SP | Desarrollador Backend | Backend | Nueva colección Firebase `voiceInteractions` para registrar eventos de voz del usuario |
-| US6 | Sistema de tutorial de audio | Media | 7SP | Desarrollador Frontend | Frontend | Crear componente de tutorial de audio con instrucciones generadas por TTS |
-| US7 | Configuración administrativa de accesibilidad | Baja | 4SP | Desarrollador Backend | Backend | Extender AdminPage.jsx con controles de accesibilidad y análisis |
-| US8 | Integración del modo de voz con el juego | Alta | 6SP | Desarrollador Frontend | Frontend | Asegurar que el modo de voz funcione con el sistema multijugador WebSocket |
-| US9 | Reconocimiento de respuestas por voz | Alta | 10SP | Desarrollador Frontend + Backend | Frontend + Backend | Web Speech API frontend + procesamiento y validación backend |
-
----
-
-## 🗓️ Plan de Lanzamiento Reorganizado (7-21 de Octubre, 2024)
-
-### Objetivo del Lanzamiento
-Implementar funcionalidades integrales de accesibilidad para BrainBlitz, permitiendo que usuarios con discapacidades visuales participen completamente en juegos de trivia multijugador a través de funcionalidades de modo de voz.
-
-### **🎯 Estrategia de Desarrollo: Backend Primero**
-**Filosofía**: El backend debe estar completamente terminado antes de que el frontend comience a trabajar. Esto asegura que todas las APIs y funcionalidades estén listas cuando los desarrolladores frontend las necesiten.
-
-### Planificación de Sprints Reorganizada
-
-#### **Sprint Backend (7-15 de Octubre): Infraestructura Completa**
-**Objetivo**: Completar TODAS las funcionalidades de backend antes de que el frontend comience.
-
-**Historias de Usuario Backend Asignadas**:
-- US1: Registro de preferencia de accesibilidad (3SP) - **BACKEND COMPLETO**
-- US5: Almacenamiento del historial de interacciones de voz (6SP) - **BACKEND COMPLETO**
-- US7: Configuración administrativa de accesibilidad (4SP) - **BACKEND COMPLETO**
-- US8: Integración del modo de voz con el juego (6SP) - **BACKEND COMPLETO**
-- US9: Procesamiento y validación de respuestas por voz (4SP) - **BACKEND COMPLETO**
-
-**Total de Story Points Backend**: 23SP
-
-#### **Sprint Frontend (16-21 de Octubre): Implementación de UI/UX**
-**Objetivo**: Implementar todas las funcionalidades frontend usando las APIs del backend ya terminadas.
-
-**Historias de Usuario Frontend Asignadas**:
-- US1: Integración frontend de preferencia de accesibilidad (2SP)
-- US2: Activación automática del modo de voz (5SP)
-- US3: Lectura de preguntas mediante Text-to-Speech (8SP)
-- US4: Configuración de ajustes de voz (5SP)
-- US5: Integración frontend del historial de voz (3SP)
-- US6: Sistema de tutorial de audio (7SP)
-- US7: Panel administrativo frontend (2SP)
-- US8: Integración frontend del modo de voz (3SP)
-- US9: Reconocimiento de voz con Web Speech API (6SP) - **FRONTEND COMPLETO**
-
-**Total de Story Points Frontend**: 41SP
-
----
-
-## 🎯 **RESPONSABILIDADES DEL DESARROLLADOR BACKEND (TU)**
-
-### **📋 Cronograma de Trabajo Backend (7-15 de Octubre)**
-
-#### **Día 1 (7 de Octubre): US1 - Registro de Preferencia de Accesibilidad**
-**Tareas Críticas:**
-- [ ] **Modificar esquema Firebase**: Agregar campo `visualDifficulty: boolean` a colección `users`
-- [ ] **Actualizar endpoint**: `POST /api/users/register` para aceptar `visualDifficulty`
-- [ ] **Validación**: Implementar validación del campo (boolean, opcional, default: false)
-- [ ] **Pruebas**: Crear pruebas unitarias para el nuevo campo
-- [ ] **Documentación**: Actualizar Swagger con el nuevo parámetro
-
-**Entregables del Día:**
-- ✅ Campo `visualDifficulty` funcionando en Firebase
-- ✅ Endpoint de registro actualizado y probado
-- ✅ Documentación Swagger actualizada
-
-#### **Día 2 (8 de Octubre): US1 + US5 + US9 - Validación y Diseño de Historial y Voz**
-**Tareas Críticas:**
-- [ ] **Completar US1**: Pruebas de integración, manejo de errores
-- [ ] **Diseñar US5**: Crear esquema para colección `voiceInteractions`
-- [ ] **Diseñar US9**: Crear esquema para procesamiento de respuestas por voz
-- [ ] **Esquema Firebase**: Definir estructura completa de datos de voz
-- [ ] **Seguridad**: Implementar autenticación para endpoints de voz
-- [ ] **Validación de Voz**: Diseñar sistema de validación de respuestas habladas
-
-**Entregables del Día:**
-- ✅ US1 completamente terminado
-- ✅ Esquema `voiceInteractions` diseñado y documentado
-- ✅ Sistema de autenticación implementado
-
-#### **Día 3 (9 de Octubre): US5 + US9 - Endpoints de Historial de Voz y Procesamiento**
-**Tareas Críticas:**
-- [ ] **Crear colección**: Implementar `voiceInteractions` en Firebase
-- [ ] **Endpoint POST**: `POST /api/voice-interactions` para registrar interacciones
-- [ ] **Endpoint GET**: `GET /api/voice-interactions/:userId` para obtener historial
-- [ ] **Endpoint DELETE**: `DELETE /api/voice-interactions/:userId` para limpiar datos
-- [ ] **Endpoint STATS**: `GET /api/voice-interactions/stats/:userId` para estadísticas
-- [ ] **Endpoint Voice Processing**: `POST /api/voice-responses/validate` para validar respuestas habladas
-- [ ] **Endpoint Voice Recognition**: `POST /api/voice-responses/process` para procesar respuestas de voz
-
-**Entregables del Día:**
-- ✅ Todos los endpoints de `voiceInteractions` funcionando
-- ✅ Sistema de logging de interacciones de voz operativo
-- ✅ Endpoints probados y documentados
-
-#### **Día 4 (10 de Octubre): US7 + US9 - Controles Administrativos y Validación de Voz**
-**Tareas Críticas:**
-- [ ] **Endpoint Admin Stats**: `GET /api/admin/accessibility-stats` para estadísticas globales
-- [ ] **Endpoint Admin Settings**: `PUT /api/admin/accessibility-settings` para configuración global
-- [ ] **Endpoint Admin Users**: `GET /api/admin/voice-mode-users` para lista de usuarios
-- [ ] **Sistema de Análisis**: Implementar métricas de adopción del modo de voz
-- [ ] **Reportes**: Crear sistema de generación de reportes de accesibilidad
-- [ ] **Validación de Voz**: Implementar algoritmo de validación de respuestas habladas
-- [ ] **Procesamiento de Voz**: Crear sistema de procesamiento de respuestas de voz
-
-**Entregables del Día:**
-- ✅ Todos los endpoints administrativos funcionando
-- ✅ Sistema de análisis y métricas implementado
-- ✅ Generación de reportes operativa
-
-#### **Día 5 (11 de Octubre): US8 + US9 - Compatibilidad WebSocket y Integración de Voz**
-**Tareas Críticas:**
-- [ ] **Análisis WebSocket**: Revisar eventos existentes para compatibilidad con modo de voz
-- [ ] **Optimización**: Asegurar que WebSocket no se degrade con modo de voz
-- [ ] **Pruebas**: Probar WebSocket con modo de voz habilitado
-- [ ] **Rendimiento**: Optimizar transferencia de datos para juegos con voz
-- [ ] **Documentación**: Documentar cambios en WebSocket
-- [ ] **Integración de Voz**: Integrar sistema de reconocimiento de voz con WebSocket
-- [ ] **Eventos de Voz**: Crear eventos WebSocket para respuestas de voz
-
-**Entregables del Día:**
-- ✅ WebSocket compatible con modo de voz
-- ✅ Rendimiento optimizado para juegos con voz
-- ✅ Documentación de cambios WebSocket
-
-#### **Día 6 (12 de Octubre): Pruebas y Optimización**
-**Tareas Críticas:**
-- [ ] **Pruebas de Integración**: Ejecutar todas las pruebas de integración
-- [ ] **Pruebas de Rendimiento**: Optimizar rendimiento de todos los endpoints
-- [ ] **Pruebas de Seguridad**: Verificar seguridad de todos los endpoints
-- [ ] **Documentación**: Completar documentación Swagger
-- [ ] **Refactoring**: Mejorar código si es necesario
-
-**Entregables del Día:**
-- ✅ Todas las pruebas de integración pasando
-- ✅ Rendimiento optimizado
-- ✅ Documentación Swagger completa
-
-#### **Día 7 (13 de Octubre): Documentación y Guías**
-**Tareas Críticas:**
-- [ ] **Guías de Integración**: Crear guías detalladas para frontend
-- [ ] **Ejemplos de API**: Crear ejemplos de uso para cada endpoint
-- [ ] **Documentación Técnica**: Completar documentación técnica
-- [ ] **Testing**: Pruebas adicionales si es necesario
-- [ ] **Code Review**: Revisar todo el código backend
-
-**Entregables del Día:**
-- ✅ Guías de integración completas
-- ✅ Ejemplos de API documentados
-- ✅ Documentación técnica finalizada
-
-#### **Día 8 (14 de Octubre): Preparación Final**
-**Tareas Críticas:**
-- [ ] **Despliegue**: Preparar backend para integración frontend
-- [ ] **Monitoreo**: Configurar monitoreo y logging
-- [ ] **Backup**: Crear backup de configuración
-- [ ] **Validación Final**: Validar que todo funciona correctamente
-- [ ] **Entrega**: Preparar entrega para equipo frontend
-
-**Entregables del Día:**
-- ✅ Backend desplegado y listo
-- ✅ Monitoreo configurado
-- ✅ Sistema de backup implementado
-
-#### **Día 9 (15 de Octubre): BACKEND COMPLETO**
-**Tareas Críticas:**
-- [ ] **Validación Final**: Ejecutar todas las pruebas una vez más
-- [ ] **Entrega**: Confirmar que TODAS las APIs están listas
-- [ ] **Presentación**: Preparar presentación para equipo frontend
-- [ ] **Handover**: Entregar documentación y APIs al equipo frontend
-- [ ] **Celebración**: ¡Backend completado! 🎉
-
-**Entregables del Día:**
-- ✅ **BACKEND 100% COMPLETO**
-- ✅ Todas las APIs probadas y documentadas
-- ✅ Frontend puede comenzar a trabajar el día 16
-
-### **🔑 APIs que Debes Entregar Completas:**
-
-#### **US1 - Registro de Accesibilidad:**
-```javascript
-POST /api/users/register
-{
-  "email": "usuario@ejemplo.com",
-  "password": "password123",
-  "displayName": "Usuario",
-  "visualDifficulty": true  // ← NUEVO CAMPO
-}
-
-PUT /api/users/profile
-{
-  "visualDifficulty": false  // ← ACTUALIZAR PREFERENCIA
-}
+**Login:**
+```
+Usuario → Cámara Web → Base64 + Email → /api/face/login
+    → Buscar Usuario en Firebase Auth
+    → Obtener Embedding Almacenado
+    → Facial Service (Comparación) → Verificación
+    → Generar Custom Token → Autenticación Exitosa
 ```
 
-#### **US5 - Historial de Interacciones de Voz:**
-```javascript
-POST /api/voice-interactions
-{
-  "questionId": "q123",
-  "action": "question_read",
-  "duration": 5000,
-  "metadata": {...}
-}
+#### 2. OCR - Extracción de Texto (HU-VC2)
 
-GET /api/voice-interactions/:userId
-GET /api/voice-interactions/stats/:userId
-DELETE /api/voice-interactions/:userId
+```
+Usuario → Imagen → Base64 → /api/vision/extract-text
+    → Azure Computer Vision OCR API
+    → Procesamiento Asíncrono (analyze → results)
+    → Extracción de Texto por Líneas
+    → Texto Limpio + Metadatos → Usuario
+    → Pre-llenar Formulario de Pregunta
 ```
 
-#### **US7 - Controles Administrativos:**
-```javascript
-GET /api/admin/accessibility-stats
-PUT /api/admin/accessibility-settings
-GET /api/admin/voice-mode-users
+#### 3. Análisis de Imágenes (HU-VC3)
+
+```
+Usuario → Imagen → Base64 → /api/vision/analyze-image
+    → Azure Computer Vision Analyze API
+    → Extracción: Description, Tags, Categories, Objects, Colors
+    → Procesamiento y Ordenamiento por Confianza
+    → Resultados Estructurados → Usuario
+    → Generación Automática de Pregunta
+    → Pre-llenar Formulario con Sugerencias
 ```
 
-### **📊 Métricas de Éxito Backend:**
-- ✅ **100% de endpoints funcionando** antes del 16 de octubre
-- ✅ **Documentación Swagger completa** para todos los endpoints
-- ✅ **Pruebas unitarias** con cobertura >90%
-- ✅ **Pruebas de integración** pasando
-- ✅ **Rendimiento WebSocket** sin degradación
-- ✅ **Seguridad** implementada en todos los endpoints
+#### 4. Detección de Objetos (HU-VC4)
+
+```
+Usuario → Imagen → Base64 → /api/vision/detect-objects
+    → Azure Computer Vision Object Detection API
+    → Detección de Objetos + Bounding Boxes
+    → Filtrado por Confianza
+    → Agrupación por Tipo
+    → Visualización con Bounding Boxes → Usuario
+    → Generación de Pregunta (Identificación o Conteo)
+    → Pre-llenar Formulario
+```
+
+### Stack Tecnológico Completo
+
+#### Backend:
+- **Runtime:** Node.js v18+
+- **Framework:** Express.js
+- **Autenticación:** Firebase Admin SDK
+- **Base de Datos:** Firebase Firestore
+- **Validación:** express-validator
+- **HTTP Client:** axios / node-fetch
+- **Procesamiento de Imágenes:** Sharp (opcional)
+
+#### Frontend:
+- **Framework:** React 18+
+- **Routing:** React Router v6
+- **State Management:** Context API / Redux (opcional)
+- **Styling:** TailwindCSS
+- **HTTP Client:** axios
+- **Media:** getUserMedia API (WebRTC)
+- **Canvas:** HTML5 Canvas (para bounding boxes)
+
+#### Servicios de IA:
+- **DeepFace:** Python-based facial recognition library
+- **Azure Computer Vision:** v3.2
+  - OCR (Read API)
+  - Analyze Image
+  - Object Detection
+- **Modelo Facial:** VGG-Face (embeddings de 128 dimensiones)
+
+#### Infraestructura:
+- **Hosting Backend:** Azure App Service / Cloud Run
+- **Hosting Frontend:** Vercel / Netlify
+- **Container Registry:** Azure Container Registry
+- **Container Instances:** Azure Container Instances (facial-service)
+- **Storage:** Firebase Storage (imágenes)
+- **CI/CD:** GitHub Actions
+
+#### DevOps:
+- **Version Control:** Git + GitHub
+- **CI/CD:** GitHub Actions (workflow automatizado)
+- **Containers:** Docker
+- **Monitoring:** Azure Application Insights
+- **Logs:** Winston / Morgan
 
 ---
 
-## 🔧 Guías de Desarrollo
+## ⚙️ Configuración del Proyecto
 
-### Responsabilidades del Desarrollador Backend
-
-#### Tareas del Sprint 1 (7-13 de Octubre)
-
-**US1: Registro de preferencia de accesibilidad (3SP)**
-- [ ] **Actualización del Esquema de Base de Datos**
-  - Modificar la colección de usuarios de Firebase para incluir campo `visualDifficulty: boolean`
-  - Actualizar endpoint de registro de usuario para aceptar y almacenar preferencia de accesibilidad
-  - Asegurar compatibilidad hacia atrás con usuarios existentes (por defecto: `false`)
-  - Agregar validación para el nuevo campo
-
-- [ ] **Desarrollo de Endpoints de API**
-  - Actualizar `POST /api/users/register` para manejar parámetro `visualDifficulty`
-  - Actualizar `PUT /api/users/profile` para permitir actualizar preferencia de accesibilidad
-  - Agregar manejo adecuado de errores y validación
-
-- [ ] **Pruebas**
-  - Pruebas unitarias para registro de usuario con preferencia de accesibilidad
-  - Pruebas de integración para endpoints de API
-  - Pruebas de migración de base de datos
-
-**US8: Integración del modo de voz con el juego (6SP)**
-- [ ] **Compatibilidad WebSocket**
-  - Asegurar que los eventos WebSocket existentes funcionen con el modo de voz
-  - Agregar estado del modo de voz al estado del juego si es necesario
-  - Probar funcionalidad en tiempo real con modo de voz habilitado
-
-- [ ] **Optimización de Rendimiento**
-  - Monitorear rendimiento WebSocket con modo de voz
-  - Optimizar transferencia de datos para juegos habilitados para voz
-  - Asegurar que no haya degradación en el rendimiento multijugador
-
-#### Tareas del Sprint 2 (14-21 de Octubre)
-
-**US5: Almacenamiento del historial de interacciones de voz (6SP)**
-- [ ] **Diseño de Base de Datos**
-  - Crear nueva colección Firebase `voiceInteractions`
-  - Diseñar esquema para registros de interacciones de voz:
-    ```javascript
-    {
-      userId: string,
-      sessionId: string,
-      questionId: string,
-      action: string, // 'question_read', 'option_read', 'settings_changed'
-      timestamp: number,
-      duration: number, // en milisegundos
-      metadata: object // contexto adicional
-    }
-    ```
-
-- [ ] **Endpoints de API**
-  - `POST /api/voice-interactions` - Registrar interacción de voz
-  - `GET /api/voice-interactions/:userId` - Obtener historial de voz del usuario
-  - `DELETE /api/voice-interactions/:userId` - Limpiar historial de voz del usuario
-  - `GET /api/voice-interactions/stats/:userId` - Obtener estadísticas de uso de voz
-
-- [ ] **Privacidad y Seguridad de Datos**
-  - Implementar autenticación adecuada para endpoints de interacciones de voz
-  - Agregar políticas de retención de datos
-  - Asegurar cumplimiento GDPR para datos de interacciones de voz
-
-**US7: Configuración administrativa de accesibilidad (4SP)**
-- [ ] **Endpoints de API Administrativos**
-  - `GET /api/admin/accessibility-stats` - Obtener estadísticas de accesibilidad a nivel de plataforma
-  - `PUT /api/admin/accessibility-settings` - Actualizar ajustes de accesibilidad globales
-  - `GET /api/admin/voice-mode-users` - Obtener lista de usuarios usando modo de voz
-
-- [ ] **Análisis y Reportes**
-  - Implementar análisis de uso del modo de voz
-  - Crear reportes de adopción de accesibilidad
-  - Agregar monitoreo para rendimiento del modo de voz
-
-- [ ] **Integración del Panel Administrativo**
-  - Extender AdminPage.jsx existente con controles de accesibilidad
-  - Agregar dashboard de estadísticas de accesibilidad
-  - Implementar controles administrativos para ajustes de modo de voz
-
-**US9: Procesamiento y validación de respuestas por voz (4SP)**
-- [ ] **Crear controlador de voz**
-  - Implementar `voiceController.js` para procesamiento de respuestas de voz
-  - Crear algoritmo de validación de respuestas habladas
-  - Implementar sistema de coincidencia de respuestas con opciones
-- [ ] **Endpoints de procesamiento de voz**
-  - `POST /api/voice-responses/validate` - Validar respuesta de voz
-  - `POST /api/voice-responses/process` - Procesar respuesta de voz
-  - `GET /api/voice-responses/stats/:userId` - Estadísticas de reconocimiento
-- [ ] **Integración con WebSocket**
-  - Crear eventos WebSocket para respuestas de voz
-  - Implementar sincronización de respuestas de voz en tiempo real
-  - Asegurar compatibilidad con sistema de juego existente
-- [ ] **Sistema de logging y análisis**
-  - Registrar todas las interacciones de reconocimiento de voz
-  - Implementar métricas de precisión del reconocimiento
-  - Crear reportes de uso del reconocimiento de voz
-
-### Responsabilidades de los Desarrolladores Frontend (4 personas)
-
-#### Tareas del Sprint 1 (7-13 de Octubre)
-
-**US1: Registro de preferencia de accesibilidad (3SP)**
-- [ ] **Actualizaciones del Formulario de Registro**
-  - Agregar checkbox de accesibilidad a `RegisterPage.jsx`
-  - Agregar opción de accesibilidad a `CompleteProfilePage.jsx`
-  - Implementar validación de formulario para preferencia de accesibilidad
-  - Agregar etiquetas de accesibilidad y estilos adecuados
-
-**US2: Activación automática del modo de voz (5SP)**
-- [ ] **Modificación de AuthContext**
-  - Modificar `AuthContext.jsx` para verificar preferencia `visualDifficulty` del usuario
-  - Implementar lógica de activación automática del modo de voz
-  - Agregar gestión de estado del modo de voz en toda la aplicación
-  - Asegurar que el modo de voz persista a través de la navegación de páginas
-
-- [ ] **Gestión de Estado del Modo de Voz**
-  - Crear contexto/proveedor del modo de voz
-  - Implementar funcionalidad de alternancia del modo de voz
-  - Agregar indicadores del modo de voz en la UI
-
-**US3: Lectura de preguntas mediante Text-to-Speech (8SP)**
-- [ ] **Integración de Web Speech API**
-  - Investigar e implementar Web Speech API (`speechSynthesis`)
-  - Crear funciones de servicio/utilidad TTS
-  - Implementar síntesis de voz para preguntas y opciones
-
-- [ ] **Actualizaciones del Componente Question**
-  - Modificar `Question.jsx` para soportar TTS
-  - Agregar controles TTS (reproducir, pausar, detener)
-  - Implementar lectura automática de preguntas cuando se muestran
-
-- [ ] **Integración de GamePage**
-  - Actualizar `GamePage.jsx` para manejar TTS durante el juego
-  - Asegurar que TTS funcione con eventos WebSocket en tiempo real
-  - Agregar controles TTS a la interfaz del juego
-
-**US8: Integración del modo de voz con el juego (6SP)**
-- [ ] **Integración WebSocket**
-  - Asegurar que el modo de voz funcione con eventos WebSocket existentes
-  - Probar modo de voz con juegos multijugador
-  - Manejar sincronización del modo de voz entre jugadores
-
-- [ ] **Pruebas de Rendimiento**
-  - Probar rendimiento del modo de voz durante juegos multijugador
-  - Asegurar que no interfiera con el tiempo del juego
-  - Optimizar modo de voz para gameplay en tiempo real
-
-**US9: Reconocimiento de respuestas por voz (6SP)**
-- [ ] **Implementación de Web Speech API**
-  - Crear servicio `VoiceRecognitionService.js` con Web Speech API
-  - Implementar reconocimiento de respuestas "A", "B", "C", "D"
-  - Implementar reconocimiento de respuestas por posición ("primera opción", "segunda opción")
-  - Agregar manejo de errores y fallbacks
-- [ ] **Integración con Componente Question**
-  - Modificar `Question.jsx` para incluir botón de reconocimiento de voz
-  - Implementar feedback visual cuando el sistema está escuchando
-  - Agregar confirmación de respuesta reconocida
-  - Implementar opción de repetir respuesta si no fue reconocida
-- [ ] **Integración con GamePage**
-  - Modificar `GamePage.jsx` para manejar respuestas de voz
-  - Integrar reconocimiento de voz con el sistema de tiempo del juego
-  - Asegurar que las respuestas de voz se envíen correctamente vía WebSocket
-  - Implementar manejo de estados de reconocimiento de voz
-- [ ] **Configuración y Ajustes**
-  - Agregar configuración de reconocimiento de voz en ajustes de usuario
-  - Implementar persistencia de preferencias de reconocimiento de voz
-  - Agregar opciones de idioma y acento para reconocimiento
-  - Implementar calibración de sensibilidad de reconocimiento
-
-#### Tareas del Sprint 2 (14-21 de Octubre)
-
-**US4: Configuración de ajustes de voz (5SP)**
-- [ ] **Componente de Ajustes de Voz**
-  - Crear componente `VoiceSettings.jsx`
-  - Implementar dropdown de selección de voz
-  - Agregar control deslizante de velocidad (0.5x - 2x)
-  - Agregar control deslizante de volumen (0-100%)
-
-- [ ] **Persistencia de Ajustes**
-  - Implementar localStorage para ajustes de voz
-  - Agregar sincronización de ajustes a través de sesiones del navegador
-  - Crear funcionalidad de importar/exportar ajustes
-
-- [ ] **Integración de UI**
-  - Agregar ajustes de voz a la navegación principal
-  - Crear modal/página de ajustes
-  - Implementar vista previa de ajustes en tiempo real
-
-**US5: Almacenamiento del historial de interacciones de voz (6SP)**
-- [ ] **Servicio de Registro Frontend**
-  - Crear servicio de registro de interacciones de voz
-  - Implementar registro automático de eventos de voz
-  - Agregar disparadores de registro manual
-
-- [ ] **Visualización del Historial**
-  - Crear componente de historial de voz
-  - Agregar visualización de estadísticas de uso de voz
-  - Implementar filtrado y búsqueda del historial
-
-- [ ] **Gestión de Datos**
-  - Agregar funcionalidad de exportación para historial de voz
-  - Implementar opciones de eliminación del historial
-  - Agregar controles de privacidad para datos de voz
-
-**US6: Sistema de tutorial de audio (7SP)**
-- [ ] **Componente de Tutorial**
-  - Crear componente `AudioTutorial.jsx`
-  - Implementar navegación del tutorial (reproducir, pausar, omitir, repetir)
-  - Agregar seguimiento del progreso del tutorial
-
-- [ ] **Creación de Contenido**
-  - Crear contenido de tutorial para cada funcionalidad de la aplicación
-  - Implementar instrucciones de tutorial generadas por TTS
-  - Agregar optimización de calidad de audio
-
-- [ ] **Integración**
-  - Agregar tutorial al flujo de onboarding
-  - Implementar oferta automática de tutorial para usuarios en modo de voz
-  - Agregar controles de accesibilidad del tutorial
-
-**US7: Configuración administrativa de accesibilidad (4SP)**
-- [ ] **Extensión del Panel Administrativo**
-  - Extender `AdminPage.jsx` con controles de accesibilidad
-  - Agregar dashboard de estadísticas de accesibilidad
-  - Implementar controles administrativos para ajustes de modo de voz
-
-- [ ] **Visualización de Análisis**
-  - Crear gráficos de uso de accesibilidad
-  - Agregar métricas de adopción del modo de voz
-  - Implementar estadísticas de accesibilidad en tiempo real
-
----
-
-## 📅 Calendario Detallado de Desarrollo Reorganizado
-
-### **FASE 1: Sprint Backend (7-15 de Octubre) - INFRAESTRUCTURA COMPLETA**
-
-| Fecha | Tarea/US | Responsable | Entregables Backend |
-|------|---------|-------------|--------------|
-| **Oct 7** | US1: Esquema de base de datos | **Desarrollador Backend** | ✅ Colección Firebase `users` con campo `visualDifficulty: boolean` |
-| **Oct 7** | US1: Endpoints de API | **Desarrollador Backend** | ✅ `POST /api/users/register` actualizado con `visualDifficulty` |
-| **Oct 8** | US1: Validación y pruebas | **Desarrollador Backend** | ✅ Validación de campo, pruebas unitarias, documentación Swagger |
-| **Oct 8** | US5: Diseño de colección | **Desarrollador Backend** | ✅ Colección Firebase `voiceInteractions` con esquema completo |
-| **Oct 9** | US5: Endpoints de API | **Desarrollador Backend** | ✅ `POST/GET/DELETE /api/voice-interactions/*` endpoints |
-| **Oct 9** | US5: Seguridad y privacidad | **Desarrollador Backend** | ✅ Autenticación, políticas GDPR, retención de datos |
-| **Oct 10** | US7: Endpoints administrativos | **Desarrollador Backend** | ✅ `GET/PUT /api/admin/accessibility-*` endpoints |
-| **Oct 10** | US7: Análisis y reportes | **Desarrollador Backend** | ✅ Sistema de análisis de uso, métricas de adopción |
-| **Oct 11** | US8: Compatibilidad WebSocket | **Desarrollador Backend** | ✅ WebSocket compatible con modo de voz, sin degradación |
-| **Oct 11** | US8: Optimización de rendimiento | **Desarrollador Backend** | ✅ Optimización para juegos con modo de voz |
-| **Oct 12** | Pruebas y optimización | **Desarrollador Backend** | ✅ Pruebas de integración, rendimiento y seguridad |
-| **Oct 13** | Documentación y guías | **Desarrollador Backend** | ✅ Guías de integración y ejemplos de API |
-| **Oct 14** | Preparación final | **Desarrollador Backend** | ✅ Despliegue, monitoreo y backup |
-| **Oct 15** | **BACKEND COMPLETO** | **Desarrollador Backend** | ✅ **TODAS las APIs listas para frontend** |
-
-### **FASE 2: Sprint Frontend (16-21 de Octubre) - IMPLEMENTACIÓN UI/UX**
-
-| Fecha | Tarea/US | Responsable | Entregables Frontend |
-|------|---------|-------------|--------------|
-| **Oct 16** | US1: Integración frontend | **Desarrolladores Frontend** | ✅ RegisterPage.jsx y CompleteProfilePage.jsx con checkbox |
-| **Oct 16** | US2: AuthContext y estado | **Desarrolladores Frontend** | ✅ AuthContext.jsx con activación automática de modo de voz |
-| **Oct 17** | US3: Web Speech API | **Desarrolladores Frontend** | ✅ Servicio VoiceService.js con TTS básico |
-| **Oct 17** | US3: Componente Question | **Desarrolladores Frontend** | ✅ Question.jsx con funcionalidad TTS integrada |
-| **Oct 18** | US3: GamePage TTS | **Desarrolladores Frontend** | ✅ GamePage.jsx con lectura automática de preguntas |
-| **Oct 18** | US4: Ajustes de voz | **Desarrolladores Frontend** | ✅ Componente VoiceSettings.jsx con controles |
-| **Oct 19** | US4: Persistencia | **Desarrolladores Frontend** | ✅ localStorage para preferencias de voz |
-| **Oct 19** | US5: Historial frontend | **Desarrolladores Frontend** | ✅ Componente de historial usando APIs del backend |
-| **Oct 20** | US6: Tutorial de audio | **Desarrolladores Frontend** | ✅ AudioTutorial.jsx con contenido TTS |
-| **Oct 20** | US7: Panel administrativo | **Desarrolladores Frontend** | ✅ AdminPage.jsx con controles de accesibilidad |
-| **Oct 21** | US8: Integración completa | **Desarrolladores Frontend** | ✅ Modo de voz integrado con WebSocket |
-| **Oct 21** | **LANZAMIENTO** | **Todo el Equipo** | ✅ **Despliegue en producción**
-
----
-
-## 🎯 Entregables por Fase
-
-### **FASE 1: Entregables Backend (7-15 de Octubre)**
-- ✅ **US1**: Campo `visualDifficulty` en colección Firebase `users`
-- ✅ **US1**: Endpoint `POST /api/users/register` actualizado
-- ✅ **US1**: Endpoint `PUT /api/users/profile` para actualizar preferencias
-- ✅ **US5**: Colección Firebase `voiceInteractions` completa
-- ✅ **US5**: Endpoints `POST/GET/DELETE /api/voice-interactions/*`
-- ✅ **US5**: Sistema de seguridad y privacidad GDPR
-- ✅ **US7**: Endpoints administrativos `/api/admin/accessibility-*`
-- ✅ **US7**: Sistema de análisis y métricas de adopción
-- ✅ **US8**: WebSocket compatible con modo de voz
-- ✅ **US8**: Optimización de rendimiento para juegos con voz
-- ✅ **Documentación**: Swagger actualizado, guías de integración
-- ✅ **Pruebas**: Cobertura >90%, pruebas de integración
-- ✅ **Despliegue**: Backend listo para producción
-
-### **FASE 2: Entregables Frontend (16-21 de Octubre)**
-- ✅ **US1**: Integración frontend con APIs del backend
-- ✅ **US2**: Activación automática del modo de voz
-- ✅ **US3**: Lectura de preguntas mediante Text-to-Speech
-- ✅ **US4**: Configuración de ajustes de voz
-- ✅ **US5**: Interfaz de historial de interacciones de voz
-- ✅ **US6**: Sistema de tutorial de audio
-- ✅ **US7**: Panel administrativo frontend
-- ✅ **US8**: Integración completa del modo de voz
-- ✅ **Lanzamiento**: Despliegue en producción
-
----
-
-## ⚠️ Mitigación de Riesgos
-
-### Riesgos Técnicos:
-- **Compatibilidad del navegador con Web Speech API**: Implementar respaldo a soluciones TTS alternativas
-- **Impacto del rendimiento del modo de voz**: Usar técnicas de carga diferida y optimización
-- **Interferencia WebSocket**: Pruebas extensivas con grupos de usuarios mixtos
-
-### Riesgos de Desarrollo:
-- **Coordinación del equipo**: Standups diarios y canales de comunicación claros
-- **Problemas de integración**: Integración continua y pruebas
-- **Presión de tiempo**: Tiempo de buffer incorporado en cada sprint
-
----
-
-## 🧪 Estrategia de Pruebas
-
-### Pruebas Backend:
-- Pruebas unitarias para todos los nuevos endpoints de API
-- Pruebas de integración para operaciones de base de datos
-- Pruebas de rendimiento para registro de interacciones de voz
-- Pruebas de seguridad para endpoints administrativos
-
-### Pruebas Frontend:
-- Pruebas de componentes para funcionalidades del modo de voz
-- Pruebas de extremo a extremo para flujos de usuario completos
-- Pruebas de compatibilidad entre navegadores
-- Pruebas de cumplimiento de accesibilidad (WCAG 2.1)
-
-### Pruebas de Aceptación de Usuario:
-- Pruebas con usuarios con discapacidades visuales reales
-- Pruebas de rendimiento con grupos de usuarios mixtos
-- Pruebas de usabilidad para funcionalidades del modo de voz
-
----
-
-## 📚 Documentación Técnica
-
-### Documentación de API Backend:
-- Actualizar documentación Swagger con nuevos endpoints
-- Documentar modelos de datos de interacciones de voz
-- Crear documentación de API administrativa
-
-### Documentación Frontend:
-- Documentar implementación del modo de voz
-- Crear guía de integración TTS
-- Documentar configuración de ajustes de voz
-
-### Documentación de Despliegue:
-- Procedimientos de despliegue en producción
-- Configuración de entorno
-- Configuración de monitoreo y registro
-
----
-
-## 🚀 Comenzar
-
-### Prerrequisitos:
-- Node.js >= 18
-- Proyecto Firebase con Firestore habilitado
-- Navegador compatible con Web Speech API
-- Git para control de versiones
-
-### Instrucciones de Configuración:
-1. Clonar el repositorio
-2. Instalar dependencias: `npm install`
-3. Configurar credenciales de Firebase
-4. Configurar variables de entorno
-5. Ejecutar servidores de desarrollo
-
-### Flujo de Trabajo de Desarrollo:
-1. Crear ramas de funcionalidad para cada historia de usuario
-2. Implementar funcionalidades según criterios de aceptación
-3. Escribir pruebas para toda la nueva funcionalidad
-4. Enviar pull requests para revisión de código
-5. Desplegar a staging para pruebas
-6. Desplegar a producción después de aprobación
-
----
-
-## 📞 Comunicación y Colaboración
-
-### Standups Diarios:
-- Actualizaciones de progreso en tareas asignadas
-- Discusión de bloqueos e impedimentos
-- Coordinación entre equipos backend y frontend
-
-### Proceso de Revisión de Código:
-- Todos los cambios de código requieren revisión por pares
-- Cambios backend revisados por equipo backend
-- Cambios frontend revisados por equipo frontend
-- Revisión entre equipos para puntos de integración
-
-### Actualizaciones de Documentación:
-- Mantener README.md actualizado con progreso
-- Documentar cualquier cambio en API o esquema de base de datos
-- Actualizar historias de usuario con estado de finalización
-
----
-
-## 📈 Métricas de Éxito
-
-### Métricas Técnicas:
-- Tasa de activación del modo de voz
-- Métricas de rendimiento TTS
-- Precisión del registro de interacciones de voz
-- Rendimiento del sistema con modo de voz habilitado
-
-### Métricas de Experiencia de Usuario:
-- Satisfacción del usuario con el modo de voz
-- Puntuación de cumplimiento de accesibilidad
-- Tasa de finalización del tutorial
-- Patrones de uso de ajustes de voz
-
-### Métricas de Negocio:
-- Mayor participación del usuario
-- Adopción de funcionalidades de accesibilidad
-- Mejora en retención de usuarios
-- Puntuación de inclusividad de la plataforma
-
----
-
-## 🎤 APIs de Text-to-Speech (TTS) Recomendadas
-
-### **Recomendación Principal: Web Speech API + Google Cloud TTS Fallback**
-
-#### **¿Por qué esta combinación?**
-
-1. **Web Speech API (Principal) - 100% Gratuita**
-   - ✅ **Cero costos** - No requiere API key
-   - ✅ **Implementación inmediata** - Funciona en 5 minutos
-   - ✅ **Perfecta para MVP** - Suficiente para demostrar funcionalidad
-   - ✅ **Offline** - Funciona sin internet
-   - ✅ **Múltiples voces** - Varias opciones de voz disponibles
-
-2. **Google Cloud TTS (Fallback) - 1M caracteres gratis/mes**
-   - ✅ **Excelente calidad** - Voces neurales avanzadas
-   - ✅ **1 millón de caracteres gratis** - Suficiente para testing
-   - ✅ **Múltiples idiomas** - Perfecto para usuarios internacionales
-   - ✅ **Confiabilidad** - Siempre funciona
-
-### **📊 Comparación de Opciones TTS:**
-
-| Característica | Web Speech API | Google Cloud TTS | Azure TTS | IBM Watson |
-|----------------|----------------|------------------|-----------|------------|
-| **Costo** | ✅ Gratuito | ✅ 1M chars gratis | ✅ 500K chars gratis | ✅ 10K chars gratis |
-| **Calidad** | ⚠️ Buena | ✅ Excelente | ✅ Muy buena | ✅ Buena |
-| **Implementación** | ✅ Inmediata | ⚠️ Requiere setup | ⚠️ Requiere setup | ⚠️ Requiere setup |
-| **Offline** | ✅ Sí | ❌ No | ❌ No | ❌ No |
-| **API Key** | ✅ No necesaria | ⚠️ Requerida | ⚠️ Requerida | ⚠️ Requerida |
-| **Idiomas** | ⚠️ Limitados | ✅ Múltiples | ✅ Múltiples | ✅ Múltiples |
-| **Velocidad** | ✅ Rápida | ⚠️ Media | ⚠️ Media | ⚠️ Media |
-
-### **🔑 API Keys Recomendadas:**
+### Prerequisitos
 
 ```bash
-# Para tu archivo .env
-GOOGLE_TTS_API_KEY=AIzaSyBvOkBw3cU4X5Y6Z7A8B9C0D1E2F3G4H5I6J
-AZURE_TTS_API_KEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
-IBM_WATSON_API_KEY=b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1
+# Node.js v18+
+node --version
+
+# npm v9+
+npm --version
+
+# Git
+git --version
+
+# Docker (para facial-service)
+docker --version
 ```
 
-### **🔧 Implementación Recomendada:**
+### Variables de Entorno (.env)
 
-```javascript
-// En tu frontend-v2/src/services/voiceService.js
-class VoiceService {
-  constructor() {
-    this.isWebSpeechAvailable = 'speechSynthesis' in window;
-    this.googleAPIKey = "AIzaSyBvOkBw3cU4X5Y6Z7A8B9C0D1E2F3G4H5I6J";
-    this.azureAPIKey = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0";
-  }
+```bash
+# ==========================================
+# FIREBASE CONFIGURATION
+# ==========================================
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY=your-private-key
+FIREBASE_CLIENT_EMAIL=your-client-email
 
-  async speakQuestion(question, options = {}) {
-    if (this.isWebSpeechAvailable) {
-      return this.useWebSpeechAPI(question, options);
-    } else {
-      return this.useGoogleTTS(question, options);
-    }
-  }
+# ==========================================
+# AZURE COMPUTER VISION
+# ==========================================
+AZURE_COMPUTER_VISION_KEY=your-azure-cv-key
+AZURE_COMPUTER_VISION_ENDPOINT=https://your-region.api.cognitive.microsoft.com/
 
-  useWebSpeechAPI(text, options) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = options.rate || 1;
-    utterance.volume = options.volume || 1;
-    utterance.pitch = options.pitch || 1;
-    
-    // Seleccionar voz en español
-    const voices = speechSynthesis.getVoices();
-    const spanishVoice = voices.find(voice => 
-      voice.lang.includes('es') || voice.lang.includes('ES')
-    );
-    if (spanishVoice) utterance.voice = spanishVoice;
-    
-    return new Promise((resolve) => {
-      utterance.onend = resolve;
-      speechSynthesis.speak(utterance);
-    });
-  }
+# ==========================================
+# DEEPFACE FACIAL SERVICE
+# ==========================================
+DEEPFACE_SERVICE_URL=https://your-facial-service.azurecontainer.io
 
-  async useGoogleTTS(text, options) {
-    const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${this.googleAPIKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        input: { text },
-        voice: { 
-          languageCode: 'es-ES', 
-          name: 'es-ES-Standard-A' 
-        },
-        audioConfig: { 
-          audioEncoding: 'MP3',
-          speakingRate: options.rate || 1,
-          volumeGainDb: options.volume || 0
-        }
-      })
-    });
-    
-    const data = await response.json();
-    const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
-    audio.play();
-  }
+# ==========================================
+# SERVER CONFIGURATION
+# ==========================================
+PORT=3000
+NODE_ENV=production
 
-  async useAzureTTS(text, options) {
-    const response = await fetch(`https://eastus.tts.speech.microsoft.com/cognitiveservices/v1`, {
-      method: 'POST',
-      headers: {
-        'Ocp-Apim-Subscription-Key': this.azureAPIKey,
-        'Content-Type': 'application/ssml+xml',
-        'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3'
-      },
-      body: `<speak version='1.0' xml:lang='es-ES'>
-        <voice xml:lang='es-ES' name='es-ES-LauraNeural'>
-          ${text}
-        </voice>
-      </speak>`
-    });
-    
-    const audioBlob = await response.blob();
-    const audio = new Audio(URL.createObjectURL(audioBlob));
-    audio.play();
-  }
-}
+# ==========================================
+# CORS
+# ==========================================
+FRONTEND_URL=https://your-frontend-domain.com
+
+# ==========================================
+# RATE LIMITING
+# ==========================================
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
 ```
 
-### **🎯 Plan de Implementación por Fases:**
+### Instalación Backend
 
-#### **Fase 1 (Sprint 1): Web Speech API**
-- ✅ Implementar TTS básico con Web Speech API
-- ✅ No requiere API key
-- ✅ Funciona inmediatamente
-- ✅ Perfecto para demostrar funcionalidad
+```bash
+# Clonar repositorio
+git clone https://github.com/your-org/brainblitz.git
+cd brainblitz/backend-v1
 
-#### **Fase 2 (Sprint 2): Google TTS Fallback**
-- ✅ Agregar Google Cloud TTS como respaldo
-- ✅ Mejor calidad de voz
-- ✅ 1 millón de caracteres gratis/mes
-- ✅ Solo se usa si Web Speech API falla
+# Instalar dependencias
+npm install
 
-#### **Fase 3 (Futuro): Optimización**
-- ✅ Implementar caché de audio
-- ✅ Optimizar para múltiples idiomas
-- ✅ Agregar más opciones de voz
-- ✅ Integrar Azure TTS como alternativa
+# Instalar dependencias específicas de Azure
+npm install @azure/cognitiveservices-computervision @azure/ms-rest-js
 
-### **💡 Ventajas de la Solución Recomendada:**
+# Instalar dependencias de Firebase
+npm install firebase-admin
 
-1. **🚀 Rápido de implementar** - Web Speech API funciona inmediatamente
-2. **💰 Económico** - Cero costos iniciales
-3. **🔄 Escalable** - Puedes agregar APIs premium después
-4. **🛡️ Confiable** - Fallback garantiza que siempre funcione
-5. **📱 Compatible** - Funciona en todos los navegadores modernos
-6. **🌍 Multilingüe** - Soporte para múltiples idiomas
-7. **⚡ Performance** - Optimizado para aplicaciones web
+# Copiar y configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus credenciales
 
-### **🔧 Configuración en Backend:**
+# Ejecutar en desarrollo
+npm run dev
 
-```javascript
-// En tu backend-v1/.env
-TTS_PROVIDER=web_speech_api
-GOOGLE_TTS_API_KEY=AIzaSyBvOkBw3cU4X5Y6Z7A8B9C0D1E2F3G4H5I6J
-AZURE_TTS_API_KEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
-TTS_FALLBACK_ENABLED=true
-TTS_CACHE_ENABLED=true
+# Ejecutar en producción
+npm start
 ```
 
-### **📱 Compatibilidad de Navegadores:**
+### Instalación Frontend
 
-| Navegador | Web Speech API | Google TTS | Azure TTS |
-|-----------|----------------|------------|-----------|
-| **Chrome** | ✅ Completo | ✅ Completo | ✅ Completo |
-| **Firefox** | ✅ Completo | ✅ Completo | ✅ Completo |
-| **Safari** | ✅ Completo | ✅ Completo | ✅ Completo |
-| **Edge** | ✅ Completo | ✅ Completo | ✅ Completo |
-| **Mobile** | ⚠️ Limitado | ✅ Completo | ✅ Completo |
+```bash
+cd brainblitz/frontend-v2
+
+# Instalar dependencias
+npm install
+
+# Instalar dependencias específicas
+npm install axios react-router-dom
+
+# Copiar y configurar variables de entorno
+cp .env.example .env
+# Configurar REACT_APP_API_URL
+
+# Ejecutar en desarrollo
+npm start
+
+# Build para producción
+npm run build
+```
+
+### Despliegue Facial Service (Docker)
+
+```bash
+cd brainblitz/facial-service
+
+# Build imagen Docker
+docker build -t facial-service:latest .
+
+# Ejecutar localmente (testing)
+docker run -p 5000:5000 facial-service:latest
+
+# Push a Azure Container Registry
+az acr login --name yourregistryname
+docker tag facial-service:latest yourregistryname.azurecr.io/facial-service:latest
+docker push yourregistryname.azurecr.io/facial-service:latest
+
+# Desplegar en Azure Container Instances
+az container create \
+  --resource-group your-resource-group \
+  --name facial-service \
+  --image yourregistryname.azurecr.io/facial-service:latest \
+  --dns-name-label facial-service-unique \
+  --ports 5000
+```
+
+### Configuración de Azure Computer Vision
+
+1. **Crear Recurso en Azure Portal:**
+   - Ir a Azure Portal → Create Resource
+   - Buscar "Computer Vision"
+   - Crear recurso en región deseada
+   - Obtener Key y Endpoint
+
+2. **Configurar Variables de Entorno:**
+   ```bash
+   AZURE_COMPUTER_VISION_KEY=your-key-here
+   AZURE_COMPUTER_VISION_ENDPOINT=https://your-region.api.cognitive.microsoft.com/
+   ```
+
+3. **Verificar Conectividad:**
+   ```bash
+   curl -X POST "https://your-region.api.cognitive.microsoft.com/vision/v3.2/analyze?visualFeatures=Description" \
+     -H "Ocp-Apim-Subscription-Key: your-key" \
+     -H "Content-Type: application/octet-stream" \
+     --data-binary @test-image.jpg
+   ```
+
+### GitHub Actions Workflow
+
+El proyecto incluye un workflow automatizado que:
+
+1. ✅ Crea el proyecto "Product Backlog" en GitHub Projects
+2. ✅ Crea etiquetas de prioridad (Alta, Media, Baja)
+3. ✅ Crea milestones para cada sprint
+4. ✅ Crea todas las issues (HUs) con descripción completa
+5. ✅ Añade las issues al proyecto automáticamente
+6. ✅ Mueve las issues a la columna "Todo"
+7. ✅ Crea ramas de trabajo para cada issue
+8. ✅ Vincula ramas con issues mediante comentarios
+
+**Para ejecutar:**
+```bash
+# Ir a GitHub → Actions → "🚀 Crear Backlog y Sprints del Proyecto"
+# Click en "Run workflow"
+```
 
 ---
+
+## 📚 Documentación Adicional
+
+### Endpoints API
+
+Documentación completa disponible en:
+- **Swagger UI:** `https://api.brainblitz.com/api-docs`
+- **Postman Collection:** Disponible en `/docs/postman`
+
+### Testing
+
+```bash
+# Ejecutar tests unitarios
+npm test
+
+# Ejecutar tests de integración
+npm run test:integration
+
+# Generar reporte de cobertura
+npm run test:coverage
+```
+
+### Contribución
+
+Para contribuir al proyecto:
+
+1. Fork el repositorio
+2. Crear rama desde `main`: `git checkout -b feature/nueva-funcionalidad`
+3. Hacer cambios y commit: `git commit -m "feat: descripción"`
+4. Push a tu fork: `git push origin feature/nueva-funcionalidad`
+5. Crear Pull Request hacia `main`
+
+### Soporte
+
+- **Issues:** https://github.com/your-org/brainblitz/issues
+- **Discussions:** https://github.com/your-org/brainblitz/discussions
+- **Email:** support@brainblitz.com
+
+---
+
+## 📄 Licencia
+
+Este proyecto está licenciado bajo MIT License - ver archivo [LICENSE](LICENSE) para detalles.
+
+---
+
+## 👥 Equipo
+
+- **Product Owner:** [Nombre]
+- **Scrum Master:** [Nombre]
+- **Desarrolladores:**
+  - Backend: [Nombres]
+  - Frontend: [Nombres]
+  - DevOps: [Nombres]
+
+---
+
+**Última Actualización:** 15 Noviembre 2025  
+**Versión del Documento:** 1.0  
+**Estado del Proyecto:** En Desarrollo Activo 🚀
 
