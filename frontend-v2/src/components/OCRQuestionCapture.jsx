@@ -232,17 +232,37 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
     setProcessedQuestion(null);
     setMode(null);
     setCorrectAnswerIndex(0);
-    stopCamera();
     setError('');
     setSuccessMessage('');
   };
 
+  // Announce form availability when voice is enabled and form is ready
+  // IMPORTANT: Use useEffect with proper cleanup and error handling to avoid blocking renders
   useEffect(() => {
-  if (isVoiceModeEnabled && !mode && !imageFile) {
-    // Don't include 'speak' in dependencies to avoid infinite loops
-    speak('Formulario de captura de pregunta. Selecciona una imagen o toma una foto.', { force: true });
-  }
-}, [isVoiceModeEnabled, mode, imageFile]);
+    let isMounted = true;
+    let speakTimeout;
+
+    if (isVoiceModeEnabled && !mode && !imageFile && !processedQuestion) {
+      // Delay speech to allow modal/component to render first
+      speakTimeout = setTimeout(() => {
+        if (isMounted) {
+          try {
+            // Use try-catch to handle any speech errors without blocking render
+            void speak('Formulario de captura de pregunta. Selecciona una imagen o toma una foto.', { force: true }).catch(err => {
+              console.error('Voice announcement failed:', err);
+            });
+          } catch (err) {
+            console.error('Error in voice effect:', err);
+          }
+        }
+      }, 300); // Delay to ensure modal is fully rendered
+    }
+
+    return () => {
+      isMounted = false;
+      if (speakTimeout) clearTimeout(speakTimeout);
+    };
+  }, [isVoiceModeEnabled, mode, imageFile, processedQuestion, speak]);
 
 
   return (
