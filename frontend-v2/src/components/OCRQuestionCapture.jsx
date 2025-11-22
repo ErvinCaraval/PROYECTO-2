@@ -437,28 +437,20 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
           )}
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-2 pt-2">
+          <div className="grid grid-cols-2 gap-2 pt-2">
             <Button
               onClick={confirmQuestion}
               disabled={loading}
-              className="flex-1 sm:flex-initial"
+              className="flex-1"
             >
               {loading ? '⏳ Guardando…' : '✔️ Guardar'}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={resetForm}
-              disabled={loading}
-              className="flex-1 sm:flex-initial"
-            >
-              📷 Otra
             </Button>
             {savedQuestions.length > 0 ? (
               <Button
                 variant="secondary"
                 onClick={onCancel}
                 disabled={loading}
-                className="flex-1 sm:flex-initial"
+                className="flex-1"
               >
                 ✓ Finalizar
               </Button>
@@ -467,7 +459,7 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
                 variant="secondary"
                 onClick={onCancel}
                 disabled={loading}
-                className="flex-1 sm:flex-initial"
+                className="flex-1"
               >
                 ← Atrás
               </Button>
