@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useVoice } from '../VoiceContext';
 import { useAuth } from '../AuthContext';
 import ManualQuestionForm from './ManualQuestionForm';
+import OCRQuestionCapture from './OCRQuestionCapture';
 import { fetchTopics, fetchDifficultyLevels } from '../services/api';
 import Button from './ui/Button';
 import Input from './ui/Input';
@@ -20,11 +21,14 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
   const [questionCountInput, setQuestionCountInput] = useState('');
   const [useAI, setUseAI] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
+  const [showOCRForm, setShowOCRForm] = useState(false);
   const [manualCount, setManualCount] = useState(null);
   const [manualCountInput, setManualCountInput] = useState('');
   const [manualStep, setManualStep] = useState(0);
   const [manualQuestions, setManualQuestions] = useState([]);
   const [manualTopic, setManualTopic] = useState('');
+  const [ocrQuestions, setOcrQuestions] = useState([]);
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   
   const [error, setError] = useState('');
@@ -194,15 +198,17 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
         </div>
       )}
       {loading && <LoadingOverlay text="Generando…" mobileOnly />}
-      {!showManualForm && !useAI && (
-        <div className="flex flex-col sm:flex-row gap-3">
+      {error && <Alert intent="error">{error}</Alert>}
+      {statusMessage && <Alert intent="success">{statusMessage}</Alert>}
+      {!showManualForm && !useAI && !showOCRForm && (
+        <div className="flex flex-col gap-3">
           <Button
             onClick={() => setUseAI(true)}
             size="lg"
             onFocus={() => isVoiceModeEnabled && speak('Crear con IA: genera preguntas automáticamente usando inteligencia artificial.', { force: true })}
             onMouseEnter={() => isVoiceModeEnabled && speak('Crear con IA: genera preguntas automáticamente usando inteligencia artificial.', { force: true })}
           >
-            Crear con IA
+            🤖 Crear con IA
           </Button>
           <Button
             variant="secondary"
@@ -211,11 +217,20 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
             onFocus={() => isVoiceModeEnabled && speak('Escribir preguntas: te permite escribir preguntas manualmente.', { force: true })}
             onMouseEnter={() => isVoiceModeEnabled && speak('Escribir preguntas: te permite escribir preguntas manualmente.', { force: true })}
           >
-            Escribir preguntas
+            ✏️ Escribir preguntas
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={() => { setShowOCRForm(true); setUseAI(false); }}
+            onFocus={() => isVoiceModeEnabled && speak('Capturar pregunta: extrae preguntas de imágenes usando OCR.', { force: true })}
+            onMouseEnter={() => isVoiceModeEnabled && speak('Capturar pregunta: extrae preguntas de imágenes usando OCR.', { force: true })}
+          >
+            📸 Capturar pregunta
           </Button>
         </div>
       )}
-      {useAI && !showManualForm && (
+      {!showManualForm && useAI && !showOCRForm && (
         <form
           className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4"
           onSubmit={async (e) => {
@@ -477,6 +492,60 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
             </div>
           )}
         </div>
+      )}
+      {showOCRForm && (
+        <OCRQuestionCapture
+          topics={topics}
+          onQuestionExtracted={async (questionPayload) => {
+            setLoading(true);
+            setError('');
+            try {
+              const apiBase = import.meta.env.VITE_API_URL;
+              const token = user && user.getIdToken ? await user.getIdToken() : null;
+              const response = await fetch(`${apiBase}/questions`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(questionPayload)
+              });
+
+              if (response.ok) {
+                const result = await response.json();
+                const savedQuestion = result.question || { ...questionPayload };
+                const updatedQuestions = [...ocrQuestions, savedQuestion];
+                setOcrQuestions(updatedQuestions);
+                
+                setStatusMessage(`✅ Pregunta ${updatedQuestions.length} guardada exitosamente. Puedes agregar más o finalizar.`);
+                setLoading(false);
+                
+                // Mantener modal abierto para agregar más preguntas
+                // No cierra automáticamente después de guardar
+              } else {
+                setError('No se pudo guardar la pregunta');
+                setLoading(false);
+              }
+            } catch (error) {
+              setError('Error al guardar la pregunta: ' + (error.message || 'Por favor, intenta de nuevo.'));
+              setLoading(false);
+            }
+          }}
+          onCancel={() => { 
+            setShowOCRForm(false);
+            
+            // Si hay preguntas guardadas, notifica al parent
+            if (ocrQuestions.length > 0) {
+              setStatusMessage(`✅ Se guardaron ${ocrQuestions.length} pregunta(s) de OCR`);
+              
+              setTimeout(() => {
+                onQuestionsGenerated(ocrQuestions);
+                setOcrQuestions([]);
+                setStatusMessage('');
+              }, 1500);
+            }
+          }}
+        />
       )}
     </Modal>
   );
