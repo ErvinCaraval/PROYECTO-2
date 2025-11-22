@@ -1,0 +1,2 @@
+import{j as e}from"./index-CMoEGUiI.js";const t="block w-full rounded-xl border-2 border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/50 backdrop-blur-md transition focus:border-bb-primary focus:ring-2 focus:ring-bb-primary/30 focus:outline-none";function n({className:r="",...o}){return e.jsx("input",{className:`${t} ${r}`,...o})}export{n as I};
+//# sourceMappingURL=Input-BPPQmrKT.js.map
