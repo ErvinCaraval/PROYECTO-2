@@ -471,21 +471,19 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
           )}
 
           {/* Action Buttons - Organized */}
-          <div className="grid grid-cols-2 gap-3 sm:flex sm:gap-4 pt-2">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:flex md:gap-3 pt-2">
             <Button
               onClick={confirmQuestion}
               disabled={loading}
-              className="sm:flex-1"
               onFocus={() => isVoiceModeEnabled && speak('Confirmar y guardar la pregunta', { force: true })}
               onMouseEnter={() => isVoiceModeEnabled && speak('Confirmar y guardar la pregunta', { force: true })}
             >
-              {loading ? '⏳ Guardando…' : '✓ Confirmar'}
+              {loading ? '⏳ Guardando…' : '✔️ Confirmar'}
             </Button>
             <Button
               variant="secondary"
               onClick={resetForm}
               disabled={loading}
-              className="sm:flex-1"
               onFocus={() => isVoiceModeEnabled && speak('Cargar otra imagen', { force: true })}
               onMouseEnter={() => isVoiceModeEnabled && speak('Cargar otra imagen', { force: true })}
             >
@@ -496,11 +494,10 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
                 variant="secondary"
                 onClick={onCancel}
                 disabled={loading}
-                className="sm:flex-1"
                 onFocus={() => isVoiceModeEnabled && speak('Finalizar y cerrar', { force: true })}
                 onMouseEnter={() => isVoiceModeEnabled && speak('Finalizar y cerrar', { force: true })}
               >
-                Finalizar
+                ✓ Finalizar
               </Button>
             )}
             {savedQuestions.length === 0 && (
@@ -508,11 +505,10 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
                 variant="secondary"
                 onClick={onCancel}
                 disabled={loading}
-                className="sm:flex-1"
                 onFocus={() => isVoiceModeEnabled && speak('Volver atrás', { force: true })}
                 onMouseEnter={() => isVoiceModeEnabled && speak('Volver atrás', { force: true })}
               >
-                Atrás
+                ← Atrás
               </Button>
             )}
           </div>
