@@ -5,6 +5,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
+import OCRQuestionCapture from '../components/OCRQuestionCapture';
 
 const emptyForm = {
   text: '',
@@ -23,6 +24,7 @@ export default function AdminPage() {
   const [accessibilitySettings, setAccessibilitySettings] = useState({});
   const [loadingAccessibility, setLoadingAccessibility] = useState(false);
   const [message, setMessage] = useState('');
+  const [ocrMode, setOcrMode] = useState(false);
 
   const fetchQuestions = async () => {
     setLoading(true);
@@ -42,6 +44,11 @@ export default function AdminPage() {
     fetchAccessibilityData();
   }, []);
 
+  const handleOCRQuestionExtracted = (question) => {
+    setForm(question);
+    setOcrMode(false);
+    setMessage('Pregunta extraída del OCR. Edita según sea necesario.');
+  };
   const fetchAccessibilityData = async () => {
     setLoadingAccessibility(true);
     try {
@@ -254,9 +261,27 @@ export default function AdminPage() {
       </Card>
 
       <Card>
-        <CardHeader className="pb-2"><h2 className="text-2xl font-bold">Admin Panel</h2></CardHeader>
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Admin Panel</h2>
+            <Button 
+              type="button"
+              variant={ocrMode ? "primary" : "secondary"}
+              onClick={() => setOcrMode(!ocrMode)}
+            >
+              {ocrMode ? 'Modo Manual' : 'Modo OCR'}
+            </Button>
+          </div>
+        </CardHeader>
         <CardBody>
-          <form onSubmit={handleSubmit} className="grid gap-3">
+          {ocrMode ? (
+            <OCRQuestionCapture 
+              topics={["General", "Arte", "Ciencia", "Historia", "Deportes"]}
+              onQuestionExtracted={handleOCRQuestionExtracted}
+              onCancel={() => setOcrMode(false)}
+            />
+          ) : (
+            <form onSubmit={handleSubmit} className="grid gap-3">
             <Input name="text" value={form.text} onChange={handleChange} placeholder="Question text" required />
             <div className="grid gap-3 sm:grid-cols-3">
               <Input name="category" value={form.category} onChange={handleChange} placeholder="Category" required />
@@ -282,7 +307,8 @@ export default function AdminPage() {
               {editingId && <Button type="button" variant="secondary" onClick={() => { setForm(emptyForm); setEditingId(null); }}>Cancel</Button>}
               <Button type="submit">{editingId ? 'Update' : 'Add'} Question</Button>
             </div>
-          </form>
+            </form>
+          )}
         </CardBody>
       </Card>
 
