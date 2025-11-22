@@ -248,7 +248,7 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
   return (
     <div className="grid gap-4 p-4">
       {isVoiceModeEnabled && (
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-end mb-3 -mt-1">
           <Button
             variant="outline"
             size="sm"
