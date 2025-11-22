@@ -1,11 +1,9 @@
-/* global require */
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from './testUtils'
+import { render, screen, fireEvent, waitFor } from './testUtils'
 import React from 'react'
-import { act } from 'react-dom/test-utils'
 import AIQuestionGenerator from '../components/AIQuestionGenerator'
 
-// Mock del hook useAuth y AuthProvider
+// Mock del hook useAuth
 vi.mock('../AuthContext', () => {
   const React = require('react')
   return {
@@ -14,7 +12,7 @@ vi.mock('../AuthContext', () => {
         uid: 'test-user-id',
         email: 'test@example.com',
         displayName: 'Test User',
-        getIdToken: () => Promise.resolve('mocked-token') // Mock de getIdToken
+        getIdToken: () => Promise.resolve('mocked-token')
       },
       loading: false
     }),
@@ -33,18 +31,14 @@ describe('AIQuestionGenerator (mobile-friendly cantidad)', () => {
     const onGenerated = vi.fn()
     const onClose = vi.fn()
 
-    // Render dentro de act()
-    await act(async () => {
-      render(<AIQuestionGenerator onQuestionsGenerated={onGenerated} onClose={onClose} />)
-    })
+    render(<AIQuestionGenerator onQuestionsGenerated={onGenerated} onClose={onClose} />)
 
-    // Buscar el botón de manera asincrónica
-    const button = await screen.findByText('Crear con IA')
+    // Esperar a que el botón aparezca y usar matcher que ignore emojis
+    const button = await waitFor(() =>
+      screen.getByText((content) => content.includes('Crear con IA'))
+    )
 
-    // Click dentro de act()
-    await act(async () => {
-      fireEvent.click(button)
-    })
+    fireEvent.click(button)
 
     const input =
       screen.getByLabelText('Cantidad', { selector: 'input' }) ||
@@ -52,16 +46,10 @@ describe('AIQuestionGenerator (mobile-friendly cantidad)', () => {
 
     expect(input.value).toBe('')
 
-    // Escribir letras + números, debe filtrar letras
-    await act(async () => {
-      fireEvent.change(input, { target: { value: 'a1b2' } })
-    })
+    fireEvent.change(input, { target: { value: 'a1b2' } })
     expect(input.value).toBe('12')
 
-    // Vaciar deja el campo sin valor válido
-    await act(async () => {
-      fireEvent.change(input, { target: { value: '' } })
-    })
+    fireEvent.change(input, { target: { value: '' } })
     expect(input.value).toBe('')
   })
 })
