@@ -21,8 +21,8 @@ export default function FaceRegister() {
   const handleCapture = async (base64String) => {
     try {
       setProgress('Optimizando imagen...');
-      // Optimizar imagen agresivamente para máxima velocidad
-      const optimized = await optimizeImage(base64String, 240, 240, 0.5);
+      // Optimizar imagen ULTRA-agresivamente para máxima velocidad
+      const optimized = await optimizeImage(base64String, 200, 200, 0.3);
       const originalSize = getImageSize(base64String);
       const optimizedSize = getImageSize(optimized);
       const reduction = Math.round((1 - optimizedSize/originalSize) * 100);
@@ -83,25 +83,31 @@ export default function FaceRegister() {
       console.log('3. API URL:', apiBase);
       console.log('4. Tamaño de imagen:', capturedImage.length, 'caracteres');
 
-      // Crear un timeout para la petición
+      // Crear un timeout para la petición (30 segundos - ULTRA OPTIMIZADO)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 segundos timeout (optimizado)
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
 
       try {
         console.log('5. Enviando petición al backend...');
         setProgress('Enviando imagen...');
+        // Comprimir payload para envío más rápido
+        const payload = JSON.stringify({
+          image: capturedImage,
+          token: token
+        });
+        console.log(`Tamaño del payload: ${(payload.length / 1024).toFixed(2)}KB`);
+        
         // Enviar imagen al backend
         const response = await fetch(`${apiBase}/face/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Accept-Encoding': 'gzip, deflate' // Permitir compresión
           },
-          body: JSON.stringify({
-            image: capturedImage,
-            token: token
-          }),
-          signal: controller.signal
+          body: payload,
+          signal: controller.signal,
+          priority: 'high' // Prioridad alta de red
         });
 
         clearTimeout(timeoutId);

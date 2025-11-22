@@ -12,7 +12,7 @@
  * @param {number} quality - Calidad JPEG (0-1, default: 0.5 para máxima compresión)
  * @returns {Promise<string>} Imagen optimizada en Base64
  */
-export function optimizeImage(base64String, maxWidth = 240, maxHeight = 240, quality = 0.5) {
+export function optimizeImage(base64String, maxWidth = 200, maxHeight = 200, quality = 0.3) {
   return new Promise((resolve, reject) => {
     try {
       const img = new Image();
@@ -36,9 +36,7 @@ export function optimizeImage(base64String, maxWidth = 240, maxHeight = 240, qua
         
         const ctx = canvas.getContext('2d');
         
-        // Optimizar renderizado para velocidad
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'medium'; // Cambiar de high a medium para mayor velocidad
+        // Optimizar renderizado para máxima velocidad\n        ctx.imageSmoothingEnabled = false; // Desabilitar smoothing para más velocidad
         
         // Dibujar imagen redimensionada
         ctx.drawImage(img, 0, 0, width, height);

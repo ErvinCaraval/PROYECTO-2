@@ -23,8 +23,8 @@ export default function FaceLogin() {
   const handleCapture = async (base64String) => {
     try {
       setProgress('Optimizando imagen...');
-      // Optimizar imagen agresivamente para máxima velocidad
-      const optimized = await optimizeImage(base64String, 240, 240, 0.5);
+      // Optimizar imagen ULTRA-agresivamente para máxima velocidad
+      const optimized = await optimizeImage(base64String, 200, 200, 0.3);
       const originalSize = getImageSize(base64String);
       const optimizedSize = getImageSize(optimized);
       const reduction = Math.round((1 - optimizedSize/originalSize) * 100);
@@ -80,15 +80,20 @@ export default function FaceLogin() {
 
       // Enviar imagen al backend para verificación
       setProgress('Verificando rostro...');
+      const payload = JSON.stringify({
+        image: capturedImage,
+        email: email
+      });
+      console.log(`Tamaño del payload: ${(payload.length / 1024).toFixed(2)}KB`);
+      
       const response = await fetch(`${apiBase}/face/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept-Encoding': 'gzip, deflate' // Permitir compresión
         },
-        body: JSON.stringify({
-          image: capturedImage,
-          email: email
-        })
+        body: payload,
+        priority: 'high' // Prioridad alta de red
       });
 
       // Verificar que la respuesta sea JSON
