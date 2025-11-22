@@ -1,0 +1,2 @@
+import{j as n}from"./index-BaYh_0Lp.js";const e={success:"bg-emerald-500/15 text-emerald-200 border-emerald-400/30",error:"bg-red-500/15 text-red-200 border-red-400/30",info:"bg-indigo-500/15 text-indigo-200 border-indigo-400/30"};function x({intent:r="info",children:t,className:o="",...s}){const d=e[r]??e.info;return n.jsx("div",{role:"status",className:`rounded-xl border px-4 py-3 text-sm ${d} ${o}`,...s,children:t})}export{x as A};
+//# sourceMappingURL=Alert-CT4I4Ncm.js.map
