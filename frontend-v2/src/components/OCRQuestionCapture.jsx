@@ -9,7 +9,7 @@ import Spinner from './ui/Spinner';
 const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
   const { isVoiceModeEnabled, speak } = useVoice();
   const { user } = useAuth();
-  const [mode, setMode] = useState(null); // 'upload' or 'manual'
+  const [mode, setMode] = useState(null); // 'upload' only
   const [selectedTopic, setSelectedTopic] = useState(topics[0] || '');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -295,18 +295,6 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
               onMouseEnter={() => isVoiceModeEnabled && speak('Subir imagen', { force: true })}
             >
               📱 Subir imagen
-            </Button>
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={() => {
-                setMode('manual');
-                setProcessedQuestion({ pregunta: '', opciones: { a: '', b: '', c: '', d: '' } });
-              }}
-              onFocus={() => isVoiceModeEnabled && speak('Escribir manualmente', { force: true })}
-              onMouseEnter={() => isVoiceModeEnabled && speak('Escribir manualmente', { force: true })}
-            >
-              ✏️ Escribir
             </Button>
           </div>
         </div>
