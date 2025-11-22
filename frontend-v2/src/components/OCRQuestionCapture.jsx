@@ -232,37 +232,17 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
     setProcessedQuestion(null);
     setMode(null);
     setCorrectAnswerIndex(0);
+    stopCamera();
     setError('');
     setSuccessMessage('');
   };
 
-  // Announce form availability when voice is enabled and form is ready
-  // IMPORTANT: Use useEffect with proper cleanup and error handling to avoid blocking renders
   useEffect(() => {
-    let isMounted = true;
-    let speakTimeout;
-
-    if (isVoiceModeEnabled && !mode && !imageFile && !processedQuestion) {
-      // Delay speech to allow modal/component to render first
-      speakTimeout = setTimeout(() => {
-        if (isMounted) {
-          try {
-            // Use try-catch to handle any speech errors without blocking render
-            void speak('Formulario de captura de pregunta. Selecciona una imagen o toma una foto.', { force: true }).catch(err => {
-              console.error('Voice announcement failed:', err);
-            });
-          } catch (err) {
-            console.error('Error in voice effect:', err);
-          }
-        }
-      }, 300); // Delay to ensure modal is fully rendered
-    }
-
-    return () => {
-      isMounted = false;
-      if (speakTimeout) clearTimeout(speakTimeout);
-    };
-  }, [isVoiceModeEnabled, mode, imageFile, processedQuestion, speak]);
+  if (isVoiceModeEnabled && !mode && !imageFile) {
+    // Don't include 'speak' in dependencies to avoid infinite loops
+    speak('Formulario de captura de pregunta. Selecciona una imagen o toma una foto.', { force: true });
+  }
+}, [isVoiceModeEnabled, mode, imageFile]);
 
 
   return (
@@ -287,23 +267,6 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
 
       {error && <Alert intent="error">{error}</Alert>}
       {successMessage && <Alert intent="success">{successMessage}</Alert>}
-      
-      {/* Show counter of saved questions */}
-      {savedQuestions.length > 0 && (
-        <div className="p-3 bg-gradient-to-r from-bb-primary/20 to-bb-primary/10 rounded-lg border border-bb-primary/40 flex items-center justify-between">
-          <span className="text-sm font-semibold text-white">
-            ✅ {savedQuestions.length} pregunta{savedQuestions.length !== 1 ? 's' : ''} guardada{savedQuestions.length !== 1 ? 's' : ''}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onCancel}
-            className="text-xs"
-          >
-            Finalizar
-          </Button>
-        </div>
-      )}
 
       {/* Mode selection */}
       {!mode && !imageFile && !processedQuestion && (
@@ -372,7 +335,7 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
 
       {/* Processed question display and confirmation */}
       {processedQuestion && (
-        <div className="grid gap-5">
+        <div className="grid gap-6">
           <div className="p-4 bg-gradient-to-br from-bb-primary/20 to-bb-primary/10 rounded-xl border-2 border-bb-primary/40">
             <h3 className="text-lg font-bold mb-2">📝 Pregunta extraída</h3>
             <p className="text-xs text-white/70">Completa los campos para guardar tu pregunta</p>
@@ -385,8 +348,8 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
           ) : null}
 
           {/* Tema */}
-          <div className="grid gap-2">
-            <label className="text-sm font-semibold text-white">Tema *</label>
+          <div className="grid gap-2.5">
+            <label className="text-sm font-semibold text-white">Tema</label>
             <select
               value={selectedTopic}
               onChange={(e) => setSelectedTopic(e.target.value)}
@@ -399,13 +362,13 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
           </div>
 
           {/* Pregunta */}
-          <div className="grid gap-2">
-            <label className="text-sm font-semibold text-white">Pregunta *</label>
+          <div className="grid gap-2.5">
+            <label className="text-sm font-semibold text-white">Pregunta</label>
             <textarea
               value={processedQuestion.pregunta || ''}
               placeholder="Escribe la pregunta aquí..."
-              className="w-full p-3 rounded-xl bg-white/5 border-2 border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-bb-primary/30 focus:border-bb-primary resize-none transition"
-              rows="3"
+              className="w-full p-4 rounded-xl bg-white/5 border-2 border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-bb-primary/30 focus:border-bb-primary resize-none transition text-base"
+              rows="4"
               onChange={(e) => {
                 setProcessedQuestion(prev => ({
                   ...prev,
@@ -418,21 +381,21 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
           {/* Opciones de respuesta */}
           <div className="grid gap-3">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-white">Opciones de respuesta *</label>
+              <label className="text-sm font-semibold text-white">Opciones de respuesta</label>
               <span className="text-xs text-white/60">Mínimo 2 opciones</span>
             </div>
-            <div className="grid gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
+            <div className="grid gap-4 p-5 bg-white/5 rounded-lg border border-white/10">
               {['a', 'b', 'c', 'd'].map((key, idx) => {
                 const optionText = processedQuestion.opciones[key];
                 const isEmpty = !optionText || optionText.trim() === '' || optionText.includes('no detectada');
                 return (
-                  <div key={key} className="flex items-center gap-3">
-                    <span className="font-bold text-bb-primary text-lg min-w-[2rem]">{key.toUpperCase()})</span>
+                  <div key={key} className="flex items-center gap-4">
+                    <span className="font-bold text-bb-primary text-lg min-w-[2.5rem]">{key.toUpperCase()})</span>
                     <input
                       type="text"
                       value={optionText && !optionText.includes('no detectada') ? optionText : ''}
                       placeholder={isEmpty ? 'Opción opcional' : ''}
-                      className={`w-full p-2.5 rounded-lg bg-white/5 border text-white focus:outline-none focus:ring-2 transition ${
+                      className={`flex-1 p-3 rounded-lg bg-white/5 border text-white text-sm focus:outline-none focus:ring-2 transition ${
                         isEmpty 
                           ? 'border-orange-400/50 focus:ring-orange-400/30' 
                           : 'border-white/10 focus:ring-bb-primary/30 focus:border-bb-primary'
@@ -447,15 +410,17 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
                         }));
                       }}
                     />
-                    <input
-                      type="radio"
-                      name="correctOption"
-                      checked={correctAnswerIndex === idx}
-                      onChange={() => setCorrectAnswerIndex(idx)}
-                      disabled={loading || isEmpty}
-                      className="h-5 w-5 cursor-pointer accent-bb-primary"
-                      title={isEmpty ? 'Completa esta opción para seleccionar' : 'Respuesta correcta'}
-                    />
+                    <div className="flex-shrink-0">
+                      <input
+                        type="radio"
+                        name="correctOption"
+                        checked={correctAnswerIndex === idx}
+                        onChange={() => setCorrectAnswerIndex(idx)}
+                        disabled={loading || isEmpty}
+                        className="h-5 w-5 cursor-pointer accent-bb-primary"
+                        title={isEmpty ? 'Completa esta opción para seleccionar' : 'Respuesta correcta'}
+                      />
+                    </div>
                   </div>
                 );
               })}
@@ -471,10 +436,10 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
           </div>
 
           {/* Respuesta Correcta */}
-          <div className="grid gap-3 p-4 bg-bb-primary/15 rounded-lg border border-bb-primary/40">
+          <div className="grid gap-3 p-5 bg-bb-primary/15 rounded-lg border border-bb-primary/40">
             <label className="text-sm font-semibold text-white flex items-center gap-2">
               <span>✓ Respuesta Correcta</span>
-              <span className="text-xs font-normal text-white/60">(Seleccionada arriba)</span>
+              <span className="text-xs font-normal text-white/60">(Selecciona arriba)</span>
             </label>
             <div className="text-sm text-white/80">
               {(() => {
@@ -506,7 +471,7 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
           )}
 
           {/* Action Buttons - Organized */}
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:gap-4 pt-2">
             <Button
               onClick={confirmQuestion}
               disabled={loading}
