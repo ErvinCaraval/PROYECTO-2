@@ -102,72 +102,94 @@ const ManualQuestionForm = ({ topics, onQuestionCreated, onCancel }) => {
           </Button>
         </div>
       )}
-      <h3 className="text-xl font-bold">Escribe tu pregunta</h3>
+      
+      <div className="p-4 bg-gradient-to-br from-bb-primary/20 to-bb-primary/10 rounded-xl border-2 border-bb-primary/40 mb-4">
+        <h3 className="text-lg font-bold mb-1">✏️ Escribe tu pregunta</h3>
+        <p className="text-xs text-white/70">Rellena todos los campos correctamente</p>
+      </div>
 
       {error && <Alert intent="error">{error}</Alert>}
       {successMessage && <Alert intent="success">{successMessage}</Alert>}
 
+      {/* Tema */}
       <div className="grid gap-2">
-        <label className="text-sm text-white/80" htmlFor="topic-select">Tema</label>
+        <label className="text-sm font-semibold text-white" htmlFor="topic-select">Tema *</label>
         <select
           id="topic-select"
           value={formData.selectedTopic}
           onChange={e => setFormData(prev => ({ ...prev, selectedTopic: e.target.value }))}
           disabled={loading}
-          className="block w-full rounded-xl border-2 border-white/10 bg-white/5 px-4 py-3 text-white backdrop-blur-md focus:border-bb-primary focus:ring-2 focus:ring-bb-primary/30 focus:outline-none"
+          className="block w-full rounded-xl border-2 border-white/10 bg-white/5 px-4 py-3 text-white backdrop-blur-md focus:border-bb-primary focus:ring-2 focus:ring-bb-primary/30 focus:outline-none transition"
         >
           {topics.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </div>
 
+      {/* Pregunta */}
       <div className="grid gap-2">
-        <label className="text-sm text-white/80" htmlFor="question-input">Pregunta</label>
+        <label className="text-sm font-semibold text-white" htmlFor="question-input">Pregunta *</label>
         <Input
           id="question-input"
           type="text"
           value={formData.question}
           onChange={e => setFormData(prev => ({ ...prev, question: e.target.value }))}
           disabled={loading}
+          placeholder="Escribe la pregunta aquí..."
           required
         />
       </div>
 
+      {/* Opciones */}
       <div className="grid gap-3">
-        <label className="text-sm text-white/80">Opciones</label>
-        <div className="grid gap-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-white">Opciones de respuesta *</label>
+          <span className="text-xs text-white/60">4 opciones requeridas</span>
+        </div>
+        <div className="grid gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
           {formData.options.map((opt, idx) => (
             <div key={idx} className="flex items-center gap-3">
+              <span className="font-bold text-bb-primary text-lg min-w-[2rem]">{String.fromCharCode(65 + idx)})</span>
               <Input
                 type="text"
                 value={opt}
                 onChange={e => handleOptionChange(idx, e.target.value)}
                 disabled={loading}
-                required
-                placeholder={`Opción ${idx + 1}`}
+                placeholder="Escribe la opción..."
                 className="flex-1"
+                required
               />
-              <label className="inline-flex items-center gap-2 text-sm">
+              <label className="inline-flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   name="correctOption"
                   checked={formData.correctIndex === idx}
                   onChange={() => setFormData(prev => ({ ...prev, correctIndex: idx }))}
                   disabled={loading}
-                  className="h-4 w-4"
+                  className="h-5 w-5 accent-bb-primary cursor-pointer"
                 />
-                <span>Correcta</span>
+                <span className="text-xs text-white/70 whitespace-nowrap">Correcta</span>
               </label>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="flex justify-end gap-3">
+      {/* Resumen de respuesta correcta */}
+      <div className="p-3 bg-bb-primary/15 rounded-lg border border-bb-primary/40">
+        <p className="text-xs text-white/70 mb-1">Respuesta correcta seleccionada:</p>
+        <p className="text-sm font-semibold text-white">
+          {String.fromCharCode(65 + formData.correctIndex)}) {formData.options[formData.correctIndex] || '(sin llenar)'}
+        </p>
+      </div>
+
+      {/* Botones de acción */}
+      <div className="flex gap-3 pt-2">
         <Button
           type="button"
           variant="secondary"
           onClick={onCancel}
           disabled={loading}
+          className="flex-1"
           onFocus={() => isVoiceModeEnabled && speak('Atrás: vuelve al generador de preguntas.', { force: true })}
           onMouseEnter={() => isVoiceModeEnabled && speak('Atrás: vuelve al generador de preguntas.', { force: true })}
         >
@@ -176,10 +198,11 @@ const ManualQuestionForm = ({ topics, onQuestionCreated, onCancel }) => {
         <Button
           type="submit"
           disabled={loading}
+          className="flex-1"
           onFocus={() => isVoiceModeEnabled && speak('Guardar: guarda la pregunta actual.', { force: true })}
           onMouseEnter={() => isVoiceModeEnabled && speak('Guardar: guarda la pregunta actual.', { force: true })}
         >
-          {loading ? 'Guardando…' : 'Guardar'}
+          {loading ? '⏳ Guardando…' : '✓ Guardar'}
         </Button>
       </div>
     </form>

@@ -352,8 +352,11 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
 
       {/* Processed question display and confirmation */}
       {processedQuestion && (
-        <div className="grid gap-4 p-4 bg-white/5 rounded-xl border-2 border-bb-primary/30">
-          <h3 className="text-lg font-bold">Pregunta extraída</h3>
+        <div className="grid gap-5">
+          <div className="p-4 bg-gradient-to-br from-bb-primary/20 to-bb-primary/10 rounded-xl border-2 border-bb-primary/40">
+            <h3 className="text-lg font-bold mb-2">📝 Pregunta extraída</h3>
+            <p className="text-xs text-white/70">Completa los campos para guardar tu pregunta</p>
+          </div>
 
           {!processedQuestion.pregunta || processedQuestion.pregunta.includes('Pregunta no detectada') ? (
             <div className="p-3 bg-orange-500/10 border border-orange-400/30 rounded-lg">
@@ -361,12 +364,13 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
             </div>
           ) : null}
 
+          {/* Tema */}
           <div className="grid gap-2">
-            <label className="text-sm text-white/80">Tema</label>
+            <label className="text-sm font-semibold text-white">Tema *</label>
             <select
               value={selectedTopic}
               onChange={(e) => setSelectedTopic(e.target.value)}
-              className="block w-full rounded-xl border-2 border-white/10 bg-white/5 px-4 py-3 text-white backdrop-blur-md focus:border-bb-primary focus:ring-2 focus:ring-bb-primary/30 focus:outline-none"
+              className="block w-full rounded-xl border-2 border-white/10 bg-white/5 px-4 py-3 text-white backdrop-blur-md focus:border-bb-primary focus:ring-2 focus:ring-bb-primary/30 focus:outline-none transition"
             >
               {topics.map(t => (
                 <option key={t} value={t}>{t}</option>
@@ -374,12 +378,13 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
             </select>
           </div>
 
+          {/* Pregunta */}
           <div className="grid gap-2">
-            <label className="text-sm text-white/80">Pregunta *</label>
+            <label className="text-sm font-semibold text-white">Pregunta *</label>
             <textarea
-              defaultValue={processedQuestion.pregunta || ''}
+              value={processedQuestion.pregunta || ''}
               placeholder="Escribe la pregunta aquí..."
-              className="p-3 rounded-xl bg-white/5 border border-white/10 text-white break-words focus:outline-none focus:ring-2 focus:ring-bb-primary/30 focus:border-bb-primary resize-none"
+              className="w-full p-3 rounded-xl bg-white/5 border-2 border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-bb-primary/30 focus:border-bb-primary resize-none transition"
               rows="3"
               onChange={(e) => {
                 setProcessedQuestion(prev => ({
@@ -390,21 +395,24 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
             />
           </div>
 
+          {/* Opciones de respuesta */}
           <div className="grid gap-3">
-            <label className="text-sm text-white/80">Opciones de respuesta *</label>
-            <p className="text-xs text-white/60">Al menos 2 opciones son requeridas</p>
-            <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-white">Opciones de respuesta *</label>
+              <span className="text-xs text-white/60">Mínimo 2 opciones</span>
+            </div>
+            <div className="grid gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
               {['a', 'b', 'c', 'd'].map((key, idx) => {
                 const optionText = processedQuestion.opciones[key];
                 const isEmpty = !optionText || optionText.trim() === '' || optionText.includes('no detectada');
                 return (
-                  <div key={key} className="flex items-start gap-2">
-                    <span className="font-bold text-bb-primary min-w-[2rem]">{key.toUpperCase()})</span>
+                  <div key={key} className="flex items-center gap-3">
+                    <span className="font-bold text-bb-primary text-lg min-w-[2rem]">{key.toUpperCase()})</span>
                     <input
                       type="text"
-                      defaultValue={optionText && !optionText.includes('no detectada') ? optionText : ''}
-                      placeholder={`Opción ${key.toUpperCase()} (opcional)`}
-                      className={`p-2 rounded-lg bg-white/5 border text-white flex-1 break-words focus:outline-none focus:ring-2 ${
+                      value={optionText && !optionText.includes('no detectada') ? optionText : ''}
+                      placeholder={isEmpty ? 'Opción opcional' : ''}
+                      className={`w-full p-2.5 rounded-lg bg-white/5 border text-white focus:outline-none focus:ring-2 transition ${
                         isEmpty 
                           ? 'border-orange-400/50 focus:ring-orange-400/30' 
                           : 'border-white/10 focus:ring-bb-primary/30 focus:border-bb-primary'
@@ -419,91 +427,109 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
                         }));
                       }}
                     />
-                  </div>
-                );
-              })}
-            </div>
-            <p className="text-xs text-orange-300">⚠️ Los campos en naranja no fueron detectados. Edítalos manualmente.</p>
-          </div>
-
-          <div className="grid gap-3 p-3 bg-bb-primary/10 rounded-lg border border-bb-primary/30">
-            <label className="text-sm font-semibold text-white">¿Cuál es la respuesta correcta? *</label>
-            <div className="grid gap-2">
-              {['a', 'b', 'c', 'd'].map((key, idx) => {
-                const optionText = processedQuestion.opciones[key];
-                const isEmptyOrInvalid = !optionText || optionText.trim() === '' || optionText.includes('no detectada');
-                
-                // Filter to only show valid options
-                if (isEmptyOrInvalid) return null;
-                
-                return (
-                  <label key={key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer">
                     <input
                       type="radio"
                       name="correctOption"
                       checked={correctAnswerIndex === idx}
                       onChange={() => setCorrectAnswerIndex(idx)}
-                      disabled={loading || isEmptyOrInvalid}
-                      className="h-4 w-4 cursor-pointer"
+                      disabled={loading || isEmpty}
+                      className="h-5 w-5 cursor-pointer accent-bb-primary"
+                      title={isEmpty ? 'Completa esta opción para seleccionar' : 'Respuesta correcta'}
                     />
-                    <span className="text-sm">
-                      <strong>{key.toUpperCase()})</strong> {optionText}
-                    </span>
-                    {correctAnswerIndex === idx && (
-                      <span className="ml-auto text-bb-primary font-bold">✓ Correcta</span>
-                    )}
-                  </label>
+                  </div>
                 );
               })}
             </div>
+            {['a', 'b', 'c', 'd'].some(key => {
+              const optionText = processedQuestion.opciones[key];
+              return !optionText || optionText.trim() === '' || optionText.includes('no detectada');
+            }) && (
+              <p className="text-xs text-orange-300 flex items-center gap-1">
+                <span>⚠️</span> Los campos destacados en naranja no fueron detectados. Edítalos manualmente.
+              </p>
+            )}
           </div>
 
-          <p className="text-sm text-white/60">
-            ℹ️ Puedes editar la pregunta manualmente. Es importante que completes todos los campos correctamente.
+          {/* Respuesta Correcta */}
+          <div className="grid gap-3 p-4 bg-bb-primary/15 rounded-lg border border-bb-primary/40">
+            <label className="text-sm font-semibold text-white flex items-center gap-2">
+              <span>✓ Respuesta Correcta</span>
+              <span className="text-xs font-normal text-white/60">(Seleccionada arriba)</span>
+            </label>
+            <div className="text-sm text-white/80">
+              {(() => {
+                const selectedIdx = correctAnswerIndex;
+                const optionsArray = ['a', 'b', 'c', 'd'];
+                const selectedOption = optionsArray[selectedIdx];
+                const selectedText = processedQuestion.opciones[selectedOption];
+                return selectedText && !selectedText.includes('no detectada') 
+                  ? `${selectedOption.toUpperCase()}) ${selectedText}` 
+                  : 'Selecciona una opción válida';
+              })()}
+            </div>
+          </div>
+
+          {/* Info */}
+          <p className="text-xs text-white/60 flex items-center gap-2 p-2 bg-white/5 rounded-lg">
+            <span>ℹ️</span>
+            <span>Puedes editar todos los campos. Asegúrate de que todo sea correcto antes de guardar.</span>
           </p>
 
-          {/* Show saved questions counter and add another option - VISIBLE BEFORE CONFIRMING */}
+          {/* Show saved questions counter */}
           {savedQuestions.length > 0 && (
-            <div className="p-3 bg-gradient-to-r from-bb-primary/20 to-bb-primary/10 rounded-lg border border-bb-primary/40">
-              <p className="text-sm font-semibold text-white mb-2">
-                ✅ {savedQuestions.length} pregunta{savedQuestions.length !== 1 ? 's' : ''} guardada{savedQuestions.length !== 1 ? 's' : ''} - Puedes guardar esta y agregar más
+            <div className="p-3 bg-gradient-to-r from-green-500/20 to-green-500/10 rounded-lg border border-green-400/30">
+              <p className="text-sm font-semibold text-white">
+                ✅ {savedQuestions.length} pregunta{savedQuestions.length !== 1 ? 's' : ''} guardada{savedQuestions.length !== 1 ? 's' : ''}
               </p>
-              <div className="flex gap-2">
-                <span className="text-xs text-bb-primary/80">💡 Confirma y luego agrega otra</span>
-              </div>
+              <p className="text-xs text-green-300 mt-1">💡 Puedes guardar esta y agregar más, o finalizar</p>
             </div>
           )}
 
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-3">
-              <Button
-                onClick={confirmQuestion}
-                size="lg"
-                disabled={loading}
-                onFocus={() => isVoiceModeEnabled && speak('Confirmar y guardar', { force: true })}
-                onMouseEnter={() => isVoiceModeEnabled && speak('Confirmar y guardar', { force: true })}
-              >
-                {loading ? '⏳ Guardando…' : '✓ Confirmar'}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={resetForm}
-                disabled={loading}
-                onFocus={() => isVoiceModeEnabled && speak('Capturar otra imagen', { force: true })}
-                onMouseEnter={() => isVoiceModeEnabled && speak('Capturar otra imagen', { force: true })}
-              >
-                📷 Otra imagen
-              </Button>
+          {/* Action Buttons - Organized */}
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+            <Button
+              onClick={confirmQuestion}
+              disabled={loading}
+              className="sm:flex-1"
+              onFocus={() => isVoiceModeEnabled && speak('Confirmar y guardar la pregunta', { force: true })}
+              onMouseEnter={() => isVoiceModeEnabled && speak('Confirmar y guardar la pregunta', { force: true })}
+            >
+              {loading ? '⏳ Guardando…' : '✓ Confirmar'}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={resetForm}
+              disabled={loading}
+              className="sm:flex-1"
+              onFocus={() => isVoiceModeEnabled && speak('Cargar otra imagen', { force: true })}
+              onMouseEnter={() => isVoiceModeEnabled && speak('Cargar otra imagen', { force: true })}
+            >
+              📷 Otra imagen
+            </Button>
+            {savedQuestions.length > 0 && (
               <Button
                 variant="secondary"
                 onClick={onCancel}
                 disabled={loading}
-                onFocus={() => isVoiceModeEnabled && speak('Atrás', { force: true })}
-                onMouseEnter={() => isVoiceModeEnabled && speak('Atrás', { force: true })}
+                className="sm:flex-1"
+                onFocus={() => isVoiceModeEnabled && speak('Finalizar y cerrar', { force: true })}
+                onMouseEnter={() => isVoiceModeEnabled && speak('Finalizar y cerrar', { force: true })}
+              >
+                Finalizar
+              </Button>
+            )}
+            {savedQuestions.length === 0 && (
+              <Button
+                variant="secondary"
+                onClick={onCancel}
+                disabled={loading}
+                className="sm:flex-1"
+                onFocus={() => isVoiceModeEnabled && speak('Volver atrás', { force: true })}
+                onMouseEnter={() => isVoiceModeEnabled && speak('Volver atrás', { force: true })}
               >
                 Atrás
               </Button>
-            </div>
+            )}
           </div>
         </div>
       )}
