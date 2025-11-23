@@ -7,6 +7,7 @@ Usa DeepFace para verificación y registro facial con:
 - Connection pooling optimizado
 - Rate limiting inteligente
 - Procesamiento completamente thread-safe
+- OPTIMIZADO PARA MEMORIA LIMITADA (Render 512MB)
 """
 from flask import Flask, request, jsonify, has_request_context
 from flask_cors import CORS
@@ -31,6 +32,16 @@ import json
 import redis as redis_client
 from collections import defaultdict
 import uuid
+import gc
+
+# Importar Memory Optimizer
+try:
+    from memory_optimizer import MemoryOptimizer, ImageOptimizer, OPTIMAL_CONFIG
+    HAS_MEMORY_OPTIMIZER = True
+except ImportError:
+    HAS_MEMORY_OPTIMIZER = False
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.warning("Memory optimizer not available")
 
 # Configuración de logging
 logging.basicConfig(
@@ -39,14 +50,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# OPTIMIZACIONES PARA MEMORIA
+if HAS_MEMORY_OPTIMIZER:
+    logger.info("🟢 Memory Optimizer activated")
+    MemoryOptimizer.log_memory("startup")
+    MemoryOptimizer.monitor_memory_loop(check_interval=30)
+
 app = Flask(__name__)
 CORS(app)
 
-# Rate limiting
+# Rate limiting - REDUCIDO PARA MEMORIA
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
+    default_limits=["100 per day", "20 per hour"]  # Reducido
 )
 
 # ============ READER-WRITER LOCK (Para caché concurrente) ============
@@ -237,22 +254,41 @@ USE_INMEM_CACHE = os.getenv('USE_INMEM_CACHE', 'false').lower() in ('1', 'true',
 if not USE_INMEM_CACHE:
     logger.info("⚠️  Caché en memoria DESHABILITADA — usando solo persistent store")
 
-embedding_cache = ConcurrentEmbeddingCache(max_size=2000, ttl_seconds=3600, enabled=USE_INMEM_CACHE)
+# RENDER OPTIMIZATION: Usar caché más pequeño (500 vs 2000)
+if HAS_MEMORY_OPTIMIZER:
+    cache_size = 500  # Render: reducir caché para ahorrar memoria
+    cache_ttl = 1800  # TTL corto: 30 minutos
+else:
+    cache_size = 2000
+    cache_ttl = 3600
+
+embedding_cache = ConcurrentEmbeddingCache(max_size=cache_size, ttl_seconds=cache_ttl, enabled=USE_INMEM_CACHE)
+if HAS_MEMORY_OPTIMIZER:
+    logger.info(f"🟢 RENDER OPTIMIZED: Cache size={cache_size}, TTL={cache_ttl}s")
 
 # ============ THREAD POOL EXECUTOR (MÁXIMA PARALELIZACIÓN) ============
 # Usar ThreadPoolExecutor en lugar de cola personalizada
 # Soporta mejor distribución de carga, timeouts, y futures
 
-# Detectar número óptimo de workers (2x CPU cores para I/O-bound)
+# Detectar número óptimo de workers - OPTIMIZADO PARA RENDER 512MB
+# Render tiene limitaciones: usar máximo 2 workers para evitar overhead
 import multiprocessing
-optimal_workers = max(4, multiprocessing.cpu_count() * 2)
+cpu_count = multiprocessing.cpu_count()
+
+# RENDER OPTIMIZATION: Limitar a 2 workers máximo
+if HAS_MEMORY_OPTIMIZER:
+    optimal_workers = min(2, max(1, cpu_count // 2))  # Máximo 2 en Render
+else:
+    optimal_workers = max(4, cpu_count * 2)
 
 executor = ThreadPoolExecutor(
     max_workers=optimal_workers,
     thread_name_prefix='FacialWorker'
 )
 
-logger.info(f"🚀 ThreadPoolExecutor inicializado con {optimal_workers} workers")
+logger.info(f"🚀 ThreadPoolExecutor inicializado con {optimal_workers} workers (RENDER OPTIMIZED)")
+if HAS_MEMORY_OPTIMIZER:
+    logger.info(f"   Memory optimization ENABLED - max workers reduced to {optimal_workers}")
 
 # ============ ESTADÍSTICAS DE PERFORMANCE ============
 class PerformanceStats:
