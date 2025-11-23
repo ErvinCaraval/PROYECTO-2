@@ -11,9 +11,7 @@ services:
       - redis_data:/data
       - ../facial-service/redis.conf:/usr/local/etc/redis/redis.conf
     environment:
-      REDIS_PASSWORD_FILE: /run/secrets/redis_password
-    secrets:
-      - redis_password
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -75,14 +73,17 @@ services:
       PORT: 5000
       DEEPFACE_SERVICE_URL: http://facial-recognition-service:5001
       REDIS_URL: redis://facial-service-redis:6379/0
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       CORS_ORIGIN: http://localhost:80,http://frontend:80
-      AZURE_CV_API_KEY: 94kkjFlqrVEtP9KRV1mMZur5szubdMBcYGAe1Wo0WMI09JZLlwXNJQQJ99BKACZoyfiXJ3w3AAAFACOGNvd9
-      AZURE_CV_ENDPOINT: https://visionxporxcomputadora.cognitiveservices.azure.com/
-      # Variables públicas adicionales si aplica
-    secrets:
-      - db_credentials
-      - api_keys
-      - firebase_config
+      AZURE_CV_API_KEY: ${AZURE_CV_API_KEY}
+      AZURE_CV_ENDPOINT: ${AZURE_CV_ENDPOINT}
+      FIREBASE_API_KEY: ${FIREBASE_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL}
+      ASSEMBLYAI_API_KEY: ${ASSEMBLYAI_API_KEY}
+      AZURE_API_KEY: ${AZURE_API_KEY}
+      AZURE_ENDPOINT: ${AZURE_ENDPOINT}
+      AZURE_TTS_REGION: ${AZURE_TTS_REGION}
     depends_on:
       facial-recognition-service:
         condition: service_healthy
@@ -140,19 +141,6 @@ services:
 volumes:
   redis_data:
     driver: local
-
-## -----------------------------------------------------------
-## Secretos (requiere Docker Swarm / stack deploy)
-## -----------------------------------------------------------
-secrets:
-  redis_password:
-    file: ./secrets/redis_password.txt
-  db_credentials:
-    file: ./secrets/db_credentials.txt
-  api_keys:
-    file: ./secrets/api_keys.txt
-  firebase_config:
-    file: ./secrets/firebase_config.json
 
 ## -----------------------------------------------------------
 ## Red

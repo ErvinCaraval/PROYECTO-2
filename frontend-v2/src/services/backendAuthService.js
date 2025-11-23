@@ -7,7 +7,19 @@
 import { signInWithCustomToken, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth } from './firebase';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Use runtime environment configuration
+const API_BASE_URL = () => {
+  // Primero intenta window.ENV (runtime configuration)
+  if (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) {
+    return window.ENV.VITE_API_URL;
+  }
+  // Fallback a import.meta.env (build-time configuration)
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // Last resort: default
+  return 'http://localhost:5000/api';
+};
 
 class BackendAuthService {
   /**
@@ -20,7 +32,7 @@ class BackendAuthService {
    */
   async register(email, password, displayName, visualDifficulty = false) {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const response = await fetch(`${API_BASE_URL()}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,7 +72,7 @@ class BackendAuthService {
   async login(email, password) {
     try {
       // ✅ IMPORTANT: Login goes through backend first!
-      const response = await fetch(`${API_BASE_URL}/auth/verify-credentials`, {
+      const response = await fetch(`${API_BASE_URL()}/auth/verify-credentials`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -6,7 +6,7 @@ class AssemblyAIVoiceRecognitionService {
     this.isRecording = false;
     this.mediaRecorder = null;
     this.audioChunks = [];
-    this.apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    this.apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
     this.stream = null;
   }
 

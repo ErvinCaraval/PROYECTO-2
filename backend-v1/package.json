@@ -4,8 +4,8 @@
   "description": "Backend for BrainBlitz trivia game with voice accessibility features",
   "main": "hybridServer.js",
   "scripts": {
-    "start": "node hybridServer.js",
-    "dev": "nodemon hybridServer.js",
+    "start": "node --max-old-space-size=256 --heap-size-limit=256 hybridServer.js",
+    "dev": "nodemon --exec 'node --max-old-space-size=256' hybridServer.js",
     "test": "jest",
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
@@ -50,7 +50,8 @@
     "microsoft-cognitiveservices-speech-sdk": "^1.31.0",
     "sharp": "^0.34.5",
     "socket.io": "^4.7.4",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.0",
+    "compression": "^1.7.4"
   },
   "devDependencies": {
     "eslint": "^8.53.0",
