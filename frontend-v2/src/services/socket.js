@@ -1,6 +1,24 @@
 let socket = null;
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const getSocketUrl = () => {
+  // Primero intenta window.ENV (runtime)
+  if (typeof window !== 'undefined' && window.ENV?.VITE_SOCKET_URL) {
+    return window.ENV.VITE_SOCKET_URL;
+  }
+  // Fallback a window.ENV.VITE_API_URL
+  if (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) {
+    return window.ENV.VITE_API_URL;
+  }
+  // Fallback a import.meta.env (build-time)
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // Default
+  return 'http://localhost:5000';
+};
 
 export async function getSocket() {
   if (socket) return socket;
@@ -9,11 +27,11 @@ export async function getSocket() {
   // Configuración optimizada para dispositivos móviles
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   
-  socket = io(SOCKET_URL, { 
+  socket = io(getSocketUrl(), { 
     autoConnect: false,
     // Configuración optimizada para dispositivos móviles
     transports: isMobile ? ['polling', 'websocket'] : ['websocket', 'polling'],
-    timeout: isMobile ? 15000 : (import.meta.env.VITE_SOCKET_TIMEOUT || 8000),
+    timeout: isMobile ? 15000 : ((typeof window !== 'undefined' && window.ENV?.VITE_SOCKET_TIMEOUT) || import.meta.env.VITE_SOCKET_TIMEOUT || 8000),
     forceNew: true, // Forzar nueva conexión
     reconnection: true,
     reconnectionAttempts: isMobile ? 8 : 5,

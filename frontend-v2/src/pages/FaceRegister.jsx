@@ -84,7 +84,7 @@ export default function FaceRegister() {
       }
 
       // Obtener URL base de la API
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       console.log('3. API URL:', apiBase);
       console.log('4. Tamaño de imagen:', capturedImage.length, 'caracteres');
 
@@ -194,7 +194,7 @@ export default function FaceRegister() {
       if (!user) return setHasRegistration(false);
       try {
         const token = await user.getIdToken();
-        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
         const res = await fetch(`${apiBase}/face/exists`, {
           method: 'GET',
           headers: { Authorization: `Bearer ${token}` }
@@ -218,7 +218,7 @@ export default function FaceRegister() {
     setLoading(true);
     try {
       const token = await user.getIdToken();
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       const res = await fetch(`${apiBase}/face/${user.uid}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }

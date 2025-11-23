@@ -64,6 +64,7 @@ function getCorsOrigins() {
   const corsOriginEnv = process.env.CORS_ORIGIN || '';
   const defaultOrigins = [
     'https://proyecto-2-2.onrender.com',
+    'https://frontend-v2-latest.onrender.com',
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5174',
@@ -85,8 +86,10 @@ console.log(`CORS Origins allowed:`, corsOrigins);
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const compression = require('compression');
 const { Server } = require('socket.io');
 const { db, auth } = require('./firebase');
+const { logMemoryUsage } = require('./utils/memoryOptimizer');
 
 const app = express();
 const server = http.createServer(app);
@@ -136,9 +139,26 @@ app.use((req, res, next) => {
   next();
 });
 
-// Aumentar límite de tamaño para imágenes Base64 (hasta 50MB)
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// ✅ COMPRESSION MIDDLEWARE: Enable gzip compression
+app.use(compression({ level: 6, threshold: 1024 })); // Compress responses > 1KB
+
+// Aumentar límite de tamaño para imágenes Base64 (reducido a 10MB para Render 512MB)
+// Máximo recomendado: 10-15MB
+app.use(express.json({ 
+  limit: '10mb',
+  // Stream large payloads to avoid memory spike
+  verify: (req, res, buf, encoding) => {
+    if (buf.length > 5 * 1024 * 1024) { // Si > 5MB, loguear
+      console.log(`Large payload received: ${(buf.length / 1024 / 1024).toFixed(2)}MB`);
+    }
+  }
+}));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Log memory every 5 minutes
+setInterval(() => {
+  logMemoryUsage('Memory Check (5min)');
+}, 5 * 60 * 1000);
 
 // Rutas API
 // ✅ Authentication routes (centralized)
@@ -905,7 +925,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Servidor híbrido ejecutándose en puerto ${PORT}`);
-  console.log(`📚 Documentación API disponible en https://proyecto-2-olvb.onrender.com/api-docs`);
+  console.log(`📚 Documentación API disponible en https://backend-v1-latest.onrender.com/api-docs/`);
 });
 
 module.exports = { app, matchVoiceResponse };

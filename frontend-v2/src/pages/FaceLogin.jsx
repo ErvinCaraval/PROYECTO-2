@@ -80,7 +80,7 @@ export default function FaceLogin() {
 
     try {
       // Obtener URL base de la API
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
       // Enviar imagen al backend para verificación
       setProgress('Verificando rostro...');
