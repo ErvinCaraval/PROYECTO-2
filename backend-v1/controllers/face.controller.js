@@ -4,6 +4,7 @@
  */
 const deepfaceService = require('../services/deepface.service');
 const { auth } = require('../firebase');
+const { cleanupMemory, logMemoryUsage } = require('../utils/memoryOptimizer');
 
 class FaceController {
   /**
@@ -12,6 +13,7 @@ class FaceController {
    */
   async register(req, res) {
     try {
+      logMemoryUsage('Face Register Start');
       const { image, token } = req.body;
 
       // Validaciones
@@ -84,6 +86,10 @@ class FaceController {
       // Nota: ahora la persistencia de cara se realiza en el microservicio (Redis).
       // `deepfaceService.registerFace` ya guarda el embedding por `user_id` en el servicio facial.
 
+      // Clean up memory after processing
+      cleanupMemory();
+      logMemoryUsage('Face Register End');
+      
       res.status(201).json({
         success: true,
         message: 'Registro facial completado exitosamente',
@@ -92,6 +98,7 @@ class FaceController {
       });
     } catch (error) {
       console.error('Error en registro facial:', error);
+      cleanupMemory();
       res.status(500).json({
         success: false,
         error: error.message || 'Error interno del servidor'
