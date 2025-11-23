@@ -30,7 +30,7 @@ export function VoiceProvider({ children }) {
       try {
         // Get user settings from backend (secure)
         const idToken = await user.getIdToken();
-        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
         const response = await fetch(`${apiBase}/auth/profile`, {
           headers: {
             'Authorization': `Bearer ${idToken}`
