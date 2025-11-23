@@ -1,12 +1,21 @@
 // Voice Interactions Service - Log voice interactions to backend
 class VoiceInteractionsService {
   constructor() {
-    // Detect environment and pick API base.
-    // Prefer explicit VITE_API_URL. If not present, use localhost for local runs or Render for production.
-    const isBrowser = typeof window !== 'undefined';
-    const isLocalHost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const envApi = import.meta.env.VITE_API_URL;
-    this.apiBase = envApi || (isLocalHost ? 'http://localhost:5000/api' : 'https://proyecto-2-olvb.onrender.com/api');
+    // Use runtime environment configuration
+    if (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) {
+      this.apiBase = window.ENV.VITE_API_URL;
+    } else {
+      // Fallback a import.meta.env (build-time)
+      const envApi = import.meta.env.VITE_API_URL;
+      if (envApi) {
+        this.apiBase = envApi;
+      } else {
+        // Last resort: detect environment
+        const isBrowser = typeof window !== 'undefined';
+        const isLocalHost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        this.apiBase = isLocalHost ? 'http://localhost:5000/api' : 'https://proyecto-2-olvb.onrender.com/api';
+      }
+    }
     this.sessionId = this.generateSessionId();
   }
 

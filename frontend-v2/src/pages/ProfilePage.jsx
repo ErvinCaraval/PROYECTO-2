@@ -26,7 +26,7 @@ function ProfilePage() {
       if (!user) return;
       let statsData = null;
       try {
-        const apiBase = import.meta.env.VITE_API_URL;
+        const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
         // ✅ Get Firebase ID token from user
         const token = user && (await user.getIdToken());
         const statsRes = await fetch(`${apiBase}/users/me/stats?uid=${user.uid}`,

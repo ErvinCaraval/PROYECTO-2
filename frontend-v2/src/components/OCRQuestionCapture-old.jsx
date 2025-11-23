@@ -10,7 +10,7 @@ const OCRQuestionCapture = ({ topics, onQuestionExtracted, onCancel }) => {
   const { isVoiceModeEnabled, speak } = useVoice();
   const { user } = useAuth();
   const fileInputRef = useRef(null);
-  const apiBase = import.meta.env.VITE_API_URL;
+  const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
   // ==================== STATE MANAGEMENT ====================
   const [mode, setMode] = useState(null);

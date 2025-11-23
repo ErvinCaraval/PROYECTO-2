@@ -42,7 +42,7 @@ export default function DashboardPage() {
 
   const fetchPublicGames = async () => {
     try {
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       const response = await fetch(`${apiBase}/games`);
       const data = await response.json();
       const gamesArray = Array.isArray(data) ? data : [];
@@ -198,7 +198,7 @@ export default function DashboardPage() {
 
   const handleDeleteGame = async (gameId) => {
     try {
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       const token = await user.getIdToken(); // Obtener el token JWT del usuario
 
       const response = await fetch(`${apiBase}/games/${gameId}`, {

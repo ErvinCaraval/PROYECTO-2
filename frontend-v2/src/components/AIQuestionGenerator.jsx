@@ -75,7 +75,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
     setError('');
 
     try {
-      const apiBase = import.meta.env.VITE_API_URL;
+      const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       if (!apiBase) {
         setError('Error de configuración: URL del API no definida');
         return;
@@ -421,7 +421,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
                                       setLoading(true);
                                       setError('');
 
-                                      const apiBase = import.meta.env.VITE_API_URL;
+                                      const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
                                       if (!apiBase) {
                                         throw new Error('Error de configuración: URL del API no definida');
                                       }
@@ -500,7 +500,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
             setLoading(true);
             setError('');
             try {
-              const apiBase = import.meta.env.VITE_API_URL;
+              const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
               const token = user && user.getIdToken ? await user.getIdToken() : null;
               const response = await fetch(`${apiBase}/questions`, {
                 method: 'POST',
