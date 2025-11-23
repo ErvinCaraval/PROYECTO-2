@@ -924,7 +924,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Servidor híbrido ejecutándose en puerto ${PORT}`);
-  console.log(`📚 Documentación API disponible en https://backend-v1-latest.onrender.com`);
+  console.log(`📚 Documentación API disponible en https://backend-v1-latest.onrender.com/api-docs/`);
 });
 
 module.exports = { app, matchVoiceResponse };
