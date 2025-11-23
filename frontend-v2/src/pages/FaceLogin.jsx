@@ -6,7 +6,8 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
 import FaceCaptureCamera from '../components/FaceCaptureCamera';
-import { optimizeImage, getImageSize } from '../utils/imageOptimizer';
+import { optimizeImage, getImageSize, optimizeImageUltra } from '../utils/imageOptimizer';
+import { getCachedFaceEmbeddings } from '../services/faceCache';
 
 export default function FaceLogin() {
   const [email, setEmail] = useState('');
@@ -17,14 +18,17 @@ export default function FaceLogin() {
   const [capturedImage, setCapturedImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [step, setStep] = useState('email'); // 'email' o 'capture'
+  const [useUltraCompression, setUseUltraCompression] = useState(false); // Opción nueva
   
   const navigate = useNavigate();
 
   const handleCapture = async (base64String) => {
     try {
       setProgress('Optimizando imagen...');
-      // Optimizar imagen agresivamente para máxima velocidad
-      const optimized = await optimizeImage(base64String, 240, 240, 0.5);
+      // Seleccionar nivel de compresión
+      const optimized = useUltraCompression
+        ? await optimizeImageUltra(base64String)  // 160x160, calidad 0.2 - ULTRA
+        : await optimizeImage(base64String, 200, 200, 0.3);  // 200x200, calidad 0.3 - Estándar
       const originalSize = getImageSize(base64String);
       const optimizedSize = getImageSize(optimized);
       const reduction = Math.round((1 - optimizedSize/originalSize) * 100);
@@ -80,15 +84,20 @@ export default function FaceLogin() {
 
       // Enviar imagen al backend para verificación
       setProgress('Verificando rostro...');
+      const payload = JSON.stringify({
+        image: capturedImage,
+        email: email
+      });
+      console.log(`Tamaño del payload: ${(payload.length / 1024).toFixed(2)}KB`);
+      
       const response = await fetch(`${apiBase}/face/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept-Encoding': 'gzip, deflate' // Permitir compresión
         },
-        body: JSON.stringify({
-          image: capturedImage,
-          email: email
-        })
+        body: payload,
+        priority: 'high' // Prioridad alta de red
       });
 
       // Verificar que la respuesta sea JSON

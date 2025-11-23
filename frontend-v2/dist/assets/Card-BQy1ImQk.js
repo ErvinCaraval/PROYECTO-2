@@ -1,2 +1,0 @@
-import{j as o}from"./index-Hu8ytDjz.js";function d({className:r="",children:e,...a}){return o.jsx("section",{className:`relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl shadow-md ${r}`,...a,children:e})}function s({className:r="",children:e,...a}){return o.jsx("header",{className:`px-6 pt-6 ${r}`,...a,children:e})}function n({className:r="",children:e,...a}){return o.jsx("div",{className:`px-6 pb-6 ${r}`,...a,children:e})}export{d as C,n as a,s as b};
-//# sourceMappingURL=Card-BQy1ImQk.js.map
