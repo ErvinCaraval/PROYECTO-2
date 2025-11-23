@@ -4,7 +4,8 @@ import { useAuth } from '../AuthContext';
 import Button from '../components/ui/Button';
 import Alert from '../components/ui/Alert';
 import FaceCaptureCamera from '../components/FaceCaptureCamera';
-import { optimizeImage, getImageSize } from '../utils/imageOptimizer';
+import { optimizeImage, getImageSize, optimizeImageUltra } from '../utils/imageOptimizer';
+import { cacheFaceEmbeddings } from '../services/faceCache';
 
 export default function FaceRegister() {
   const [error, setError] = useState('');
@@ -13,6 +14,7 @@ export default function FaceRegister() {
   const [progress, setProgress] = useState('');
   const [capturedImage, setCapturedImage] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [useUltraCompression, setUseUltraCompression] = useState(false); // Opción nueva
   
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -21,12 +23,15 @@ export default function FaceRegister() {
   const handleCapture = async (base64String) => {
     try {
       setProgress('Optimizando imagen...');
-      // Optimizar imagen ULTRA-agresivamente para máxima velocidad
-      const optimized = await optimizeImage(base64String, 200, 200, 0.3);
+      // Seleccionar nivel de compresión
+      const optimized = useUltraCompression
+        ? await optimizeImageUltra(base64String)  // 160x160, calidad 0.2 - ULTRA
+        : await optimizeImage(base64String, 200, 200, 0.3);  // 200x200, calidad 0.3 - Estándar
+      
       const originalSize = getImageSize(base64String);
       const optimizedSize = getImageSize(optimized);
       const reduction = Math.round((1 - optimizedSize/originalSize) * 100);
-      console.log(`✓ Imagen optimizada: ${originalSize}KB → ${optimizedSize}KB (${reduction}% reducción)`);
+      console.log(`✓ Imagen optimizada (${useUltraCompression ? 'ULTRA' : 'ESTÁNDAR'}): ${originalSize}KB → ${optimizedSize}KB (${reduction}% reducción)`);
       setCapturedImage(optimized);
       setPreview(optimized);
       setProgress('');
@@ -135,6 +140,17 @@ export default function FaceRegister() {
           setSuccess('¡Registro facial completado exitosamente!');
           setProgress('');
           
+          // Cachear embeddings localmente si están disponibles (para login rápido)
+          if (data.embeddings && user?.email) {
+            try {
+              await cacheFaceEmbeddings(user.email, data.embeddings, {
+                registrationDate: new Date().toISOString()
+              });
+            } catch (cacheErr) {
+              console.warn('No se pudo cachear embeddings, pero el registro fue exitoso:', cacheErr);
+            }
+          }
+          
           // Redirigir a completar perfil o dashboard después de 2 segundos
           setTimeout(() => {
             // Verificar si el usuario tiene displayName, si no, ir a complete-profile
@@ -236,6 +252,20 @@ export default function FaceRegister() {
               Ya creaste tu cuenta, ahora completa tu registro con reconocimiento facial
             </p>
           )}
+          
+          {/* Opción de compresión ultra para conexiones lentas */}
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer hover:text-white">
+              <input
+                type="checkbox"
+                checked={useUltraCompression}
+                onChange={(e) => setUseUltraCompression(e.target.checked)}
+                disabled={loading}
+                className="w-4 h-4 accent-bb-primary cursor-pointer"
+              />
+              <span>🚀 Compresión Ultra (si es muy lento)</span>
+            </label>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl p-6">
