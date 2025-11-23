@@ -32,9 +32,45 @@ exports.getAll = async (req, res) => {
 // Create a new question
 exports.create = async (req, res) => {
   try {
-    const { text, options, correctAnswerIndex, category, explanation } = req.body;
-    const docRef = await db.collection('questions').add({ text, options, correctAnswerIndex, category, explanation });
-    res.status(201).json({ id: docRef.id });
+    const {
+      text,
+      options,
+      correctAnswerIndex,
+      category,
+      explanation,
+      imageUrl,
+      imageBase64,
+      imageAnalysis
+    } = req.body;
+
+    if (!text || !Array.isArray(options) || options.length < 2) {
+      return res.status(400).json({ error: 'Invalid question payload' });
+    }
+
+    if (typeof correctAnswerIndex !== 'number' || correctAnswerIndex < 0 || correctAnswerIndex >= options.length) {
+      return res.status(400).json({ error: 'Invalid correctAnswerIndex' });
+    }
+
+    const payload = {
+      text,
+      options,
+      correctAnswerIndex,
+      category: category || '',
+      explanation: explanation || ''
+    };
+
+    if (imageUrl) {
+      payload.imageUrl = imageUrl;
+    }
+    if (imageBase64) {
+      payload.imageBase64 = imageBase64;
+    }
+    if (imageAnalysis) {
+      payload.imageAnalysis = imageAnalysis;
+    }
+
+    const docRef = await db.collection('questions').add(payload);
+    res.status(201).json({ id: docRef.id, question: { id: docRef.id, ...payload } });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

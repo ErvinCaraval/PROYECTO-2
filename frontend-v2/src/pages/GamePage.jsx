@@ -305,6 +305,7 @@ export default function GamePage() {
                     selected={selected}
                     showResult={showResult}
                     correctIndex={result?.correctAnswerIndex ?? null}
+                    imageSrc={question.imageBase64 || question.imageUrl}
                   />
                 </div>
                 <div className="shrink-0 pt-1">

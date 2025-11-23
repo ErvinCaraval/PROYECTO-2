@@ -16,7 +16,7 @@ const registerLimiter = rateLimit({
 // Protege contra ataques de fuerza bruta
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // máximo 5 intentos de login por IP cada 15 minutos
+  max: 1000, // máximo 1000 intentos de login por IP cada 15 minutos
   message: {
     error: 'Demasiados intentos de inicio de sesión. Intenta de nuevo en 15 minutos.'
   },

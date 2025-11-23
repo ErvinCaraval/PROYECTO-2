@@ -54,13 +54,23 @@ describe('questionsController', () => {
 
   describe('create', () => {
     test('should create question', async () => {
-      req.body = { text: 'Q', options: [], correctAnswerIndex: 0, category: '', explanation: '' };
+      req.body = { text: 'Q', options: ['a', 'b'], correctAnswerIndex: 0, category: '', explanation: '' };
       require('../../firebase').db.collection.mockReturnValue({ add: jest.fn().mockResolvedValue({ id: '123' }) });
       await questionsController.create(req, res);
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ id: expect.any(String) }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        id: expect.any(String),
+        question: expect.objectContaining({ text: 'Q' })
+      }));
+    });
+    test('should return 400 for invalid payload', async () => {
+      req.body = { text: '', options: ['only'], correctAnswerIndex: 0 };
+      await questionsController.create(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.any(String) }));
     });
     test('should handle error', async () => {
+      req.body = { text: 'Q', options: ['a', 'b'], correctAnswerIndex: 0, category: '', explanation: '' };
       require('../../firebase').db.collection.mockReturnValue({ add: jest.fn().mockRejectedValue(new Error('fail')) });
       await questionsController.create(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
