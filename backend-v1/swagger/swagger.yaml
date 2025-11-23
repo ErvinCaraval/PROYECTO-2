@@ -1,34 +1,63 @@
 
 openapi: 3.0.0
 info:
-  title: BrainBlitz API - Documentación Detallada
-  version: 1.0.0
+  title: BrainBlitz API - Documentación Completa
+  version: 2.0.0
   description: |
-    Bienvenido a la API de BrainBlitz, el backend para el juego de trivia multijugador.  
-    Aquí encontrarás todos los endpoints REST disponibles, sus parámetros, ejemplos de uso y descripciones claras para que puedas integrarte fácilmente, incluso si es tu primera vez trabajando con APIs.
+    API Backend de **BrainBlitz**, el juego de trivia multijugador con accesibilidad de voz integrada.  
+    Aquí encontrarás todos los endpoints REST disponibles, sus parámetros, ejemplos de uso y descripciones completas.
+
+    **Características principales:**
+    - ✅ Autenticación con Firebase Auth
+    - ✅ Modo accesibilidad con voz (Voice-to-Text y Text-to-Speech)
+    - ✅ Reconocimiento facial para login
+    - ✅ Generación de preguntas con IA (OpenAI)
+    - ✅ OCR para escanear imágenes
+    - ✅ Procesamiento de audio con AssemblyAI
+    - ✅ Rate limiting y protección contra abuso
+    - ✅ Estadísticas en tiempo real
 
     **Notas importantes:**
-    - Todas las respuestas son en formato JSON.
-    - Algunos endpoints requieren autenticación mediante Firebase (token JWT).
+    - Todas las respuestas están en formato JSON.
+    - Algunos endpoints requieren autenticación mediante Bearer Token (Firebase JWT).
     - Puedes probar todos los endpoints desde `/api-docs` en el servidor en ejecución.
 
     ---
-    ## Uso en la nube (Render)
-    - **Base URL:** `https://brainblitz-backend.onrender.com`
-    - Reemplaza `localhost:5000` por el URL de Render en todas tus peticiones.
-    - Prueba los endpoints en [https://brainblitz-backend.onrender.com/api-docs](https://brainblitz-backend.onrender.com/api-docs)
-    - Ejemplo:
-      ```bash
-      curl -X POST https://brainblitz-backend.onrender.com/api/users/register \
-        -H "Content-Type: application/json" \
-        -d '{"email":"test@correo.com","password":"123456","displayName":"Test"}'
-      ```
+    ## URLs de Despliegue
+    
+    ### 🌐 Producción
+    - **Frontend:** [https://frontend-v2-latest.onrender.com](https://frontend-v2-latest.onrender.com)
+    - **Backend API:** [https://backend-v1-latest.onrender.com](https://backend-v1-latest.onrender.com)
+    - **Documentación Swagger:** [https://backend-v1-latest.onrender.com/api-docs](https://backend-v1-latest.onrender.com/api-docs)
+
+    ### 💻 Desarrollo Local
+    - **Backend:** http://localhost:5000
+    - **Frontend:** http://localhost:3000 (o http://localhost:5173)
+    - **Facial Service:** http://localhost:5001
+
+    ---
+    ## Ejemplo de uso
+
+    **Registrar usuario:**
+    ```bash
+    curl -X POST https://backend-v1-latest.onrender.com/api/users/register \
+      -H "Content-Type: application/json" \
+      -d '{"email":"test@correo.com","password":"123456","displayName":"Test"}'
+    ```
+
+    **Generar preguntas con IA:**
+    ```bash
+    curl -X POST https://backend-v1-latest.onrender.com/api/ai/generate-questions \
+      -H "Authorization: Bearer <TOKEN>" \
+      -H "Content-Type: application/json" \
+      -d '{"topic":"ciencia","difficulty":"medium","count":5,"useAI":true}'
+    ```
 
 servers:
-  - url: https://proyecto-2-olvb.onrender.com
-    description: Entorno de producción
+  - url: https://backend-v1-latest.onrender.com
+    description: 🌐 Entorno de Producción (Render)
   - url: http://localhost:5000
-    description: Entorno local
+    description: 💻 Entorno Local
 
 tags:
   - name: Users
@@ -49,6 +78,10 @@ tags:
     description: Endpoints de Text-to-Speech y gestión de voces (Azure/AssemblyAI).
   - name: AssemblyAI
     description: Endpoints para integración directa con AssemblyAI (STT/TTS/Procesamiento).
+  - name: FacialRecognition
+    description: Endpoints para registro y login facial (reconocimiento biométrico).
+  - name: OCR
+    description: Endpoints para reconocimiento óptico de caracteres (OCR).
 
 paths:
 
@@ -67,7 +100,7 @@ paths:
         ```
         **Producción:**
         ```bash
-        curl -X GET https://proyecto-2-olvb.onrender.com/api/admin/accessibility -H "Authorization: Bearer <TOKEN>"
+        curl -X GET https://backend-v1-latest.onrender.com/api/admin/accessibility -H "Authorization: Bearer <TOKEN>"
         ```
       security:
         - bearerAuth: []
@@ -143,7 +176,7 @@ paths:
         ```
         **Producción:**
         ```bash
-        curl -X PUT https://proyecto-2-olvb.onrender.com/api/admin/accessibility \
+        curl -X PUT https://backend-v1-latest.onrender.com/api/admin/accessibility \
           -H "Authorization: Bearer <TOKEN>" \
           -H "Content-Type: application/json" \
           -d '{"visualDifficulty": true}'
@@ -230,7 +263,7 @@ paths:
         ```
         **Producción:**
         ```bash
-        curl -X GET https://proyecto-2-olvb.onrender.com/api/admin/accessibility/stats -H "Authorization: Bearer <TOKEN>"
+        curl -X GET https://backend-v1-latest.onrender.com/api/admin/accessibility/stats -H "Authorization: Bearer <TOKEN>"
         ```
       security:
         - bearerAuth: []
@@ -287,7 +320,7 @@ paths:
         ```
         **Producción:**
         ```bash
-        curl -X GET https://proyecto-2-olvb.onrender.com/api/admin/accessibility-stats -H "Authorization: Bearer <TOKEN>"
+        curl -X GET https://backend-v1-latest.onrender.com/api/admin/accessibility-stats -H "Authorization: Bearer <TOKEN>"
         ```
       security:
         - bearerAuth: []
@@ -372,7 +405,7 @@ paths:
         ```
         **Producción:**
         ```bash
-        curl -X GET https://proyecto-2-olvb.onrender.com/api/admin/voice-mode-users -H "Authorization: Bearer <TOKEN>"
+        curl -X GET https://backend-v1-latest.onrender.com/api/admin/voice-mode-users -H "Authorization: Bearer <TOKEN>"
         ```
       security:
         - bearerAuth: []
@@ -2366,6 +2399,898 @@ components:
                   error:
                     type: string
                     example: "userId is required"
+
+  # ========================================
+  # OCR - OPTICAL CHARACTER RECOGNITION
+  # ========================================
+
+  /api/ocr/health:
+    get:
+      tags: [OCR]
+      summary: Verificar estado del servicio OCR
+      description: |
+        Verifica si el servicio de OCR (Azure) está configurado y disponible.
+      responses:
+        '200':
+          description: "Estado del servicio OCR"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  service:
+                    type: string
+                    example: "Azure OCR"
+                  available:
+                    type: boolean
+                    example: true
+
+  /api/ocr/process-url:
+    post:
+      tags: [OCR]
+      summary: Procesar imagen desde URL
+      description: |
+        Extrae texto de una imagen proporcionada mediante URL.
+        Útil para escanear preguntas desde imágenes en la web.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imageUrl:
+                  type: string
+                  format: uri
+                  description: "URL de la imagen a procesar"
+                  example: "https://example.com/image.jpg"
+                language:
+                  type: string
+                  description: "Código de idioma (ej: es, en, fr)"
+                  example: "es"
+      responses:
+        '200':
+          description: "Texto extraído exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  rawText:
+                    type: string
+                    example: "¿Cuál es la capital de Francia? a) París b) Lyon c) Marsella"
+                  pregunta:
+                    type: string
+                    example: "¿Cuál es la capital de Francia?"
+                  opciones:
+                    type: array
+                    items:
+                      type: string
+                    example: ["París", "Lyon", "Marsella"]
+                  confidence:
+                    type: string
+                    enum: ["high", "medium", "low"]
+                    example: "high"
+        '400':
+          description: "URL inválida o imagen sin texto"
+        '503':
+          description: "Servicio OCR no configurado"
+
+  /api/ocr/process-image:
+    post:
+      tags: [OCR]
+      summary: Procesar imagen desde base64
+      description: |
+        Extrae texto de una imagen proporcionada en formato base64.
+        Útil para imágenes capturadas desde cámara del dispositivo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imageBase64:
+                  type: string
+                  description: "Imagen en base64 (puede incluir prefijo data:image/...)"
+                  example: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                mimeType:
+                  type: string
+                  description: "Tipo MIME (ej: image/jpeg, image/png)"
+                  example: "image/jpeg"
+                language:
+                  type: string
+                  description: "Código de idioma"
+                  example: "es"
+      responses:
+        '200':
+          description: "Texto extraído de la imagen"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  rawText:
+                    type: string
+                  pregunta:
+                    type: string
+                  opciones:
+                    type: array
+                    items:
+                      type: string
+                  confidence:
+                    type: string
+        '400':
+          description: "Base64 inválido o imagen excede límite (50MB)"
+        '503':
+          description: "Servicio OCR no configurado"
+
+  # ========================================
+  # FACIAL RECOGNITION
+  # ========================================
+
+  /api/face/register:
+    post:
+      tags: [FacialRecognition]
+      summary: Registrar cara del usuario
+      description: |
+        Registra el reconocimiento facial del usuario para login biométrico futuro.
+        Requiere imagen en base64 y token de Firebase.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  description: "Imagen de la cara en base64"
+                token:
+                  type: string
+                  description: "Token de Firebase Auth"
+      responses:
+        '200':
+          description: "Cara registrada exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Facial recognition registered successfully"
+                  userId:
+                    type: string
+                    example: "user123456"
+        '400':
+          description: "Imagen inválida o token faltante"
+        '503':
+          description: "Servicio facial no disponible"
+
+  /api/face/login:
+    post:
+      tags: [FacialRecognition]
+      summary: Login mediante reconocimiento facial
+      description: |
+        Autentica al usuario utilizando reconocimiento facial.
+        Proporciona imagen y email del usuario.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  description: "Imagen de la cara en base64"
+                email:
+                  type: string
+                  format: email
+                  description: "Email del usuario a verificar"
+      responses:
+        '200':
+          description: "Login facial exitoso"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Facial login successful"
+                  userId:
+                    type: string
+                  token:
+                    type: string
+                    description: "JWT token para sesión"
+        '401':
+          description: "Cara no reconocida o email no encontrado"
+        '503':
+          description: "Servicio facial no disponible"
+
+  /api/face/exists:
+    get:
+      tags: [FacialRecognition]
+      summary: Verificar si usuario tiene registro facial
+      description: |
+        Comprueba si el usuario autenticado tiene un registro facial previo.
+        Requiere token de Firebase.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: "Estado del registro facial"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exists:
+                    type: boolean
+                    example: true
+                  userId:
+                    type: string
+        '401':
+          description: "No autenticado"
+        '503':
+          description: "Servicio facial no disponible"
+
+  /api/face/{userId}:
+    delete:
+      tags: [FacialRecognition]
+      summary: Eliminar registro facial del usuario
+      description: |
+        Elimina el registro facial del usuario autenticado.
+        El uid en el token debe coincidir con el userId en la URL.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "ID del usuario (debe coincidir con token)"
+      responses:
+        '200':
+          description: "Registro facial eliminado"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+        '403':
+          description: "No autorizado (uid no coincide)"
+        '401':
+          description: "No autenticado"
+
+  # ========================================
+  # ASSEMBLYAI - ADVANCED VOICE PROCESSING
+  # ========================================
+
+  /api/assemblyai/tts:
+    post:
+      tags: [AssemblyAI]
+      summary: Text-to-Speech con AssemblyAI
+      description: |
+        Convierte texto a audio usando AssemblyAI.
+        Soporta múltiples idiomas y voces personalizadas.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: "Texto a convertir en audio"
+                  example: "Bienvenido a BrainBlitz"
+                voice:
+                  type: string
+                  description: "Voz a utilizar"
+                  example: "maya"
+                language:
+                  type: string
+                  description: "Código de idioma"
+                  example: "es"
+      responses:
+        '200':
+          description: "Audio generado exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  audioUrl:
+                    type: string
+                    description: "URL del audio generado"
+                  duration:
+                    type: number
+                    description: "Duración en segundos"
+        '400':
+          description: "Texto o parámetros inválidos"
+        '503':
+          description: "Servicio AssemblyAI no disponible"
+
+  /api/assemblyai/stt:
+    post:
+      tags: [AssemblyAI]
+      summary: Speech-to-Text con AssemblyAI
+      description: |
+        Convierte audio a texto usando AssemblyAI.
+        Proporciona transcripción con alta precisión.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                audioUrl:
+                  type: string
+                  format: uri
+                  description: "URL del audio a transcribir"
+                language:
+                  type: string
+                  example: "es"
+                punctuate:
+                  type: boolean
+                  description: "Agregar puntuación automática"
+                  example: true
+                speakerLabels:
+                  type: boolean
+                  description: "Detectar múltiples hablantes"
+      responses:
+        '200':
+          description: "Transcripción completada"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  text:
+                    type: string
+                    example: "Primera opción"
+                  confidence:
+                    type: number
+                    example: 0.95
+        '400':
+          description: "URL de audio inválida"
+        '503':
+          description: "Servicio AssemblyAI no disponible"
+
+  /api/assemblyai/process-audio:
+    post:
+      tags: [AssemblyAI]
+      summary: Procesar audio base64
+      description: |
+        Procesa audio en formato base64 directamente.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                audioBase64:
+                  type: string
+                  description: "Audio en base64"
+                mimeType:
+                  type: string
+                  example: "audio/wav"
+                language:
+                  type: string
+                  example: "es"
+      responses:
+        '200':
+          description: "Audio procesado"
+
+  /api/assemblyai/voices:
+    get:
+      tags: [AssemblyAI]
+      summary: Obtener voces disponibles
+      description: |
+        Lista todas las voces disponibles en AssemblyAI.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: "Lista de voces"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  voices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        language:
+                          type: string
+
+  /api/assemblyai/status:
+    get:
+      tags: [AssemblyAI]
+      summary: Estado del servicio AssemblyAI
+      description: |
+        Verifica disponibilidad del servicio AssemblyAI.
+      responses:
+        '200':
+          description: "Estado del servicio"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  available:
+                    type: boolean
+                  service:
+                    type: string
+                    example: "AssemblyAI"
+                  features:
+                    type: array
+                    items:
+                      type: string
+
+  # ========================================
+  # AI - ARTIFICIAL INTELLIGENCE ENDPOINTS
+  # ========================================
+
+  /api/ai/topics:
+    get:
+      tags: [AI]
+      summary: Obtener temas disponibles
+      description: |
+        Retorna la lista de temas disponibles para generar preguntas con IA.
+        **Rate limited**
+      responses:
+        '200':
+          description: "Lista de temas disponibles"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  topics:
+                    type: array
+                    items:
+                      type: string
+                    example: ["ciencia", "historia", "geografía", "tecnología", "deporte"]
+
+  /api/ai/difficulty-levels:
+    get:
+      tags: [AI]
+      summary: Obtener niveles de dificultad
+      description: |
+        Retorna los niveles de dificultad disponibles para generar preguntas.
+        **Rate limited**
+      responses:
+        '200':
+          description: "Niveles de dificultad"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  levels:
+                    type: array
+                    items:
+                      type: string
+                    example: ["easy", "medium", "hard"]
+
+  /api/ai/generate-questions:
+    post:
+      tags: [AI]
+      summary: Generar preguntas con IA (OpenAI)
+      description: |
+        Genera preguntas de trivia personalizadas usando OpenAI.
+        Requiere autenticación y proporciona preguntas en base al tema y dificultad solicitados.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                topic:
+                  type: string
+                  description: "Tema para las preguntas"
+                  example: "ciencia"
+                difficulty:
+                  type: string
+                  enum: ["easy", "medium", "hard"]
+                  example: "medium"
+                count:
+                  type: integer
+                  description: "Cantidad de preguntas a generar (1-10)"
+                  example: 5
+                useAI:
+                  type: boolean
+                  description: "Usar IA para generar preguntas"
+                  example: true
+      responses:
+        '200':
+          description: "Preguntas generadas exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  topic:
+                    type: string
+                  difficulty:
+                    type: string
+                  count:
+                    type: integer
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        pregunta:
+                          type: string
+                          example: "¿Cuál es el elemento químico más abundante?"
+                        opciones:
+                          type: array
+                          items:
+                            type: string
+                          example: ["Oxígeno", "Nitrógeno", "Carbono"]
+                        respuestaCorrecta:
+                          type: integer
+                          example: 0
+        '400':
+          description: "Parámetros inválidos"
+        '401':
+          description: "No autenticado"
+        '503':
+          description: "Servicio de IA no disponible"
+
+  /api/ai/generate-game-questions:
+    post:
+      tags: [AI]
+      summary: Generar preguntas para un juego específico
+      description: |
+        Genera preguntas de IA específicamente para una partida.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gameId:
+                  type: string
+                  description: "ID de la partida"
+                topic:
+                  type: string
+                difficulty:
+                  type: string
+                count:
+                  type: integer
+      responses:
+        '200':
+          description: "Preguntas generadas para la partida"
+
+  # ========================================
+  # GAMES - MULTIPLAYER GAME MANAGEMENT
+  # ========================================
+
+  /api/games:
+    get:
+      tags: [Games]
+      summary: Listar juegos públicos disponibles
+      description: |
+        Obtiene la lista de juegos públicos en estado "waiting" (esperando jugadores).
+        **Rate limited**
+      responses:
+        '200':
+          description: "Lista de juegos públicos disponibles"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "game123456"
+                    gameTitle:
+                      type: string
+                      example: "Trivia de Ciencia"
+                    topic:
+                      type: string
+                      example: "ciencia"
+                    difficulty:
+                      type: string
+                      example: "medium"
+                    createdBy:
+                      type: string
+                    status:
+                      type: string
+                      enum: ["waiting", "playing", "finished"]
+                      example: "waiting"
+                    maxPlayers:
+                      type: integer
+                      example: 4
+                    currentPlayers:
+                      type: integer
+                      example: 1
+                    createdAt:
+                      type: string
+                      format: date-time
+
+  /api/games/{gameId}:
+    delete:
+      tags: [Games]
+      summary: Eliminar juego público
+      description: |
+        Elimina un juego público. Solo el creador puede eliminar su juego.
+        Requiere autenticación.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "ID del juego a eliminar"
+      responses:
+        '200':
+          description: "Juego eliminado exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Game deleted successfully"
+        '403':
+          description: "No autorizado para eliminar este juego"
+        '404':
+          description: "Juego no encontrado"
+
+  # ========================================
+  # QUESTIONS - QUESTION MANAGEMENT
+  # ========================================
+
+  /api/questions:
+    get:
+      tags: [Questions]
+      summary: Obtener todas las preguntas
+      description: |
+        Retorna la lista completa de preguntas disponibles en la base de datos.
+        **Rate limited** - Sin requiere autenticación
+      responses:
+        '200':
+          description: "Lista de todas las preguntas"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "q123456"
+                    text:
+                      type: string
+                      example: "¿Cuál es la capital de Francia?"
+                    options:
+                      type: array
+                      items:
+                        type: string
+                      example: ["París", "Lyon", "Marsella"]
+                    correctAnswerIndex:
+                      type: integer
+                      example: 0
+                    category:
+                      type: string
+                      example: "geografía"
+                    explanation:
+                      type: string
+                      example: "París es la capital de Francia..."
+
+    post:
+      tags: [Questions]
+      summary: Crear nueva pregunta
+      description: |
+        Crea una nueva pregunta en la base de datos.
+        **Requiere autenticación**
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  example: "¿Cuál es el planeta más grande?"
+                options:
+                  type: array
+                  items:
+                    type: string
+                  example: ["Júpiter", "Saturno", "Neptuno"]
+                correctAnswerIndex:
+                  type: integer
+                  example: 0
+                category:
+                  type: string
+                  example: "astronomía"
+                explanation:
+                  type: string
+      responses:
+        '201':
+          description: "Pregunta creada exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+        '400':
+          description: "Parámetros inválidos"
+        '401':
+          description: "No autenticado"
+
+  /api/questions/bulk:
+    post:
+      tags: [Questions]
+      summary: Crear múltiples preguntas
+      description: |
+        Crea varias preguntas en una sola solicitud.
+        **Requiere autenticación**
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                questions:
+                  type: array
+                  items:
+                    type: object
+                  minItems: 1
+      responses:
+        '200':
+          description: "Preguntas creadas exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          description: "Sin preguntas proporcionadas"
+        '401':
+          description: "No autenticado"
+
+  /api/questions/{id}:
+    put:
+      tags: [Questions]
+      summary: Actualizar pregunta
+      description: |
+        Actualiza una pregunta existente.
+        **Requiere autenticación**
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "ID de la pregunta"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: "Pregunta actualizada"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Question updated"
+        '400':
+          description: "Error al actualizar"
+
+    delete:
+      tags: [Questions]
+      summary: Eliminar pregunta
+      description: |
+        Elimina una pregunta.
+        **Requiere autenticación**
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "ID de la pregunta"
+      responses:
+        '200':
+          description: "Pregunta eliminada"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Question deleted"
+        '400':
+          description: "Error al eliminar"
 
   # ===========================================
   # DOCUMENTACIÓN DE EVENTOS WEBSOCKET
