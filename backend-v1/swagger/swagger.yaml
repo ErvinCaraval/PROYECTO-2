@@ -2015,8 +2015,6 @@ paths:
                     type: array
                     items:
                       type: string
-
-components:
   securitySchemes:
     bearerAuth:
       type: http
@@ -3306,3 +3304,26 @@ components:
   # - voiceAnswerError: Error en respuesta de voz
   # - voiceModeChanged: Modo de voz cambiado
   # - voiceModeStatus: Estado del modo de voz
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Token JWT de Firebase Auth"
+  schemas:
+    Question:
+      type: object
+      required: [text, options, correctAnswerIndex, category, difficulty, explanation]
+      properties:
+        text:
+          type: string
+          description: "Texto de la pregunta"
+          example: "¿Cuál es el río más largo del mundo?"
+        options:
+          type: array
+          description: "Opciones de respuesta"
+          items:
+            type: string
+          example: ["Nilo", "Amazonas", "Yangtsé", "Misisipi"]
