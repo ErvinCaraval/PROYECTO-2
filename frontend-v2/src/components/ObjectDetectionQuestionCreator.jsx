@@ -37,6 +37,14 @@ export default function ObjectDetectionQuestionCreator({
   const [questionType, setQuestionType] = useState('identification');
   const [hoveredObject, setHoveredObject] = useState(null);
   const [step, setStep] = useState('upload'); // upload | results | preview
+  const [questionsCreated, setQuestionsCreated] = useState(0);
+  const [justSavedQuestion, setJustSavedQuestion] = useState(false);
+  const [questionDraft, setQuestionDraft] = useState({
+    text: '',
+    options: ['', '', '', ''],
+    correctIndex: 0,
+    explanation: ''
+  });
 
   // Handlers
   const handleFileChange = (e) => {
@@ -57,6 +65,9 @@ export default function ObjectDetectionQuestionCreator({
     reader.onload = (event) => {
       setImagePreview(event.target.result);
       setStep('upload');
+      // Resetear contadores cuando se carga una nueva imagen
+      setQuestionsCreated(0);
+      setJustSavedQuestion(false);
       if (isVoiceModeEnabled) {
         speak('Imagen seleccionada correctamente. Presiona detectar objetos para continuar.', { force: true });
       }
@@ -219,127 +230,69 @@ export default function ObjectDetectionQuestionCreator({
         uniqueObjects.push('Ninguno de los anteriores');
       }
 
-      // Mezclar opciones (mantener correcta en la primera posición por ahora)
       options = uniqueObjects;
-      correctAnswerIndex = 0; // El primer objeto es siempre el seleccionado
+      correctAnswerIndex = 0; // Por defecto, primera opción
 
-      explanation = `✅ Respuesta correcta: "${selectedObject.name}".\n\nSe detectaron ${detection.stats.totalObjects} objeto(s) en total. El objeto seleccionado tiene una confianza de ${(selectedObject.confidence * 100).toFixed(0)}%.`;
+      explanation = `Se detectaron ${detection.stats.totalObjects} objeto(s) en total.`;
     } else {
       const count = detection.objectCounts[selectedObject.name] || 0;
       question = `¿Cuánto${count !== 1 ? 's' : ''} ${selectedObject.name} hay en la imagen?`;
       options = ['0', '1', '2', '3', '4+'];
       correctAnswerIndex = count > 4 ? 4 : count;
 
-      explanation = `✅ Respuesta correcta: ${count}.\n\nSe detectó(ron) ${count} ${selectedObject.name}(s) en la imagen.`;
+      explanation = `Se detectó(ron) ${count} ${selectedObject.name}(s) en la imagen.`;
     }
 
     // Validar que tenemos exactamente 4 opciones
     if (options.length !== 4) {
-      console.warn(`⚠️ Número incorrecto de opciones: ${options.length}. Esperado: 4`);
-      // Forzar 4 opciones
       if (options.length < 4) {
         while (options.length < 4) {
-          options.push('Opción adicional');
+          options.push('');
         }
       } else {
         options = options.slice(0, 4);
       }
     }
 
-    const questionData = {
+    // Llenar el draft de pregunta para edición
+    setQuestionDraft({
       text: question,
-      options,
-      correctAnswerIndex,
-      category: 'Detección de Objetos',
-      explanation,
-      imageBase64: imagePreview,
-      questionType: `detectionObjects_${questionType}`,
-      difficulty: 'media',
-      imageAnalysis: {
-        detectedObjects: detection.objects,
-        objectCounts: detection.objectCounts,
-        totalObjects: detection.stats.totalObjects,
-        service: 'Azure Computer Vision',
-        timestamp: new Date().toISOString()
-      }
-    };
+      options: options,
+      correctIndex: correctAnswerIndex,
+      explanation: explanation
+    });
 
     setStep('preview');
     
     if (isVoiceModeEnabled) {
-      speak(`Pregunta generada. ${question}. Las opciones son: ${options.join(', ')}`, { force: true });
+      speak(`Pregunta generada. ${question}. Las opciones son: ${options.filter(o => o).join(', ')}. Edita antes de guardar.`, { force: true });
     }
   };
 
   const confirmQuestion = () => {
-    const filteredObjects = detection?.objects.filter(
-      obj => obj.confidence >= confidenceThreshold
-    ) || [];
-
-    let question = '';
-    let options = [];
-    let correctAnswerIndex = -1;
-    let explanation = '';
-
-    if (questionType === 'identification') {
-      question = `¿Qué objeto aparece en esta imagen?`;
-      
-      // Primero: incluir el objeto seleccionado
-      const uniqueObjects = [selectedObject.name];
-      const seen = new Set([selectedObject.name]);
-      
-      // Luego: agregar otros objetos únicos hasta tener 4
-      for (const obj of filteredObjects) {
-        if (!seen.has(obj.name) && uniqueObjects.length < 4) {
-          uniqueObjects.push(obj.name);
-          seen.add(obj.name);
-        }
-      }
-      
-      // Si tenemos menos de 4 opciones, completar con objetos no filtrados
-      if (uniqueObjects.length < 4) {
-        for (const obj of detection.objects) {
-          if (!seen.has(obj.name) && uniqueObjects.length < 4) {
-            uniqueObjects.push(obj.name);
-            seen.add(obj.name);
-          }
-        }
-      }
-      
-      // Si aún tenemos menos de 4, duplicar algunos (fallback)
-      while (uniqueObjects.length < 4) {
-        uniqueObjects.push('Ninguno de los anteriores');
-      }
-
-      options = uniqueObjects;
-      correctAnswerIndex = 0; // El primer objeto es siempre el seleccionado
-      explanation = `✅ Respuesta correcta: "${selectedObject.name}".\n\nSe detectaron ${detection.stats.totalObjects} objeto(s) en total.`;
-    } else {
-      const count = detection.objectCounts[selectedObject.name] || 0;
-      question = `¿Cuánto${count !== 1 ? 's' : ''} ${selectedObject.name} hay en la imagen?`;
-      options = ['0', '1', '2', '3', '4+'];
-      correctAnswerIndex = count > 4 ? 4 : count;
-      explanation = `✅ Respuesta correcta: ${count}.\n\nSe detectó(ron) ${count} ${selectedObject.name}(s).`;
+    // Validar que tenemos pregunta y opciones válidas
+    if (!questionDraft.text.trim()) {
+      setError('❌ La pregunta no puede estar vacía.');
+      return;
     }
 
-    // Validar que tenemos exactamente 4 opciones
-    if (options.length !== 4) {
-      console.warn(`⚠️ Número incorrecto de opciones: ${options.length}. Esperado: 4`);
-      if (options.length < 4) {
-        while (options.length < 4) {
-          options.push('Opción adicional');
-        }
-      } else {
-        options = options.slice(0, 4);
-      }
+    const validOptions = questionDraft.options.filter(opt => opt.trim());
+    if (validOptions.length < 2) {
+      setError('❌ Necesitas al menos 2 opciones válidas.');
+      return;
+    }
+
+    if (!questionDraft.options[questionDraft.correctIndex]?.trim()) {
+      setError('❌ La opción correcta no puede estar vacía.');
+      return;
     }
 
     const questionData = {
-      text: question,
-      options,
-      correctAnswerIndex,
+      text: questionDraft.text.trim(),
+      options: questionDraft.options.map(opt => opt.trim()),
+      correctAnswerIndex: questionDraft.correctIndex,
       category: 'Detección de Objetos',
-      explanation,
+      explanation: questionDraft.explanation || '',
       imageBase64: imagePreview,
       questionType: `detectionObjects_${questionType}`,
       difficulty: 'media',
@@ -352,13 +305,49 @@ export default function ObjectDetectionQuestionCreator({
       }
     };
 
+    // Llamar al callback para guardar la pregunta
     onQuestionCreated?.(questionData);
+    
+    // Mostrar mensaje de éxito y contar
+    setQuestionsCreated(prev => prev + 1);
+    setJustSavedQuestion(true);
+    setSuccessMessage(`✅ Pregunta ${questionsCreated + 1} guardada`);
+    
+    if (isVoiceModeEnabled) {
+      speak(`Pregunta ${questionsCreated + 1} guardada. Puedes crear otra pregunta con esta imagen.`, { force: true });
+    }
+
+    // Limpiar estado después de 2 segundos
+    setTimeout(() => {
+      setJustSavedQuestion(false);
+      setSuccessMessage('');
+    }, 2000);
+    
+    // Volver a vista de resultados para permitir crear otra pregunta
+    setStep('results');
+    setSelectedObject(null);
+    setQuestionType('identification');
+    setQuestionDraft({
+      text: '',
+      options: ['', '', '', ''],
+      correctIndex: 0,
+      explanation: ''
+    });
   };
 
   // Filtered objects
   const filteredObjects = detection?.objects.filter(
     obj => obj.confidence >= confidenceThreshold
   ) || [];
+
+  const handleCancel = () => {
+    if (questionsCreated > 0) {
+      if (isVoiceModeEnabled) {
+        speak(`Se guardaron ${questionsCreated} pregunta${questionsCreated !== 1 ? 's' : ''}. Volviendo al panel de preguntas.`, { force: true });
+      }
+    }
+    onCancel?.();
+  };
 
   return (
     <div className="object-detection-creator">
@@ -414,7 +403,7 @@ export default function ObjectDetectionQuestionCreator({
           {error && <Alert intent="error">{error}</Alert>}
           {successMessage && <Alert intent="success">{successMessage}</Alert>}
 
-          <Button variant="secondary" onClick={onCancel} className="od-button-full">
+          <Button variant="secondary" onClick={handleCancel} className="od-button-full">
             Cancelar
           </Button>
         </div>
@@ -555,16 +544,21 @@ export default function ObjectDetectionQuestionCreator({
             <Button variant="secondary" onClick={() => setStep('upload')} className="od-button-secondary">
               ← Volver
             </Button>
+            {questionsCreated > 0 && (
+              <Button variant="ghost" onClick={handleCancel} className="od-button-secondary">
+                Finalizar ({questionsCreated} pregunta{questionsCreated !== 1 ? 's' : ''})
+              </Button>
+            )}
           </div>
         </div>
       )}
 
-      {/* Step 3: Preview */}
-      {step === 'preview' && detection && selectedObject && (
+      {/* Step 3: Preview and Editing */}
+      {step === 'preview' && detection && (
         <div className="od-section">
           <div className="od-header">
-            <h2>👁️ Vista Previa de la Pregunta</h2>
-            <p>Revisa la pregunta antes de guardarla</p>
+            <h2>👁️ Editar Pregunta</h2>
+            <p>Revisa y edita la pregunta antes de guardarla</p>
           </div>
 
           <div className="od-preview-card">
@@ -572,65 +566,59 @@ export default function ObjectDetectionQuestionCreator({
             
             <div className="od-preview-question">
               <h3>📝 Pregunta:</h3>
-              <p className="od-preview-text">
-                {questionType === 'identification'
-                  ? '¿Qué objeto aparece en esta imagen?'
-                  : `¿Cuánto${detection.objectCounts[selectedObject.name] !== 1 ? 's' : ''} ${selectedObject.name} hay en la imagen?`}
-              </p>
+              <input
+                type="text"
+                value={questionDraft.text}
+                onChange={(e) => setQuestionDraft(prev => ({ ...prev, text: e.target.value }))}
+                className="od-input"
+                placeholder="Escribe tu pregunta"
+              />
             </div>
 
             <div className="od-preview-options">
-              <h3>📋 Opciones:</h3>
+              <h3>📋 Opciones de Respuesta:</h3>
               <div className="od-options-list">
-                {(() => {
-                  const filteredObjects = detection.objects.filter(
-                    obj => obj.confidence >= confidenceThreshold
-                  );
-                  let options = [];
-                  let correctIdx = -1;
-
-                  if (questionType === 'identification') {
-                    const uniqueObjects = [];
-                    const seen = new Set();
-                    for (const obj of filteredObjects) {
-                      if (!seen.has(obj.name)) {
-                        uniqueObjects.push(obj.name);
-                        seen.add(obj.name);
-                        if (uniqueObjects.length >= 4) break;
-                      }
-                    }
-                    options = uniqueObjects;
-                    correctIdx = options.indexOf(selectedObject.name);
-                    if (correctIdx === -1) {
-                      options[options.length - 1] = selectedObject.name;
-                      correctIdx = options.length - 1;
-                    }
-                  } else {
-                    const count = detection.objectCounts[selectedObject.name] || 0;
-                    options = ['0', '1', '2', '3', '4+'];
-                    correctIdx = count > 4 ? 4 : count;
-                  }
-
-                  return options.map((opt, idx) => (
-                    <div key={idx} className={`od-option ${idx === correctIdx ? 'od-correct' : ''}`}>
-                      <span>{String.fromCharCode(65 + idx)}.</span>
-                      <span>{opt}</span>
-                      {idx === correctIdx && <span className="od-correct-badge">✓ Correcta</span>}
-                    </div>
-                  ));
-                })()}
+                {questionDraft.options.map((opt, idx) => (
+                  <div key={idx} className={`od-option-editor ${idx === questionDraft.correctIndex ? 'od-selected-correct' : ''}`}>
+                    <label className="od-radio-option">
+                      <input
+                        type="radio"
+                        name="correctAnswer"
+                        checked={idx === questionDraft.correctIndex}
+                        onChange={() => setQuestionDraft(prev => ({ ...prev, correctIndex: idx }))}
+                      />
+                      <span className="od-option-letter">{String.fromCharCode(65 + idx)}.</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={opt}
+                      onChange={(e) => {
+                        const newOptions = [...questionDraft.options];
+                        newOptions[idx] = e.target.value;
+                        setQuestionDraft(prev => ({ ...prev, options: newOptions }));
+                      }}
+                      className="od-option-input"
+                      placeholder={`Opción ${idx + 1}`}
+                    />
+                    {idx === questionDraft.correctIndex && <span className="od-correct-badge">✓ Correcta</span>}
+                  </div>
+                ))}
               </div>
             </div>
 
             <div className="od-preview-explanation">
               <h3>💡 Explicación:</h3>
-              <p>
-                {questionType === 'identification'
-                  ? `✅ Respuesta correcta: "${selectedObject.name}". Se detectaron ${detection.stats.totalObjects} objeto(s) en total.`
-                  : `✅ Respuesta correcta: ${detection.objectCounts[selectedObject.name] || 0}. Se detectó(ron) ${detection.objectCounts[selectedObject.name] || 0} ${selectedObject.name}(s).`}
-              </p>
+              <textarea
+                value={questionDraft.explanation}
+                onChange={(e) => setQuestionDraft(prev => ({ ...prev, explanation: e.target.value }))}
+                className="od-explanation-textarea"
+                placeholder="Explicación de la respuesta (opcional)"
+                rows="3"
+              />
             </div>
           </div>
+
+          {error && <Alert intent="error">{error}</Alert>}
 
           <div className="od-button-group">
             <Button
@@ -640,8 +628,13 @@ export default function ObjectDetectionQuestionCreator({
               💾 Guardar Pregunta
             </Button>
             <Button variant="secondary" onClick={() => setStep('results')} className="od-button-secondary">
-              ← Editar
+              ← Volver
             </Button>
+            {questionsCreated > 0 && (
+              <Button variant="ghost" onClick={handleCancel} className="od-button-secondary">
+                Finalizar ({questionsCreated} pregunta{questionsCreated !== 1 ? 's' : ''})
+              </Button>
+            )}
           </div>
         </div>
       )}
