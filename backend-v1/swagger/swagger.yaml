@@ -82,6 +82,8 @@ tags:
     description: Endpoints para registro y login facial (reconocimiento biométrico).
   - name: OCR
     description: Endpoints para reconocimiento óptico de caracteres (OCR).
+  - name: Vision
+    description: Endpoints de visión por computadora (OCR, Análisis de Imagen, Detección de Objetos).
 
 paths:
 
@@ -1439,6 +1441,225 @@ paths:
           description: "Error al eliminar"
 
   # ===========================================
+  # VISION - OBJECT DETECTION (HU-VC4)
+  # ===========================================
+
+  /api/vision/detect-objects:
+    post:
+      summary: "HU-VC4 - Detectar objetos en imágenes"
+      description: "Detecta y localiza objetos específicos en imágenes usando Azure Computer Vision. Permite crear preguntas interactivas basadas en objetos detectados."
+      tags:
+        - Vision
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - imageBase64
+              properties:
+                imageBase64:
+                  type: string
+                  description: "Imagen codificada en base64. Formato: 'data:image/jpeg;base64,...'"
+                  example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAA..."
+                imageUrl:
+                  type: string
+                  description: "URL pública de la imagen (alternativa a imageBase64)"
+                  example: "https://example.com/image.jpg"
+                minConfidence:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                  default: 0.5
+                  description: "Umbral mínimo de confianza para incluir objetos detectados"
+                  example: 0.6
+                language:
+                  type: string
+                  default: "es"
+                  description: "Idioma para las etiquetas de objetos"
+                  enum: ["es", "en", "fr", "de", "pt", "it"]
+                objectName:
+                  type: string
+                  description: "Filtrar por nombre específico de objeto (ej: 'guitar')"
+                  example: "guitar"
+      responses:
+        '200':
+          description: "Detección exitosa"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  detection:
+                    type: object
+                    properties:
+                      objects:
+                        type: array
+                        description: "Lista de objetos detectados"
+                        items:
+                          $ref: '#/components/schemas/DetectedObject'
+                      objectCounts:
+                        type: object
+                        description: "Conteo de objetos por tipo"
+                        example:
+                          guitar: 1
+                          person: 2
+                          piano: 1
+                      groupedByType:
+                        type: object
+                        description: "Objetos agrupados por tipo"
+                        example:
+                          guitar:
+                            - id: 0
+                              name: "guitar"
+                              confidence: 0.98
+                      stats:
+                        $ref: '#/components/schemas/ObjectDetectionStats'
+                      topObjects:
+                        type: array
+                        description: "Top 5 objetos más confiables"
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            confidence:
+                              type: number
+                            count:
+                              type: number
+                      metadata:
+                        type: object
+                        description: "Metadatos de la detección"
+                        properties:
+                          width:
+                            type: number
+                            example: 1920
+                          height:
+                            type: number
+                            example: 1440
+                          service:
+                            type: string
+                            example: "Azure Computer Vision v3.2"
+                          timestamp:
+                            type: string
+                            format: date-time
+                          minConfidenceThreshold:
+                            type: number
+                            example: 0.5
+                  questionSuggestions:
+                    type: object
+                    description: "Sugerencias automáticas de preguntas"
+                    properties:
+                      identification:
+                        type: object
+                        description: "Pregunta de identificación"
+                        properties:
+                          type:
+                            type: string
+                            example: "identification"
+                          question:
+                            type: string
+                            example: "¿Qué objeto aparece en esta imagen?"
+                          options:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                text:
+                                  type: string
+                                confidence:
+                                  type: number
+                                isCorrect:
+                                  type: boolean
+                          correctAnswer:
+                            type: string
+                          explanation:
+                            type: string
+                      counting:
+                        type: object
+                        description: "Pregunta de conteo"
+                        properties:
+                          type:
+                            type: string
+                            example: "counting"
+                          question:
+                            type: string
+                            example: "¿Cuántos guitar(s) hay en la imagen?"
+                          options:
+                            type: array
+                            items:
+                              type: string
+                            example: ["0", "1", "2", "3"]
+                          correctAnswer:
+                            type: string
+                            example: "1"
+                      multipleChoice:
+                        type: object
+                        description: "Pregunta de opción múltiple"
+                        nullable: true
+                  cost:
+                    type: object
+                    description: "Información de costos"
+                    properties:
+                      usd:
+                        type: number
+                        example: 0.0005
+                      note:
+                        type: string
+                  processedAt:
+                    type: string
+                    format: date-time
+                  language:
+                    type: string
+                    example: "es"
+        '400':
+          description: "Error en la solicitud"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                  code:
+                    type: string
+                    enum:
+                      - MISSING_IMAGE
+                      - IMAGE_TOO_LARGE
+                      - INVALID_IMAGE_TYPE
+                      - INVALID_CONFIDENCE
+        '401':
+          description: "No autenticado"
+        '403':
+          description: "No autorizado"
+        '429':
+          description: "Límite de tasa excedido"
+        '503':
+          description: "Servicio no disponible"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                  code:
+                    type: string
+                    example: "SERVICE_UNAVAILABLE"
+
+  # ===========================================
   # DOCUMENTACIÓN DE EVENTOS WEBSOCKET
   # ===========================================
 
@@ -1475,3 +1696,94 @@ components:
           items:
             type: string
           example: ["Nilo", "Amazonas", "Yangtsé", "Misisipi"]
+
+    # ========== VISION - OBJECT DETECTION SCHEMAS ==========
+    
+    DetectedObject:
+      type: object
+      description: "Objeto detectado en una imagen"
+      properties:
+        id:
+          type: number
+          description: "ID único del objeto detectado"
+        name:
+          type: string
+          description: "Nombre/etiqueta del objeto"
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: "Nivel de confianza (0-1)"
+        rectangle:
+          type: object
+          description: "Bounding box del objeto (en píxeles)"
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+            w:
+              type: number
+            h:
+              type: number
+        normalizedRectangle:
+          type: object
+          description: "Bounding box normalizado (0-1 para Canvas)"
+          properties:
+            x:
+              type: number
+              minimum: 0
+              maximum: 1
+            y:
+              type: number
+              minimum: 0
+              maximum: 1
+            w:
+              type: number
+              minimum: 0
+              maximum: 1
+            h:
+              type: number
+              minimum: 0
+              maximum: 1
+        area:
+          type: number
+          description: "Área del objeto en píxeles"
+
+    ObjectDetectionStats:
+      type: object
+      description: "Estadísticas de detección de objetos"
+      properties:
+        totalObjects:
+          type: number
+          description: "Total de objetos detectados"
+        totalTypes:
+          type: number
+          description: "Cantidad de tipos únicos de objetos"
+        averageConfidence:
+          type: number
+          description: "Confianza promedio"
+        maxConfidence:
+          type: number
+          description: "Confianza máxima"
+        minConfidence:
+          type: number
+          description: "Confianza mínima"
+
+    QuestionSuggestion:
+      type: object
+      description: "Sugerencia de pregunta generada automáticamente"
+      properties:
+        type:
+          type: string
+          enum: ["identification", "counting", "multipleChoice"]
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctAnswer:
+          type: string
+        explanation:
+          type: string
