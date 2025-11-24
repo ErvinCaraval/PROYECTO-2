@@ -3,6 +3,7 @@ import { useVoice } from '../VoiceContext';
 import { useAuth } from '../AuthContext';
 import ManualQuestionForm from './ManualQuestionForm';
 import OCRQuestionCapture from './OCRQuestionCapture';
+import ImageAnalysisQuestionCreator from './ImageAnalysisQuestionCreator';
 import { fetchTopics, fetchDifficultyLevels } from '../services/api';
 import Button from './ui/Button';
 import Input from './ui/Input';
@@ -22,12 +23,14 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
   const [useAI, setUseAI] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
   const [showOCRForm, setShowOCRForm] = useState(false);
+  const [showImageAnalysisForm, setShowImageAnalysisForm] = useState(false);
   const [manualCount, setManualCount] = useState(null);
   const [manualCountInput, setManualCountInput] = useState('');
   const [manualStep, setManualStep] = useState(0);
   const [manualQuestions, setManualQuestions] = useState([]);
   const [manualTopic, setManualTopic] = useState('');
   const [ocrQuestions, setOcrQuestions] = useState([]);
+  const [visionQuestions, setVisionQuestions] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   
@@ -166,7 +169,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
 
   return (
     <Modal open={true} title="🤖 Generador de Preguntas" onClose={onClose}>
-      {isVoiceModeEnabled && (!showManualForm && !showOCRForm) && (
+      {isVoiceModeEnabled && (!showManualForm && !showOCRForm && !showImageAnalysisForm) && (
         <div className="flex justify-end mb-2">
           <Button
             variant="outline"
@@ -200,10 +203,15 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
       {loading && <LoadingOverlay text="Generando…" mobileOnly />}
       {error && <Alert intent="error">{error}</Alert>}
       {statusMessage && <Alert intent="success">{statusMessage}</Alert>}
-      {!showManualForm && !useAI && !showOCRForm && (
+      {!showManualForm && !useAI && !showOCRForm && !showImageAnalysisForm && (
         <div className="flex flex-col gap-3">
           <Button
-            onClick={() => setUseAI(true)}
+            onClick={() => {
+              setUseAI(true);
+              setShowManualForm(false);
+              setShowOCRForm(false);
+              setShowImageAnalysisForm(false);
+            }}
             size="lg"
             onFocus={() => isVoiceModeEnabled && speak('Crear con IA: genera preguntas automáticamente usando inteligencia artificial.', { force: true })}
             onMouseEnter={() => isVoiceModeEnabled && speak('Crear con IA: genera preguntas automáticamente usando inteligencia artificial.', { force: true })}
@@ -213,7 +221,14 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
           <Button
             variant="secondary"
             size="lg"
-            onClick={() => { setShowManualForm(true); setUseAI(false); setManualStep(0); setManualQuestions([]); }}
+            onClick={() => {
+              setShowManualForm(true);
+              setUseAI(false);
+              setShowOCRForm(false);
+              setShowImageAnalysisForm(false);
+              setManualStep(0);
+              setManualQuestions([]);
+            }}
             onFocus={() => isVoiceModeEnabled && speak('Escribir preguntas: te permite escribir preguntas manualmente.', { force: true })}
             onMouseEnter={() => isVoiceModeEnabled && speak('Escribir preguntas: te permite escribir preguntas manualmente.', { force: true })}
           >
@@ -222,11 +237,25 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
           <Button
             variant="secondary"
             size="lg"
-            onClick={() => { setShowOCRForm(true); setUseAI(false); }}
+            onClick={() => { setShowOCRForm(true); setUseAI(false); setShowImageAnalysisForm(false); }}
             onFocus={() => isVoiceModeEnabled && speak('Capturar pregunta: extrae preguntas de imágenes usando OCR.', { force: true })}
             onMouseEnter={() => isVoiceModeEnabled && speak('Capturar pregunta: extrae preguntas de imágenes usando OCR.', { force: true })}
           >
             📸 Capturar pregunta
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={() => {
+              setShowImageAnalysisForm(true);
+              setUseAI(false);
+              setShowManualForm(false);
+              setShowOCRForm(false);
+            }}
+            onFocus={() => isVoiceModeEnabled && speak('Analizar imagen: genera preguntas automáticamente usando Azure Computer Vision.', { force: true })}
+            onMouseEnter={() => isVoiceModeEnabled && speak('Analizar imagen: genera preguntas automáticamente usando Azure Computer Vision.', { force: true })}
+          >
+            🖼️ Analizar imagen
           </Button>
         </div>
       )}
@@ -543,6 +572,57 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
                 setOcrQuestions([]);
                 setStatusMessage('');
               }, 1500);
+            }
+          }}
+        />
+      )}
+      {showImageAnalysisForm && (
+        <ImageAnalysisQuestionCreator
+          topics={topics}
+          onQuestionCreated={async (questionPayload) => {
+            setLoading(true);
+            setError('');
+            try {
+              const apiBase =
+                (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) ||
+                import.meta.env.VITE_API_URL ||
+                'http://localhost:5000/api';
+              const token = user && user.getIdToken ? await user.getIdToken() : null;
+              const response = await fetch(`${apiBase}/questions`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(questionPayload)
+              });
+              const result = await response.json();
+              if (!response.ok) {
+                throw new Error(result.error || 'No se pudo guardar la pregunta');
+              }
+              const savedQuestion = result.question || { ...questionPayload };
+              const updated = [...visionQuestions, savedQuestion];
+              setVisionQuestions(updated);
+              setStatusMessage(`✅ Pregunta ${updated.length} guardada desde análisis de imagen`);
+              return savedQuestion;
+            } catch (err) {
+              setError('Error al guardar la pregunta: ' + (err.message || 'Intenta de nuevo.'));
+              throw err;
+            } finally {
+              setLoading(false);
+            }
+          }}
+          onCancel={() => {
+            setShowImageAnalysisForm(false);
+            if (visionQuestions.length > 0) {
+              setStatusMessage(`✅ Se guardaron ${visionQuestions.length} pregunta(s) desde análisis de imagen`);
+              setTimeout(() => {
+                onQuestionsGenerated(visionQuestions);
+                setVisionQuestions([]);
+                setStatusMessage('');
+              }, 1500);
+            } else {
+              setVisionQuestions([]);
             }
           }}
         />

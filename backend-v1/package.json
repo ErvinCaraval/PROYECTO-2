@@ -4,7 +4,7 @@
   "description": "Backend for BrainBlitz trivia game with voice accessibility features",
   "main": "hybridServer.js",
   "scripts": {
-    "start": "node --max-old-space-size=256 --heap-size-limit=256 hybridServer.js",
+    "start": "node --max-old-space-size=256 hybridServer.js",
     "dev": "nodemon --exec 'node --max-old-space-size=256' hybridServer.js",
     "test": "jest",
     "test:unit": "jest tests/unit",
