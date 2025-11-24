@@ -37,6 +37,8 @@ export default function ObjectDetectionQuestionCreator({
   const [questionType, setQuestionType] = useState('identification');
   const [hoveredObject, setHoveredObject] = useState(null);
   const [step, setStep] = useState('upload'); // upload | results | preview
+  const [questionsCreated, setQuestionsCreated] = useState(0);
+  const [justSavedQuestion, setJustSavedQuestion] = useState(false);
 
   // Handlers
   const handleFileChange = (e) => {
@@ -57,6 +59,9 @@ export default function ObjectDetectionQuestionCreator({
     reader.onload = (event) => {
       setImagePreview(event.target.result);
       setStep('upload');
+      // Resetear contadores cuando se carga una nueva imagen
+      setQuestionsCreated(0);
+      setJustSavedQuestion(false);
       if (isVoiceModeEnabled) {
         speak('Imagen seleccionada correctamente. Presiona detectar objetos para continuar.', { force: true });
       }
@@ -352,13 +357,43 @@ export default function ObjectDetectionQuestionCreator({
       }
     };
 
+    // Llamar al callback para guardar la pregunta
     onQuestionCreated?.(questionData);
+    
+    // Mostrar mensaje de éxito y contar
+    setQuestionsCreated(prev => prev + 1);
+    setJustSavedQuestion(true);
+    setSuccessMessage(`✅ Pregunta ${questionsCreated + 1} guardada`);
+    
+    if (isVoiceModeEnabled) {
+      speak(`Pregunta ${questionsCreated + 1} guardada. Puedes crear otra pregunta con esta imagen.`, { force: true });
+    }
+
+    // Limpiar estado después de 2 segundos
+    setTimeout(() => {
+      setJustSavedQuestion(false);
+      setSuccessMessage('');
+    }, 2000);
+    
+    // Volver a vista de resultados para permitir crear otra pregunta
+    setStep('results');
+    setSelectedObject(null);
+    setQuestionType('identification');
   };
 
   // Filtered objects
   const filteredObjects = detection?.objects.filter(
     obj => obj.confidence >= confidenceThreshold
   ) || [];
+
+  const handleCancel = () => {
+    if (questionsCreated > 0) {
+      if (isVoiceModeEnabled) {
+        speak(`Se guardaron ${questionsCreated} pregunta${questionsCreated !== 1 ? 's' : ''}. Volviendo al panel de preguntas.`, { force: true });
+      }
+    }
+    onCancel?.();
+  };
 
   return (
     <div className="object-detection-creator">
@@ -414,7 +449,7 @@ export default function ObjectDetectionQuestionCreator({
           {error && <Alert intent="error">{error}</Alert>}
           {successMessage && <Alert intent="success">{successMessage}</Alert>}
 
-          <Button variant="secondary" onClick={onCancel} className="od-button-full">
+          <Button variant="secondary" onClick={handleCancel} className="od-button-full">
             Cancelar
           </Button>
         </div>
@@ -555,6 +590,11 @@ export default function ObjectDetectionQuestionCreator({
             <Button variant="secondary" onClick={() => setStep('upload')} className="od-button-secondary">
               ← Volver
             </Button>
+            {questionsCreated > 0 && (
+              <Button variant="ghost" onClick={handleCancel} className="od-button-secondary">
+                Finalizar ({questionsCreated} pregunta{questionsCreated !== 1 ? 's' : ''})
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -641,6 +681,9 @@ export default function ObjectDetectionQuestionCreator({
             </Button>
             <Button variant="secondary" onClick={() => setStep('results')} className="od-button-secondary">
               ← Editar
+            </Button>
+            <Button variant="ghost" onClick={handleCancel} className="od-button-secondary">
+              Finalizar ({questionsCreated} pregunta{questionsCreated !== 1 ? 's' : ''})
             </Button>
           </div>
         </div>
