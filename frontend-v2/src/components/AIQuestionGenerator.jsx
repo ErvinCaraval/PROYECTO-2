@@ -74,16 +74,24 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
       return;
     }
 
+    if (!questionCount || questionCount < 1) {
+      setError('Por favor ingresa una cantidad válida de preguntas (mínimo 1)');
+      return;
+    }
+
     setLoading(true);
     setError('');
+    console.log(`🤖 Iniciando generación de ${questionCount} preguntas sobre "${selectedTopic}" (dificultad: ${selectedDifficulty})...`);
 
     try {
       const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       if (!apiBase) {
-        setError('Error de configuración: URL del API no definida');
-        return;
+        throw new Error('Error de configuración: URL del API no definida');
       }
+      
       const token = user && user.getIdToken ? await user.getIdToken() : null;
+      console.log('📡 Enviando solicitud al backend...');
+      
       const response = await fetch(`${apiBase}/ai/generate-questions`, {
         method: 'POST',
         headers: {
@@ -98,68 +106,71 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
         }),
       });
 
-      const data = await response.json();
-      if (data.success) {
-        // Guardar preguntas en Firestore y esperar confirmación exitosa antes de crear la partida
-        const questionsWithMeta = data.questions.map(q => ({
-          // Si las opciones existen, barajarlas y actualizar el índice de la respuesta correcta de forma robusta
-          ...(() => {
-            if (!Array.isArray(q.options) || typeof q.correctAnswerIndex !== 'number') return q;
-            // Asociar cada opción con su índice original
-            const optionsWithIndex = q.options.map((opt, idx) => ({ opt, origIdx: idx }));
-            // Barajar
-            for (let i = optionsWithIndex.length - 1; i > 0; i--) {
-              const j = Math.floor(Math.random() * (i + 1));
-              [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
-            }
-            // Buscar la nueva posición de la opción que era la correcta
-            const newCorrectIndex = optionsWithIndex.findIndex(o => o.origIdx === q.correctAnswerIndex);
-            return {
-              ...q,
-              options: optionsWithIndex.map(o => o.opt),
-              correctAnswerIndex: newCorrectIndex
-            };
-          })(),
-          createdBy: user?.uid || 'anon',
-          createdAt: Date.now(),
-          category: selectedTopic,
-          difficulty: selectedDifficulty
-        }));
-        let saveOk = false;
-        try {
-          const bulkToken = user && user.getIdToken ? await user.getIdToken() : null;
-          const response = await fetch(`${apiBase}/questions/bulk`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(bulkToken ? { Authorization: `Bearer ${bulkToken}` } : {})
-            },
-            body: JSON.stringify({ questions: questionsWithMeta })
-          });
-          const result = await response.json();
-          if (!result.success) {
-            setError((prev) => (prev ? prev + ' | ' : '') + (result.error || 'Error guardando preguntas en Firestore'));
-            setError('No se pudieron guardar las preguntas. ' + (result.error || 'Por favor, intenta de nuevo.'));
-          } else {
-            saveOk = true;
-          }
-        } catch (e) {
-          setError('Ocurrió un error al guardar las preguntas. Por favor, verifica tu conexión e intenta de nuevo.');
-        }
-        if (!saveOk) {
-          setLoading(false);
-          return;
-        }
-        // Redirigir al usuario a la pantalla principal para que pueda crear la partida manualmente
-        onQuestionsGenerated(data.questions);
-        setLoading(false);
-        // No navegues ni cierres aquí, deja que el Dashboard controle el cierre
-      } else {
-        setError(data.error || 'Error generando preguntas');
-        setError('No se pudieron generar las preguntas: ' + (data.error || 'Por favor, intenta de nuevo.'));
+      console.log(`📥 Respuesta recibida con status ${response.status}`);
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || `Error del servidor: ${response.status}`);
       }
+
+      const data = await response.json();
+      
+      if (!data.success || !data.questions || data.questions.length === 0) {
+        throw new Error(data.error || 'Error desconocido al generar preguntas');
+      }
+
+      console.log(`✅ Se generaron ${data.questions.length} preguntas exitosamente`);
+      
+      // Guardar preguntas en Firestore y esperar confirmación exitosa
+      const questionsWithMeta = data.questions.map(q => ({
+        // Si las opciones existen, barajarlas y actualizar el índice de la respuesta correcta de forma robusta
+        ...(() => {
+          if (!Array.isArray(q.options) || typeof q.correctAnswerIndex !== 'number') return q;
+          // Asociar cada opción con su índice original
+          const optionsWithIndex = q.options.map((opt, idx) => ({ opt, origIdx: idx }));
+          // Barajar
+          for (let i = optionsWithIndex.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
+          }
+          // Buscar la nueva posición de la opción que era la correcta
+          const newCorrectIndex = optionsWithIndex.findIndex(o => o.origIdx === q.correctAnswerIndex);
+          return {
+            ...q,
+            options: optionsWithIndex.map(o => o.opt),
+            correctAnswerIndex: newCorrectIndex
+          };
+        })(),
+        createdBy: user?.uid || 'anon',
+        createdAt: Date.now(),
+        category: selectedTopic,
+        difficulty: selectedDifficulty
+      }));
+      
+      console.log('💾 Guardando preguntas en Firestore...');
+      const bulkToken = user && user.getIdToken ? await user.getIdToken() : null;
+      const saveResponse = await fetch(`${apiBase}/questions/bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(bulkToken ? { Authorization: `Bearer ${bulkToken}` } : {})
+        },
+        body: JSON.stringify({ questions: questionsWithMeta })
+      });
+      
+      const saveResult = await saveResponse.json();
+      if (!saveResult.success) {
+        throw new Error(saveResult.error || 'Error al guardar las preguntas en la base de datos');
+      }
+
+      console.log('✅ Preguntas guardadas exitosamente');
+      
+      // Solo después de guardar exitosamente, notificar al componente padre
+      onQuestionsGenerated(data.questions);
+      
     } catch (error) {
-      setError('Error de conexión. Por favor, verifica tu conexión a internet e intenta nuevamente.');
+      console.error('❌ Error:', error.message);
+      setError(error.message || 'Error al generar preguntas. Por favor, intenta nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -264,16 +275,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
           className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4"
           onSubmit={async (e) => {
             e.preventDefault();
-            setLoading(true);
-            setError('');
-            try {
-              await generateQuestions();
-              setError('');
-            } catch (err) {
-              setError('Error al generar preguntas. Por favor, inténtalo de nuevo.');
-            } finally {
-              setLoading(false);
-            }
+            await generateQuestions();
           }}
         >
           <div>
@@ -358,7 +360,8 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !selectedTopic || questionCount === null}
+              title={!selectedTopic ? 'Selecciona un tema' : questionCount === null ? 'Ingresa la cantidad de preguntas' : 'Crear preguntas'}
               onFocus={() => isVoiceModeEnabled && speak('Crear preguntas: genera las preguntas con inteligencia artificial.', { force: true })}
               onMouseEnter={() => isVoiceModeEnabled && speak('Crear preguntas: genera las preguntas con inteligencia artificial.', { force: true })}
             >
