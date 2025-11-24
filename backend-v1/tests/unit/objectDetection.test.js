@@ -1,8 +1,13 @@
 const request = require('supertest');
 const express = require('express');
+
+// Set environment variables before requiring the service
+process.env.AZURE_CV_API_KEY = 'test-api-key';
+process.env.AZURE_CV_ENDPOINT = 'https://test.cognitiveservices.azure.com/';
+
 const axios = require('axios');
-const azureVisionService = require('../services/azureVisionService');
-const visionController = require('../controllers/visionController');
+const azureVisionService = require('../../services/azureVisionService');
+const visionController = require('../../controllers/visionController');
 
 // Mock axios
 jest.mock('axios');
