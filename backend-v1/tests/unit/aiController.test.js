@@ -39,9 +39,18 @@ describe('AIController', () => {
         expect(res.json).toHaveBeenCalledWith({ error: 'El número de preguntas debe ser mayor que cero.' });
       });
 
-    test('should return 500 if not enough questions', async () => {
+    test('should return 200 even if not enough questions (now allows partial results)', async () => {
       req.body = { topic: 'math', useAI: true, count: 5 };
-      controller.aiGenerator.generateQuestions = jest.fn().mockResolvedValue({ questions: [1, 2] });
+      // El nuevo comportamiento retorna lo que pudo generar (tolerance > 50%)
+      controller.aiGenerator.generateQuestions = jest.fn().mockResolvedValue({ questions: [1, 2, 3] });
+      await controller.generateQuestions(req, res);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, questions: expect.any(Array) }));
+    });
+
+    test('should return 500 if very few questions (less than 50% of target)', async () => {
+      req.body = { topic: 'math', useAI: true, count: 5 };
+      // Si solo obtiene 1 pregunta de 5 (20%), falla
+      controller.aiGenerator.generateQuestions = jest.fn().mockRejectedValue(new Error('La IA no generó suficientes preguntas'));
       await controller.generateQuestions(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.any(String) }));
