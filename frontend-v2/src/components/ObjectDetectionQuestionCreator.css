@@ -497,6 +497,107 @@
 }
 
 /* Responsive */
+
+/* Editable Options */
+.od-option-editor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(100, 150, 255, 0.05);
+  border: 2px solid rgba(100, 150, 255, 0.2);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  transition: all 0.2s ease;
+}
+
+.od-option-editor:hover {
+  background: rgba(100, 150, 255, 0.1);
+  border-color: rgba(100, 150, 255, 0.4);
+}
+
+.od-option-editor.od-selected-correct {
+  background: rgba(0, 200, 100, 0.1);
+  border-color: rgba(0, 200, 100, 0.4);
+}
+
+.od-radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.od-radio-option input[type="radio"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.od-option-letter {
+  font-weight: bold;
+  color: #6495ff;
+  min-width: 30px;
+}
+
+.od-option-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(100, 150, 255, 0.2);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.od-option-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(100, 150, 255, 0.6);
+  box-shadow: 0 0 10px rgba(100, 150, 255, 0.3);
+}
+
+.od-input {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(100, 150, 255, 0.2);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 16px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.od-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(100, 150, 255, 0.6);
+  box-shadow: 0 0 10px rgba(100, 150, 255, 0.3);
+}
+
+.od-explanation-textarea {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(100, 150, 255, 0.2);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  resize: vertical;
+}
+
+.od-explanation-textarea:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(100, 150, 255, 0.6);
+  box-shadow: 0 0 10px rgba(100, 150, 255, 0.3);
+}
+
+/* Responsive Media Queries */
 @media (max-width: 768px) {
   .od-section {
     padding: 20px;

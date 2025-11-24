@@ -675,14 +675,13 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
               const savedQuestion = result.question || { ...questionPayload };
               const updated = [...visionQuestions, savedQuestion];
               setVisionQuestions(updated);
-              setStatusMessage(`✅ Pregunta detectada y guardada con éxito`);
-              setShowObjectDetectionForm(false);
+              setStatusMessage(`✅ Pregunta guardada. Puedes crear otra o finalizar.`);
+              // NO cerrar el formulario - permitir crear múltiples preguntas
+              // setShowObjectDetectionForm(false); <- ELIMINADO
               
               setTimeout(() => {
-                onQuestionsGenerated(updated);
-                setVisionQuestions([]);
                 setStatusMessage('');
-              }, 1500);
+              }, 2000);
               
               return savedQuestion;
             } catch (err) {
@@ -693,7 +692,13 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
             }
           }}
           onCancel={() => {
+            // Cuando el usuario cancela, finalizamos con todas las preguntas acumuladas
             setShowObjectDetectionForm(false);
+            setTimeout(() => {
+              onQuestionsGenerated(visionQuestions);
+              setVisionQuestions([]);
+              setStatusMessage('');
+            }, 300);
           }}
         />
       )}
