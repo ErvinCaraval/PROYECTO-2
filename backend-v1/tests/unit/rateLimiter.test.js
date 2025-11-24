@@ -17,13 +17,19 @@ describe('Rate Limiter Middleware', () => {
 
   describe('registerLimiter', () => {
     beforeEach(() => {
+      // Handler que devuelve error (400) para simular fallos
       app.post('/test-register', registerLimiter, (req, res) => {
+        // Simular validación fallida
+        if (!req.body.email || !req.body.password) {
+          return res.status(400).json({ error: 'Missing required fields' });
+        }
         res.json({ success: true });
       });
     });
 
-    test('should allow requests within limit', async () => {
-      for (let i = 0; i < 5; i++) {
+    test('should allow successful requests without counting against limit', async () => {
+      // Con skipSuccessfulRequests: true, requests exitosos no se cuentan
+      for (let i = 0; i < 10; i++) {
         const res = await request(app)
           .post('/test-register')
           .send({ email: 'test@test.com', password: 'password', displayName: 'Test' });
@@ -31,18 +37,18 @@ describe('Rate Limiter Middleware', () => {
       }
     });
 
-    test('should block requests exceeding limit', async () => {
-      // Make 5 requests (limit)
+    test('should block requests after 5 failed attempts', async () => {
+      // Make 5 failed requests (missing password = 400)
       for (let i = 0; i < 5; i++) {
         await request(app)
           .post('/test-register')
-          .send({ email: 'test@test.com', password: 'password', displayName: 'Test' });
+          .send({ email: 'test@test.com', displayName: 'Test' }); // Missing password
       }
 
-      // 6th request should be blocked
+      // 6th failed request should be blocked (429)
       const res = await request(app)
         .post('/test-register')
-        .send({ email: 'test@test.com', password: 'password', displayName: 'Test' });
+        .send({ email: 'test@test.com', displayName: 'Test' });
       
       expect(res.status).toBe(429);
       expect(res.body).toHaveProperty('error');
@@ -51,13 +57,18 @@ describe('Rate Limiter Middleware', () => {
 
   describe('passwordRecoveryLimiter', () => {
     beforeEach(() => {
+      // Handler que devuelve error (400) para simular fallos
       app.post('/test-recovery', passwordRecoveryLimiter, (req, res) => {
+        if (!req.body.email) {
+          return res.status(400).json({ error: 'Missing email' });
+        }
         res.json({ success: true });
       });
     });
 
-    test('should allow requests within limit', async () => {
-      for (let i = 0; i < 3; i++) {
+    test('should allow successful requests without counting against limit', async () => {
+      // Con skipSuccessfulRequests: true, requests exitosos no se cuentan
+      for (let i = 0; i < 10; i++) {
         const res = await request(app)
           .post('/test-recovery')
           .send({ email: 'test@test.com' });
@@ -65,18 +76,18 @@ describe('Rate Limiter Middleware', () => {
       }
     });
 
-    test('should block requests exceeding limit', async () => {
-      // Make 3 requests (limit)
+    test('should block requests after 3 failed attempts', async () => {
+      // Make 3 failed requests (missing email = 400)
       for (let i = 0; i < 3; i++) {
         await request(app)
           .post('/test-recovery')
-          .send({ email: 'test@test.com' });
+          .send({}); // Missing email
       }
 
-      // 4th request should be blocked
+      // 4th failed request should be blocked (429)
       const res = await request(app)
         .post('/test-recovery')
-        .send({ email: 'test@test.com' });
+        .send({});
       
       expect(res.status).toBe(429);
       expect(res.body).toHaveProperty('error');
