@@ -507,82 +507,106 @@ Habilitar la creación de preguntas visuales interactivas, permitir búsqueda de
 - ✅ Validación de imagen Base64 o archivo, máximo 4MB
 
 **3. Integración con Azure Object Detection:**
-- ✅ POST a `https://{endpoint}/vision/v3.2/detect`
+- ✅ POST a `https://{endpoint}/vision/v3.2/analyze?visualFeatures=Objects`
 - ✅ Headers: `Ocp-Apim-Subscription-Key` y `Content-Type: application/octet-stream`
 - ✅ Procesamiento de respuesta JSON con objetos detectados
 
-**4. Extracción de Objetos:**
+**4. Extracción de Objetos (Backend):**
 - ✅ Lista de objetos con nombre, confianza, bounding box y área
-- ✅ Filtrado opcional por confianza < 0.5
-- ✅ Ordenamiento por confianza descendente o área
+- ✅ Filtrado por `minConfidence` (parámetro configurable, default 0.5)
+- ✅ Ordenamiento por confianza descendente
+- ✅ Bounding boxes en píxeles Y normalizados (0-1)
 
 **5. Respuesta del Endpoint:**
-- ✅ Formato JSON con array de objetos, total y dimensiones de imagen
-- ✅ Metadatos: total de objetos y dimensiones
-- ✅ Bounding boxes en píxeles o normalizados (0-1)
+- ✅ Formato JSON con:
+  - array de objetos detectados
+  - objectCounts: conteo por tipo de objeto
+  - groupedByType: objetos agrupados por tipo
+  - stats: estadísticas (total, tipos, confianza avg/max/min)
+  - topObjects: top 5 objetos ordenados por confianza
+  - metadata: dimensiones, timestamp, threshold utilizado
+- ✅ Metadatos: total de objetos y dimensiones de imagen
+- ✅ Bounding boxes en píxeles y normalizados (0-1)
 
-**6. Funcionalidades Adicionales:**
-- ✅ Parámetro opcional `objectName` para buscar objeto específico
-- ✅ Conteo de cada tipo de objeto
-- ✅ Agrupación de objetos del mismo tipo
+**6. Funcionalidades Avanzadas:**
+- ✅ Parámetro `objectName` para buscar objeto específico (filtrado)
+- ✅ Parámetro `minConfidence` para filtrado dinámico
+- ✅ Conteo de cada tipo de objeto (`objectCounts`)
+- ✅ Agrupación de objetos del mismo tipo (`groupedByType`)
+- ✅ Estadísticas de confianza
 
 **7. Manejo de Errores:**
 - ✅ Error 400 con mensaje claro para imagen inválida
-- ✅ Lista vacía si no se detectan objetos (no error)
+- ✅ Array vacío de objetos si no se detectan (NO es error)
 - ✅ Manejo de errores de API con mensajes apropiados
-- ✅ Manejo de timeouts
-- ✅ Logging de errores
+- ✅ Manejo de timeouts (timeout: 60000ms)
+- ✅ Logging detallado de errores
 
-**8. Pruebas:**
+**8. Pruebas (Backend):**
 - ✅ Prueba unitaria con imagen de prueba
 - ✅ Prueba de integración del endpoint
 - ✅ Verificación de detección de múltiples objetos
-- ✅ Verificación de precisión
+- ✅ Verificación de precisión y filtrado
 - ✅ Verificación de manejo de errores
 
-**9. Integración con el Juego - Frontend:**
+**9. Generación de Sugerencias de Preguntas (Backend):**
+- ✅ 3 tipos de sugerencias generadas automáticamente:
+  - Identification: "¿Qué objeto principal aparece?"
+  - Counting: "¿Cuántos [objeto] hay?"
+  - Multiple Choice: "¿Cuál de estos objetos aparece?"
+- ✅ Cada sugerencia incluye: pregunta, opciones, respuesta correcta, explicación
+- ✅ Nivel de dificultad calculado según confianza promedio
+- ✅ Contexto descriptivo para cada pregunta
+
+**9. Integración con el Juego - Frontend - FASE 1 (Básica):**
 - ✅ Componente `ObjectDetectionQuestionCreator.jsx` con:
   - Subida de imagen (drag & drop o botón)
   - Preview de imagen
   - Botón "Detectar Objetos" → llamada a `/api/vision/detect-objects`
   - Spinner de carga
-  - Imagen con bounding boxes dibujados sobre objetos
+  - **Resultados en JSON visualizable**
+
+**10. Integración con el Juego - Frontend - FASE 2 (Avanzada - Próxima Iteración):**
+- ⚠️ Componente mejorado `ObjectDetectionQuestionCreator.jsx` con:
+  - Imagen con bounding boxes dibujados sobre objetos (Canvas API)
   - Lista de objetos con:
     - Nombre del objeto
     - Nivel de confianza (barra o porcentaje)
     - Posición (coordenadas)
-- ✅ Visualización Interactiva:
-  - Hover sobre objeto en lista → resalta bounding box
-  - Clic en bounding box → resalta en lista
-  - Filtro por confianza mínima (slider)
-  - Contador por tipo (ej: "3 guitarras", "1 persona", "2 sillas")
-- ✅ Generación Automática de Preguntas:
-  - Botón "Crear Pregunta de Objetos":
-    1. Genera: "¿Qué objeto aparece en esta imagen?" o "¿Cuántos [objeto] hay?"
-    2. Usa objetos detectados como opciones
-    3. Marca objeto con mayor confianza como correcto
-    4. Pre-llena formulario
-  - Opción para preguntas de conteo:
-    - "¿Cuántos [objeto] hay en la imagen?"
-    - Sistema cuenta objetos del mismo tipo
-    - Genera opciones numéricas (0, 1, 2, 3, 4+)
-- ✅ Integración con `AIQuestionGenerator`:
-  - Opción "Crear Pregunta de Detección de Objetos"
-  - Imagen con objetos se guarda asociada a pregunta
-  - Formulario pre-llenado con pregunta y opciones
-- ✅ Flujo de Usuario Completo:
-  1. Usuario va a "Crear Juego" o "Generar Preguntas"
-  2. Selecciona "Crear Pregunta de Detección de Objetos"
-  3. Sube imagen con objetos (instrumentos, animales, objetos)
-  4. Sistema detecta objetos y muestra resultados visuales
-  5. Usuario revisa objetos y ajusta filtro de confianza
-  6. Usuario selecciona tipo de pregunta:
-     - "¿Qué objeto es este?" (identificación)
-     - "¿Cuántos [objeto] hay?" (conteo)
-  7. Sistema genera pregunta y opciones automáticamente
-  8. Usuario edita si es necesario
-  9. Usuario confirma respuesta correcta y crea pregunta
-- ✅ Resultado Final en el Juego:
+  - Visualización Interactiva:
+    - Hover sobre objeto en lista → resalta bounding box
+    - Clic en bounding box → resalta en lista
+    - Filtro por confianza mínima (slider)
+    - Contador por tipo (ej: "3 guitarras", "1 persona", "2 sillas")
+
+**11. Generación Automática de Preguntas (Backend Completo):**
+- ✅ Backend genera 3 tipos de sugerencias:
+  - **Identification:** "¿Qué objeto principal aparece en esta imagen?"
+    - Opciones: Top objetos detectados
+    - Respuesta correcta: Objeto con mayor confianza
+    - Dificultad: Calculada según confianza promedio
+  - **Counting:** "¿Cuántos [objeto] hay en la imagen?"
+    - Opciones numéricas: 0, 1, 2, 3, 4+
+    - Respuesta correcta: Conteo exacto
+    - Dificultad: Fácil (dato objetivo)
+  - **Multiple Choice:** "¿Cuál de estos objetos aparece en la imagen?"
+    - Opciones: Objetos detectados
+    - Respuesta correcta: Basada en detección
+    - Dificultad: Media
+
+**12. Integración con `AIQuestionGenerator` - FASE 1:**
+- ✅ Backend retorna sugerencias en estructura JSON
+- ⚠️ Frontend consumirá estas sugerencias en próxima iteración
+- ⚠️ Opción "Crear Pregunta de Detección de Objetos" (pendiente interfaz)
+
+**13. Flujo de Usuario Actual (Implementado):**
+  1. ✅ Usuario sube imagen a `/api/vision/detect-objects`
+  2. ✅ Sistema retorna objetos detectados + sugerencias de preguntas
+  3. ✅ Respuesta incluye: objetos, conteos, estadísticas, 3 tipos de preguntas sugeridas
+  4. ⚠️ Frontend completa: Usuario selecciona tipo de pregunta y edita
+  5. ⚠️ Frontend completa: Usuario crea pregunta con respuesta correcta validada
+
+**14. Resultado Final en el Juego (Visión Futura):**
   - Preguntas muestran:
     - Imagen original (sin bounding boxes)
     - Texto de pregunta (ej: "¿Qué objeto musical aparece?")
@@ -600,8 +624,9 @@ Habilitar la creación de preguntas visuales interactivas, permitir búsqueda de
 
 **10. Documentación:**
 - ✅ Endpoint documentado en Swagger
-- ✅ Ejemplos visuales de imágenes y objetos detectados
-- ✅ Guía de uso para crear preguntas
+- ✅ Respuesta JSON con estructura clara y campos bien documentados
+- ✅ Ejemplos de objetos detectados y sugerencias de preguntas
+- ⚠️ Guía de UI/UX para visualización de bounding boxes (pendiente)
 
 #### Tecnologías:
 - Azure Computer Vision Object Detection
@@ -643,6 +668,55 @@ Todas las historias de usuario en este proyecto utilizan servicios de Inteligenc
 - **Azure Object Detection:** 10 SP (24.4%)
 
 **Total:** 41 Story Points implementando servicios de IA
+
+---
+
+## 📊 Estado Actual del Proyecto (24 Noviembre 2025)
+
+### Sprint 1 - Completado ✅
+- **HU-VC2:** OCR Backend ✅ + Frontend ✅ = **100% Completo**
+- **HU-VC1:** Facial Recognition Backend ✅ + Frontend ✅ = **100% Completo**
+
+### Sprint 2 - Parcialmente Completado ⚠️
+- **HU-VC3:** Analyze Image Backend ✅ + Frontend ✅ = **100% Completo**
+- **HU-VC4:** Detect Objects Backend ✅ + Frontend ⚠️ = **65% Completo**
+
+### Desglose de HU-VC4:
+```
+Backend (Implementado): 100%
+├── ✅ Endpoint /api/vision/detect-objects
+├── ✅ Validación y manejo de errores
+├── ✅ Integración con Azure Vision API
+├── ✅ Normalización de bounding boxes
+├── ✅ Generación de 3 tipos de preguntas
+├── ✅ Estadísticas y conteos
+└── ✅ Respuesta JSON estructurada
+
+Frontend (Parcial): 35%
+├── ✅ Componente ObjectDetectionQuestionCreator.jsx
+├── ✅ Upload de imagen
+├── ✅ Preview
+├── ✅ Llamada a API
+├── ✅ Spinner de carga
+├── ✅ Visualización de JSON en consola
+├── ❌ Visualización de bounding boxes (Canvas)
+├── ❌ Interactividad (hover, click)
+├── ❌ Slider para filtro de confianza
+├── ❌ Integración con AIQuestionGenerator
+└── ❌ Selección de tipo de pregunta
+```
+
+### Próximas Acciones (Frontend - HU-VC4):
+1. Implementar Canvas para dibujar bounding boxes
+2. Agregar interactividad (hover highlight)
+3. Crear slider para filtrado dinámico
+4. Integrar con selector de tipo de pregunta
+5. Completar flujo de creación de preguntas
+
+### Archivos de Referencia:
+- `/VISION_API_EXAMPLES.md` - Ejemplos de respuestas API
+- `/backend-v1/controllers/visionController.js` - Lógica de controladores
+- `/backend-v1/services/azureVisionService.js` - Integración con Azure
 
 ---
 
@@ -750,34 +824,57 @@ Todas las historias de usuario en este proyecto utilizan servicios de Inteligenc
 
 #### Componentes Entregados:
 - **Backend:**
-  - 5 Endpoints API nuevos
-  - 1 Microservicio de reconocimiento facial
-  - 5 Controladores nuevos
-  - Sistema de validación y manejo de errores
+  - ✅ 5 Endpoints API nuevos (`/face/register`, `/face/login`, `/vision/extract-text`, `/vision/analyze-image`, `/vision/detect-objects`)
+  - ✅ 1 Microservicio de reconocimiento facial (DeepFace)
+  - ✅ 5 Métodos de controladores con validación completa
+  - ✅ Sistema robusto de validación y manejo de errores
+  - ✅ Normalización de respuestas JSON estructuradas
+  - ✅ Generación automática de sugerencias de preguntas (3 tipos en HU-VC4)
   
 - **Frontend:**
-  - 5 Componentes React nuevos
-  - Integración con cámara web
-  - Visualización de análisis de IA
-  - Sistema de generación automática de preguntas
+  - ✅ 5 Componentes React nuevos (Estructura básica)
+  - ✅ 3 Componentes para vision completamente funcionales (OCR, Analyze, DetectObjects)
+  - ✅ 2 Componentes para facial (Register, Login)
+  - ⚠️ 1 Componente necesita mejoras de UX (visualización de bounding boxes)
+  - ✅ Integración con cámara web (getUserMedia)
+  - ✅ Visualización de análisis de IA en JSON
+  - ⚠️ Sistema de generación automática de preguntas (backend listo, frontend pendiente integración)
   
 - **Integraciones de IA:**
-  - DeepFace (VGG-Face)
-  - Azure Computer Vision OCR
-  - Azure Computer Vision Analyze
-  - Azure Computer Vision Object Detection
+  - ✅ DeepFace (VGG-Face) con embeddings de 128 dimensiones
+  - ✅ Azure Computer Vision OCR v3.2
+  - ✅ Azure Computer Vision Analyze Image API
+  - ✅ Azure Computer Vision Object Detection API (con normalización de bounding boxes)
   
 - **Infraestructura:**
-  - Azure Container Instances (microservicio facial)
-  - Firebase Firestore (embeddings faciales)
-  - Azure Cognitive Services (3 APIs)
+  - ✅ Azure Container Instances (microservicio facial)
+  - ✅ Firebase Firestore (embeddings faciales)
+  - ✅ Azure Cognitive Services (3 APIs)
+  - ✅ GitHub Actions para CI/CD
+  - ✅ Docker para containerización
 
 #### Capacidades Nuevas para Usuarios:
-1. ✅ Autenticación sin contraseña mediante rostro
-2. ✅ Creación de preguntas desde imágenes con texto
-3. ✅ Generación automática de preguntas desde análisis de imágenes
-4. ✅ Creación de preguntas visuales con detección de objetos
+1. ✅ Autenticación sin contraseña mediante reconocimiento facial
+2. ✅ Creación automática de preguntas desde imágenes con texto (OCR)
+3. ✅ Generación automática de preguntas desde análisis inteligente de imágenes
+4. ⚠️ Creación de preguntas visuales con detección de objetos (backend completo, UI pendiente)
 5. ✅ Mejora de accesibilidad con descripción automática de imágenes
+
+#### Funcionalidades Implementadas vs Pendientes:
+
+**Implementadas (Backend 100%):**
+- Detección de objetos en imágenes
+- Normalización de bounding boxes (píxeles + 0-1)
+- Generación automática de 3 tipos de preguntas
+- Conteo y estadísticas de objetos
+- Filtrado dinámico por confianza
+
+**Pendientes (Frontend - Próxima Iteración):**
+- Visualización de bounding boxes con Canvas API
+- Interactividad: hover, click, drag
+- Slider para filtrado de confianza en UI
+- Selección visual de tipo de pregunta
+- Integración completa con formulario de creación de preguntas
 
 ---
 
