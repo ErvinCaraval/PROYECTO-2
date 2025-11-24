@@ -18,6 +18,21 @@ class AIQuestionGenerator {
     this.groqModel = process.env.GROQ_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
     // Respaldo OpenAI si existiese
     this.openAiModel = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
+    
+    // Logging de configuración
+    if (this.groqApiKey) {
+      const keyPreview = this.groqApiKey.substring(0, 10) + '...';
+      console.log(`✅ GROQ_API_KEY configurada: ${keyPreview}`);
+    } else {
+      console.warn(`⚠️ GROQ_API_KEY no configurada`);
+    }
+    
+    if (this.openAiApiKey) {
+      const keyPreview = this.openAiApiKey.substring(0, 10) + '...';
+      console.log(`✅ OPENAI_API_KEY configurada: ${keyPreview}`);
+    } else {
+      console.warn(`⚠️ OPENAI_API_KEY no configurada`);
+    }
   }
 
   // Extrae JSON de respuestas que puedan venir con ``` o texto adicional
@@ -56,16 +71,17 @@ class AIQuestionGenerator {
     }
   }
 
-  // Generar preguntas usando IA (Groq por defecto)
+  // Generar preguntas usando IA (Groq por defecto, fallback a OpenAI)
   async generateQuestions(topic, difficulty = 'medium', count = 5) {
     try {
       console.log(`🤖 Generando ${count} preguntas sobre "${topic}" (dificultad: ${difficulty})...`);
       
       const prompt = this.buildPrompt(topic, difficulty, count);
       let questions = [];
+      let groqError = null;
 
       if (!this.groqApiKey && !this.openAiApiKey) {
-        throw new Error('No se encontró ninguna API key de IA. Por favor configura GROQ_API_KEY o OPENAI_API_KEY en tu archivo .env.');
+        throw new Error('❌ No se encontró ninguna API key de IA.\n📋 Por favor configura:\n- GROQ_API_KEY o\n- OPENAI_API_KEY\nen tu archivo .env');
       }
 
       // Preferir Groq si hay API key
@@ -99,9 +115,19 @@ class AIQuestionGenerator {
         } catch (err) {
           const errorMsg = err.response?.data?.error?.message || err.message;
           console.error(`❌ Error de Groq: ${errorMsg}`);
-          throw new Error('Error al conectar con la API de Groq: ' + errorMsg);
+          groqError = err;
+          
+          // Si Groq falla por API key inválida o límite, intentar con OpenAI
+          if (err.response?.status === 401 || err.response?.status === 429 || errorMsg.includes('Invalid') || errorMsg.includes('API')) {
+            console.warn('⚠️ Groq no disponible, intentando con OpenAI...');
+          } else {
+            throw new Error('Error al conectar con la API de Groq: ' + errorMsg);
+          }
         }
-      } else if (this.openAiApiKey) {
+      }
+      
+      // Fallback: OpenAI si Groq falló o no hay API key
+      if ((!questions || questions.length === 0) && this.openAiApiKey) {
         // Respaldo: OpenAI si está disponible
         try {
           console.log(`📡 Conectando a API de OpenAI (modelo: ${this.openAiModel})...`);
