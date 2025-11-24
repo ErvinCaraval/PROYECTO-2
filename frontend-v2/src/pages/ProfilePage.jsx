@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { useVoice } from '../VoiceContext';
+import backendAuthService from '../services/backendAuthService';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import Alert from '../components/ui/Alert';
 import Button from '../components/ui/Button';
@@ -25,10 +26,10 @@ function ProfilePage() {
       if (!user) return;
       let statsData = null;
       try {
-        const apiBase = import.meta.env.VITE_API_URL;
-        // Obtener el token de Firebase
+        const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        // ✅ Get Firebase ID token from user
         const token = user && (await user.getIdToken());
-        const statsRes = await fetch(`${apiBase}/api/users/me/stats?uid=${user.uid}`,
+        const statsRes = await fetch(`${apiBase}/users/me/stats?uid=${user.uid}`,
           {
             headers: {
               'Authorization': token ? `Bearer ${token}` : '',

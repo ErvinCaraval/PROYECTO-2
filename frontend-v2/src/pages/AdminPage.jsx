@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import mockDb from '../services/mockDb';
+import adminService from '../services/adminService';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
+import OCRQuestionCapture from '../components/OCRQuestionCapture';
 
 const emptyForm = {
   text: '',
@@ -23,12 +24,19 @@ export default function AdminPage() {
   const [accessibilitySettings, setAccessibilitySettings] = useState({});
   const [loadingAccessibility, setLoadingAccessibility] = useState(false);
   const [message, setMessage] = useState('');
+  const [ocrMode, setOcrMode] = useState(false);
 
   const fetchQuestions = async () => {
     setLoading(true);
-    const snap = await mockDb.collection('questions').get();
-    setQuestions(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    setLoading(false);
+    try {
+      const data = await adminService.getAllQuestions();
+      setQuestions(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+      setMessage('Error cargando preguntas');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { 
@@ -36,24 +44,18 @@ export default function AdminPage() {
     fetchAccessibilityData();
   }, []);
 
+  const handleOCRQuestionExtracted = (question) => {
+    setForm(question);
+    setOcrMode(false);
+    setMessage('Pregunta extraída del OCR. Edita según sea necesario.');
+  };
   const fetchAccessibilityData = async () => {
     setLoadingAccessibility(true);
     try {
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      
-      // Fetch accessibility stats
-      const statsResponse = await fetch(`${apiBase}/api/admin/accessibility-stats`);
-      if (statsResponse.ok) {
-        const stats = await statsResponse.json();
-        setAccessibilityStats(stats);
-      }
-      
-      // Fetch accessibility settings
-      const settingsResponse = await fetch(`${apiBase}/api/admin/accessibility-settings`);
-      if (settingsResponse.ok) {
-        const settings = await settingsResponse.json();
-        setAccessibilitySettings(settings);
-      }
+      const stats = await adminService.getAccessibilityStats();
+      const settings = await adminService.getAccessibilitySettings();
+      setAccessibilityStats(stats);
+      setAccessibilitySettings(settings);
     } catch (error) {
       console.error('Error fetching accessibility data:', error);
       setMessage('Error cargando datos de accesibilidad');
@@ -65,22 +67,9 @@ export default function AdminPage() {
   const updateAccessibilitySettings = async (newSettings) => {
     setLoadingAccessibility(true);
     try {
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiBase}/api/admin/accessibility-settings`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newSettings)
-      });
-      
-      if (response.ok) {
-        const updatedSettings = await response.json();
-        setAccessibilitySettings(updatedSettings);
-        setMessage('Configuración de accesibilidad actualizada correctamente');
-      } else {
-        throw new Error('Error updating settings');
-      }
+      const updatedSettings = await adminService.updateAccessibilitySettings(newSettings);
+      setAccessibilitySettings(updatedSettings);
+      setMessage('Configuración de accesibilidad actualizada correctamente');
     } catch (error) {
       console.error('Error updating accessibility settings:', error);
       setMessage('Error actualizando configuración de accesibilidad');
@@ -102,22 +91,35 @@ export default function AdminPage() {
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingId) {
-      await mockDb.collection('questions').doc(editingId).update(form);
-    } else {
-      await mockDb.collection('questions').add(form);
+    try {
+      if (editingId) {
+        await adminService.updateQuestion(editingId, form);
+        setMessage('Pregunta actualizada correctamente');
+      } else {
+        await adminService.createQuestion(form);
+        setMessage('Pregunta creada correctamente');
+      }
+      setForm(emptyForm);
+      setEditingId(null);
+      fetchQuestions();
+    } catch (error) {
+      console.error('Error saving question:', error);
+      setMessage('Error guardando pregunta');
     }
-    setForm(emptyForm);
-    setEditingId(null);
-    fetchQuestions();
   };
   const handleEdit = (q) => {
     setForm(q);
     setEditingId(q.id);
   };
   const handleDelete = async (id) => {
-    await mockDb.collection('questions').doc(id).delete();
-    fetchQuestions();
+    try {
+      await adminService.deleteQuestion(id);
+      setMessage('Pregunta eliminada correctamente');
+      fetchQuestions();
+    } catch (error) {
+      console.error('Error deleting question:', error);
+      setMessage('Error eliminando pregunta');
+    }
   };
 
   return (
@@ -259,9 +261,27 @@ export default function AdminPage() {
       </Card>
 
       <Card>
-        <CardHeader className="pb-2"><h2 className="text-2xl font-bold">Admin Panel</h2></CardHeader>
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Admin Panel</h2>
+            <Button 
+              type="button"
+              variant={ocrMode ? "primary" : "secondary"}
+              onClick={() => setOcrMode(!ocrMode)}
+            >
+              {ocrMode ? 'Modo Manual' : 'Modo OCR'}
+            </Button>
+          </div>
+        </CardHeader>
         <CardBody>
-          <form onSubmit={handleSubmit} className="grid gap-3">
+          {ocrMode ? (
+            <OCRQuestionCapture 
+              topics={["General", "Arte", "Ciencia", "Historia", "Deportes"]}
+              onQuestionExtracted={handleOCRQuestionExtracted}
+              onCancel={() => setOcrMode(false)}
+            />
+          ) : (
+            <form onSubmit={handleSubmit} className="grid gap-3">
             <Input name="text" value={form.text} onChange={handleChange} placeholder="Question text" required />
             <div className="grid gap-3 sm:grid-cols-3">
               <Input name="category" value={form.category} onChange={handleChange} placeholder="Category" required />
@@ -287,7 +307,8 @@ export default function AdminPage() {
               {editingId && <Button type="button" variant="secondary" onClick={() => { setForm(emptyForm); setEditingId(null); }}>Cancel</Button>}
               <Button type="submit">{editingId ? 'Update' : 'Add'} Question</Button>
             </div>
-          </form>
+            </form>
+          )}
         </CardBody>
       </Card>
 

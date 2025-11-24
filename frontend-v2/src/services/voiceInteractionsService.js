@@ -1,12 +1,21 @@
 // Voice Interactions Service - Log voice interactions to backend
 class VoiceInteractionsService {
   constructor() {
-    // Detect environment and pick API base.
-    // Prefer explicit VITE_API_URL. If not present, use localhost for local runs or Render for production.
-    const isBrowser = typeof window !== 'undefined';
-    const isLocalHost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const envApi = import.meta.env.VITE_API_URL;
-    this.apiBase = envApi || (isLocalHost ? 'http://localhost:5000' : 'https://proyecto-2-olvb.onrender.com');
+    // Use runtime environment configuration
+    if (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) {
+      this.apiBase = window.ENV.VITE_API_URL;
+    } else {
+      // Fallback a import.meta.env (build-time)
+      const envApi = import.meta.env.VITE_API_URL;
+      if (envApi) {
+        this.apiBase = envApi;
+      } else {
+        // Last resort: detect environment
+        const isBrowser = typeof window !== 'undefined';
+        const isLocalHost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        this.apiBase = isLocalHost ? 'http://localhost:5000/api' : 'https://proyecto-2-olvb.onrender.com/api';
+      }
+    }
     this.sessionId = this.generateSessionId();
   }
 
@@ -32,7 +41,7 @@ class VoiceInteractionsService {
       };
 
       console.log('[VoiceInteractionsService] Log interaction:', payload);
-      const response = await fetch(`${this.apiBase}/api/voice-interactions`, {
+      const response = await fetch(`${this.apiBase}/voice-interactions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,7 +65,7 @@ class VoiceInteractionsService {
 
   async processAudioWithAssemblyAI(audioBase64, questionOptions, mimeType) {
     try {
-      const response = await fetch(`${this.apiBase}/api/voice-interactions/process-audio`, {
+      const response = await fetch(`${this.apiBase}/voice-interactions/process-audio`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -181,7 +190,7 @@ class VoiceInteractionsService {
   async getUserVoiceHistory(userId) {
     try {
       console.log('[VoiceInteractionsService] Fetching voice history for:', userId);
-      const response = await fetch(`${this.apiBase}/api/voice-interactions/${userId}`, {
+      const response = await fetch(`${this.apiBase}/voice-interactions/${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -203,7 +212,7 @@ class VoiceInteractionsService {
 
   async getUserVoiceStats(userId) {
     try {
-      const response = await fetch(`${this.apiBase}/api/voice-interactions/stats/${userId}`, {
+      const response = await fetch(`${this.apiBase}/voice-interactions/stats/${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -226,7 +235,7 @@ class VoiceInteractionsService {
 
   async deleteUserVoiceHistory(userId) {
     try {
-      const response = await fetch(`${this.apiBase}/api/voice-interactions/${userId}`, {
+      const response = await fetch(`${this.apiBase}/voice-interactions/${userId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

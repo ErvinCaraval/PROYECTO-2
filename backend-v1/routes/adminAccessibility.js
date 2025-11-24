@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../firebase');
 const authenticate = require('../middleware/authenticate');
+const requireAdmin = require('../middleware/adminAuthorization');
 const { generalUserLimiter } = require('../middleware/rateLimiter'); 
 
 // [HU7] Obtener configuración de accesibilidad del usuario autenticad
@@ -70,13 +71,11 @@ router.get('/accessibility/stats', authenticate, generalUserLimiter, async (req,
 });
 
 // [HU7] Obtener estadísticas globales de accesibilidad (ADMIN)
-router.get('/accessibility-stats', authenticate, generalUserLimiter, async (req, res) => {
+// ✅ SECURITY FIX: Ahora requiere rol de admin
+router.get('/accessibility-stats', authenticate, requireAdmin, generalUserLimiter, async (req, res) => {
   try {
     const uid = req.user?.uid;
     if (!uid) return res.status(401).json({ error: 'No autenticado' });
-    
-    // Verificar si el usuario es admin (esto debería implementarse con roles)
-    // Por ahora, asumimos que todos los usuarios autenticados pueden ver stats globales
     
     // Obtener estadísticas de usuarios con dificultades visuales
     const usersSnapshot = await db.collection('users').get();
@@ -130,7 +129,8 @@ router.get('/accessibility-stats', authenticate, generalUserLimiter, async (req,
 });
 
 // [HU7] Obtener lista de usuarios con modo de voz (ADMIN)
-router.get('/voice-mode-users', authenticate, generalUserLimiter, async (req, res) => {
+// ✅ SECURITY FIX: Ahora requiere rol de admin
+router.get('/voice-mode-users', authenticate, requireAdmin, generalUserLimiter, async (req, res) => {
   try {
     const uid = req.user?.uid;
     if (!uid) return res.status(401).json({ error: 'No autenticado' });
@@ -160,7 +160,8 @@ router.get('/voice-mode-users', authenticate, generalUserLimiter, async (req, re
 });
 
 // [HU7] Configuración global de accesibilidad (ADMIN)
-router.get('/accessibility-settings', authenticate, generalUserLimiter, async (req, res) => {
+// ✅ SECURITY FIX: Ahora requiere rol de admin
+router.get('/accessibility-settings', authenticate, requireAdmin, generalUserLimiter, async (req, res) => {
   try {
     const uid = req.user?.uid;
     if (!uid) return res.status(401).json({ error: 'No autenticado' });
@@ -193,7 +194,8 @@ router.get('/accessibility-settings', authenticate, generalUserLimiter, async (r
 });
 
 // [HU7] Actualizar configuración global de accesibilidad (ADMIN)
-router.put('/accessibility-settings', authenticate, generalUserLimiter, async (req, res) => {
+// ✅ SECURITY FIX: Ahora requiere rol de admin
+router.put('/accessibility-settings', authenticate, requireAdmin, generalUserLimiter, async (req, res) => {
   try {
     const uid = req.user?.uid;
     if (!uid) return res.status(401).json({ error: 'No autenticado' });
@@ -237,7 +239,8 @@ router.put('/accessibility-settings', authenticate, generalUserLimiter, async (r
 });
 
 // [HU7] Generar reporte de accesibilidad (ADMIN)
-router.get('/accessibility-report', authenticate, generalUserLimiter, async (req, res) => {
+// ✅ SECURITY FIX: Ahora requiere rol de admin
+router.get('/accessibility-report', authenticate, requireAdmin, generalUserLimiter, async (req, res) => {
   try {
     const uid = req.user?.uid;
     if (!uid) return res.status(401).json({ error: 'No autenticado' });

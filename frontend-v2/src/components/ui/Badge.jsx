@@ -1,7 +1,7 @@
 import React from 'react'
 
 const variants = {
-  primary: 'bg-bb-primary/20 text-bb-primary ring-bb-primary/30',
+  primary: 'bg-bb-primary/20 text-purple-300 ring-bb-primary/30',
   amber: 'bg-amber-400/15 text-amber-300 ring-amber-400/30',
   emerald: 'bg-emerald-400/15 text-emerald-300 ring-emerald-400/30',
   violet: 'bg-violet-400/15 text-violet-300 ring-violet-400/30',

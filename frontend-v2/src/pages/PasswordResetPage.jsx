@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { auth } from '../services/firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import backendAuthService from '../services/backendAuthService';
 import { Link } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -18,7 +17,8 @@ export default function PasswordResetPage() {
     setMessage('');
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      // ✅ Use backend authentication service
+      await backendAuthService.sendPasswordResetEmail(email);
       setMessage('Password reset email sent! Check your inbox.');
     } catch (err) {
       setError(err.message);

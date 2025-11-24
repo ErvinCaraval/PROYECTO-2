@@ -1,9 +1,95 @@
 require('dotenv').config();
+const fs = require('fs');
+
+/**
+ * Resolve the DEEPFACE service URL automatically depending on environment.
+ * Priority:
+ *  1. process.env.DEEPFACE_SERVICE_URL (explicit)
+ *  2. process.env.FACIAL_SERVICE_HOST or FACIAL_SERVICE_AZURE_HOST (explicit host)
+ *  3. If running on Azure App Service (WEBSITE_HOSTNAME) => https://<WEBSITE_HOSTNAME>
+ *  4. If running on Render (RENDER_EXTERNAL_URL) => https://<RENDER_EXTERNAL_URL>
+ *  5. If running in Docker (detect /.dockerenv or /proc/1/cgroup) => service name from compose 'http://facial-recognition-service:5001'
+ *  6. Fallback to local: 'http://localhost:5001'
+ */
+function resolveDeepfaceServiceUrl() {
+  if (process.env.DEEPFACE_SERVICE_URL && process.env.DEEPFACE_SERVICE_URL.trim() !== '') {
+    return process.env.DEEPFACE_SERVICE_URL;
+  }
+
+  if (process.env.FACIAL_SERVICE_HOST && process.env.FACIAL_SERVICE_HOST.trim() !== '') {
+    const host = process.env.FACIAL_SERVICE_HOST.trim();
+    return host.startsWith('http') ? host : `http://${host}`;
+  }
+  if (process.env.FACIAL_SERVICE_AZURE_HOST && process.env.FACIAL_SERVICE_AZURE_HOST.trim() !== '') {
+    const host = process.env.FACIAL_SERVICE_AZURE_HOST.trim();
+    return host.startsWith('http') ? host : `https://${host}`;
+  }
+
+  // Azure App Service
+  if (process.env.WEBSITE_HOSTNAME) {
+    return `https://${process.env.WEBSITE_HOSTNAME}`;
+  }
+
+  // Render or other platforms which expose an env var
+  if (process.env.RENDER_EXTERNAL_URL) {
+    return `https://${process.env.RENDER_EXTERNAL_URL.replace(/^https?:\/\//, '')}`;
+  }
+
+  // Detect Docker by /.dockerenv or cgroup
+  try {
+    if (fs.existsSync('/.dockerenv')) {
+      return 'http://facial-recognition-service:5001';
+    }
+    const cgroup = fs.readFileSync('/proc/1/cgroup', 'utf8');
+    if (/docker|kubepods|containerd/.test(cgroup)) {
+      return 'http://facial-recognition-service:5001';
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  // Default to localhost for development
+  return 'http://localhost:5001';
+}
+
+// Ensure DEEPFACE_SERVICE_URL is set early so other modules can use it
+const resolvedDeepfaceUrl = resolveDeepfaceServiceUrl();
+process.env.DEEPFACE_SERVICE_URL = process.env.DEEPFACE_SERVICE_URL || resolvedDeepfaceUrl;
+console.log(`Resolved DEEPFACE_SERVICE_URL=${process.env.DEEPFACE_SERVICE_URL}`);
+
+/**
+ * Función para construir dinámicamente la lista de orígenes CORS permitidos
+ */
+function getCorsOrigins() {
+  const corsOriginEnv = process.env.CORS_ORIGIN || '';
+  const defaultOrigins = [
+    'https://proyecto-2-2.onrender.com',
+    'https://frontend-v2-latest.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:80',
+    'http://localhost',
+  ];
+
+  // Agregar orígenes desde variable de entorno CORS_ORIGIN (separados por comas)
+  if (corsOriginEnv.trim()) {
+    const envOrigins = corsOriginEnv.split(',').map(o => o.trim());
+    return [...new Set([...defaultOrigins, ...envOrigins])];
+  }
+
+  return defaultOrigins;
+}
+
+const corsOrigins = getCorsOrigins();
+console.log(`CORS Origins allowed:`, corsOrigins);
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const compression = require('compression');
 const { Server } = require('socket.io');
 const { db, auth } = require('./firebase');
+const { logMemoryUsage } = require('./utils/memoryOptimizer');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,12 +97,7 @@ const io = new Server(server, {
 
 
   cors: {
-    origin: [
-      'https://proyecto-2-2.onrender.com',
-      'http://localhost:3000',
-      'https://proyecto-2-2.onrender.com/',
-      'http://localhost:3000/'
-    ],
+    origin: corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -28,37 +109,69 @@ const io = new Server(server, {
 
 // Swagger UI para documentación interactiva usando swagger.yaml
 const swaggerUi = require('swagger-ui-express');
-const fs = require('fs');
 const yaml = require('js-yaml');
 const swaggerDocument = yaml.load(fs.readFileSync(__dirname + '/swagger/swagger.yaml', 'utf8'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(cors({
-  origin: [
-    'https://proyecto-2-2.onrender.com',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://proyecto-2-2.onrender.com/',
-    'http://localhost:3000/',
-    'http://localhost:5173/',
-    'http://localhost:5174/'
-  ],
+  origin: corsOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-// Aumentar límite de tamaño para imágenes Base64 (hasta 50MB)
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// ✅ SECURITY FIX: Add security headers
+app.use((req, res, next) => {
+  // Prevent clickjacking attacks
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  // Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  // Enable XSS protection
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // Control referrer information
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Enable HSTS
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  // Disable client-side caching for sensitive data
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
+// ✅ COMPRESSION MIDDLEWARE: Enable gzip compression
+app.use(compression({ level: 6, threshold: 1024 })); // Compress responses > 1KB
+
+// Aumentar límite de tamaño para imágenes Base64 (reducido a 10MB para Render 512MB)
+// Máximo recomendado: 10-15MB
+app.use(express.json({ 
+  limit: '10mb',
+  // Stream large payloads to avoid memory spike
+  verify: (req, res, buf, encoding) => {
+    if (buf.length > 5 * 1024 * 1024) { // Si > 5MB, loguear
+      console.log(`Large payload received: ${(buf.length / 1024 / 1024).toFixed(2)}MB`);
+    }
+  }
+}));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Log memory every 5 minutes
+setInterval(() => {
+  logMemoryUsage('Memory Check (5min)');
+}, 5 * 60 * 1000);
 
 // Rutas API
+// ✅ Authentication routes (centralized)
+app.use('/api/auth', require('./routes/auth'));
+
 app.use('/api/users', require('./routes/users'));
 app.use('/api/tts', require('./routes/tts'));
+app.use('/api/ocr', require('./routes/ocr'));
+app.use('/api/vision', require('./routes/vision'));
 
 // Ruta de prueba para verificar que el servidor está funcionando
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', services: ['tts', 'users'] });
+  res.json({ status: 'ok', services: ['tts', 'users', 'auth', 'ocr', 'vision'] });
 });
 app.use('/api/games', require('./routes/games'));
 app.use('/api/questions', require('./routes/questions'));
@@ -780,17 +893,31 @@ const { matchVoiceResponse, generateSuggestions } = require('./utils/voiceRecogn
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,
-    error: `Ruta no encontrada: ${req.method} ${req.path}`,
-    message: 'El endpoint solicitado no existe'
+    error: 'Endpoint not found',
+    message: `The requested endpoint does not exist: ${req.method} ${req.path}`
   });
 });
 
-// Middleware de manejo de errores global - siempre devolver JSON
+// ✅ SECURITY FIX: Middleware de manejo de errores global - no exponer detalles internos
 app.use((err, req, res, next) => {
-  console.error('Error en el servidor:', err);
-  res.status(err.status || 500).json({
+  console.error('Error en el servidor:', {
+    message: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method
+  });
+  
+  const statusCode = err.status || 500;
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // Generic message for production to avoid leaking info
+  const clientMessage = isProduction 
+    ? 'Internal server error. Please contact support.'
+    : err.message;
+  
+  res.status(statusCode).json({
     success: false,
-    error: err.message || 'Error interno del servidor',
+    error: clientMessage,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
@@ -798,7 +925,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Servidor híbrido ejecutándose en puerto ${PORT}`);
-  console.log(`📚 Documentación API disponible en https://proyecto-2-olvb.onrender.com/api-docs`);
+  console.log(`📚 Documentación API disponible en https://backend-v1-latest.onrender.com/api-docs/`);
 });
 
 module.exports = { app, matchVoiceResponse };

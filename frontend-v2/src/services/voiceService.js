@@ -14,22 +14,34 @@ class VoiceService {
       role: 'default'
     };
     
-    // Configurar la URL base del backend.
-    // Preferir la variable de entorno de Vite (VITE_API_URL). Mantener un
-    // fallback para entornos de build/localhost.
-    let viteApiUrl = null;
-    try {
-      // import.meta.env está disponible con Vite en tiempo de build/runtime
-      viteApiUrl = (typeof import.meta !== 'undefined' && import.meta.env)
-        ? import.meta.env.VITE_API_URL
-        : null;
-    } catch (e) {
-      viteApiUrl = null;
+    // Configurar la URL base del backend usando window.ENV (runtime configuration)
+    // o fallback a import.meta.env (build-time configuration)
+    let apiUrl = null;
+    
+    // Primero intentar window.ENV (inyectado en runtime)
+    if (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) {
+      apiUrl = window.ENV.VITE_API_URL;
+    }
+    
+    // Fallback a import.meta.env (variable de build)
+    if (!apiUrl && typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
+      apiUrl = import.meta.env.VITE_API_URL;
+    }
+    
+    // Fallback a entorno (por si estamos en Node.js)
+    if (!apiUrl && typeof process !== 'undefined' && process.env?.VITE_API_URL) {
+      apiUrl = process.env.VITE_API_URL;
+    }
+    
+    // Último fallback: detectar ambiente y usar URL por defecto
+    if (!apiUrl) {
+      const isProd = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
+      apiUrl = isProd ? 'https://proyecto-2-olvb.onrender.com/api' : 'http://localhost:5000/api';
     }
 
-    this.baseUrl = viteApiUrl || (process.env && process.env.NODE_ENV === 'production'
-      ? 'https://proyecto-2-olvb.onrender.com'
-      : 'http://localhost:5000');
+    this.baseUrl = apiUrl;
+    
+    console.log('[VoiceService] Initialized with baseUrl:', this.baseUrl);
     
     // Load settings from localStorage if available
     if (typeof localStorage !== 'undefined') {
@@ -113,7 +125,7 @@ class VoiceService {
 
   async checkBackendConnection() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/health`);
+      const response = await fetch(`${this.baseUrl}/health`);
       const data = await response.json();
       console.log('Backend connection status:', data);
       if (!data.services.includes('tts')) {
@@ -185,8 +197,8 @@ class VoiceService {
     try {
       const headers = await this.getAuthHeaders();
       
-      console.log('Fetching voices from:', `${this.baseUrl}/api/tts/voices`);
-      const response = await fetch(`${this.baseUrl}/api/tts/voices`, {
+      console.log('Fetching voices from:', `${this.baseUrl}/tts/voices`);
+      const response = await fetch(`${this.baseUrl}/tts/voices`, {
         headers
       });
       
@@ -258,7 +270,7 @@ class VoiceService {
           this.stop();
         }
 
-        const apiUrl = `${this.baseUrl}/api/tts/synthesize`;
+        const apiUrl = `${this.baseUrl}/tts/synthesize`;
         // Get the selected voice details from available voices
         const selectedVoice = this.availableVoices.find(v => 
           v.name === (options.voiceName || this.settings.voiceName)

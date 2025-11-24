@@ -24,18 +24,26 @@ if ! command -v az &> /dev/null; then
     exit 1
 fi
 
+## Load .env if present (export variables)
+if [ -f ".env" ]; then
+    set -a
+    # shellcheck source=/dev/null
+    source .env
+    set +a
+fi
+
 # Verificar autenticación
 echo "🔐 Verificando autenticación en Azure..."
 if ! az account show &> /dev/null; then
-    echo "❌ No estás autenticado en Azure."
-    echo ""
-    echo "💡 Para autenticarte, ejecuta:"
-    echo "   ./azure_login.sh"
-    echo ""
-    echo "   O manualmente:"
-    echo "   az login"
-    echo ""
-    exit 1
+        echo "❌ No estás autenticado en Azure."
+        echo ""
+        echo "💡 Para autenticarte, ejecuta:"
+        echo "   ./azure_login.sh"
+        echo ""
+        echo "   O manualmente:"
+        echo "   az login"
+        echo ""
+        exit 1
 fi
 
 ACCOUNT=$(az account show --query name -o tsv)
@@ -80,11 +88,13 @@ az container create \
     --cpu 2 \
     --memory 4 \
     --registry-login-server docker.io \
-    --registry-username ervincaravaliibarra \
-    --registry-password 94092232381 \
+    --registry-username "${DOCKERHUB_USER:-ervincaravaliibarra}" \
+    --registry-password "${DOCKERHUB_PASS:-}" \
     --environment-variables \
         FLASK_ENV=production \
         PYTHONUNBUFFERED=1 \
+        USE_REDIS=true \
+        REDIS_URL="${REDIS_URL:-}" \
     --restart-policy Always
 
 echo ""

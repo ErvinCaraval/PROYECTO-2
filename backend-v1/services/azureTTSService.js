@@ -2,9 +2,14 @@ const sdk = require('microsoft-cognitiveservices-speech-sdk');
 
 class AzureTTSService {
     constructor() {
+        // En desarrollo/Minikube, Azure es opcional
         if (!process.env.AZURE_API_KEY || !process.env.AZURE_TTS_REGION) {
-            throw new Error('Azure credentials not properly configured');
+            console.warn('⚠️  Azure credentials not configured - TTS service will be disabled');
+            this.enabled = false;
+            return;
         }
+        
+        this.enabled = true;
         
         // Función auxiliar para generar SSML
         this.generateSSML = (text, options = {}) => {

@@ -1,107 +1,47 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
-import { optimizeImage, getImageSize } from '../utils/imageOptimizer';
+import FaceCaptureCamera from '../components/FaceCaptureCamera';
+import { optimizeImage, getImageSize, optimizeImageUltra } from '../utils/imageOptimizer';
+import { getCachedFaceEmbeddings } from '../services/faceCache';
 
 export default function FaceLogin() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [stream, setStream] = useState(null);
+  const [progress, setProgress] = useState('');
   const [capturedImage, setCapturedImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [step, setStep] = useState('email'); // 'email' o 'capture'
+  const [useUltraCompression, setUseUltraCompression] = useState(false); // Opción nueva
   
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   const navigate = useNavigate();
 
-  // Inicializar cámara cuando se necesite
-  useEffect(() => {
-    if (step === 'capture') {
-      startCamera();
-    }
-    return () => {
-      stopCamera();
-    };
-  }, [step]);
-
-  const startCamera = async () => {
+  const handleCapture = async (base64String) => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: 'user'
-        }
-      });
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-    } catch (err) {
-      setError('No se pudo acceder a la cámara. Por favor, verifica los permisos.');
-      console.error('Error accediendo a la cámara:', err);
+      setProgress('Optimizando imagen...');
+      // Seleccionar nivel de compresión
+      const optimized = useUltraCompression
+        ? await optimizeImageUltra(base64String)  // 160x160, calidad 0.2 - ULTRA
+        : await optimizeImage(base64String, 200, 200, 0.3);  // 200x200, calidad 0.3 - Estándar
+      const originalSize = getImageSize(base64String);
+      const optimizedSize = getImageSize(optimized);
+      const reduction = Math.round((1 - optimizedSize/originalSize) * 100);
+      console.log(`✓ Imagen optimizada: ${originalSize}KB → ${optimizedSize}KB (${reduction}% reducción)`);
+      setCapturedImage(optimized);
+      setPreview(optimized);
+      setProgress('');
+    } catch (error) {
+      console.error('Error optimizando imagen, usando original:', error);
+      setCapturedImage(base64String);
+      setPreview(base64String);
+      setProgress('');
     }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  };
-
-  const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) {
-      setError('Error capturando la foto');
-      return;
-    }
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-
-    // Configurar canvas con las dimensiones del video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    // Dibujar el frame actual del video en el canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Convertir canvas a Blob y luego a Base64 (calidad reducida para optimizar)
-    canvas.toBlob(async (blob) => {
-      if (blob) {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64String = reader.result;
-          try {
-            // Optimizar imagen antes de guardarla (reduce tamaño significativamente)
-            // Usar 300x300 y calidad 0.6 para reducir aún más el tamaño y tiempo de procesamiento
-            const optimized = await optimizeImage(base64String, 300, 300, 0.6);
-            const originalSize = getImageSize(base64String);
-            const optimizedSize = getImageSize(optimized);
-            console.log(`Imagen optimizada: ${originalSize}KB → ${optimizedSize}KB (${Math.round((1 - optimizedSize/originalSize) * 100)}% reducción)`);
-            setCapturedImage(optimized);
-            setPreview(optimized);
-          } catch (error) {
-            console.error('Error optimizando imagen, usando original:', error);
-            // Si falla la optimización, usar la original
-            setCapturedImage(base64String);
-            setPreview(base64String);
-          }
-        };
-        reader.readAsDataURL(blob);
-      }
-    }, 'image/jpeg', 0.8);
   };
 
   const retakePhoto = () => {
@@ -134,23 +74,30 @@ export default function FaceLogin() {
     }
 
     setLoading(true);
+    setProgress('Enviando imagen...');
     setError('');
     setSuccess('');
 
     try {
       // Obtener URL base de la API
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
       // Enviar imagen al backend para verificación
-      const response = await fetch(`${apiBase}/api/face/login`, {
+      setProgress('Verificando rostro...');
+      const payload = JSON.stringify({
+        image: capturedImage,
+        email: email
+      });
+      console.log(`Tamaño del payload: ${(payload.length / 1024).toFixed(2)}KB`);
+      
+      const response = await fetch(`${apiBase}/face/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept-Encoding': 'gzip, deflate' // Permitir compresión
         },
-        body: JSON.stringify({
-          image: capturedImage,
-          email: email
-        })
+        body: payload,
+        priority: 'high' // Prioridad alta de red
       });
 
       // Verificar que la respuesta sea JSON
@@ -170,9 +117,9 @@ export default function FaceLogin() {
       if (data.success && data.verified) {
         // Login exitoso - usar el customToken para autenticar
         if (data.customToken) {
+          setProgress('Autenticando...');
           await signInWithCustomToken(auth, data.customToken);
           setSuccess('¡Login facial exitoso! Redirigiendo...');
-          stopCamera();
           
           // Redirigir después de 1 segundo
           setTimeout(() => {
@@ -189,6 +136,7 @@ export default function FaceLogin() {
       console.error('Error en login facial:', err);
     } finally {
       setLoading(false);
+      setProgress('');
     }
   };
 
@@ -196,7 +144,6 @@ export default function FaceLogin() {
     setStep('email');
     setCapturedImage(null);
     setPreview(null);
-    stopCamera();
     setError('');
     setSuccess('');
   };
@@ -214,6 +161,7 @@ export default function FaceLogin() {
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl p-6">
           {error && <Alert intent="error" className="mb-4">{error}</Alert>}
           {success && <Alert intent="success" className="mb-4">{success}</Alert>}
+          {progress && <Alert intent="info" className="mb-4">⏳ {progress}</Alert>}
 
           {step === 'email' ? (
             <form onSubmit={handleEmailSubmit} className="space-y-4">
@@ -239,51 +187,13 @@ export default function FaceLogin() {
           ) : (
             <div className="space-y-4">
               {!preview ? (
-                <>
-                  {/* Video Preview */}
-                  <div className="relative bg-black rounded-lg overflow-hidden">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-auto max-h-[480px]"
-                    />
-                    {!stream && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                        <p className="text-white">Iniciando cámara...</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Canvas oculto para captura */}
-                  <canvas ref={canvasRef} className="hidden" />
-
-                  {/* Botones de control */}
-                  <div className="flex gap-4 justify-center">
-                    <Button
-                      onClick={capturePhoto}
-                      disabled={!stream || loading}
-                      size="lg"
-                    >
-                      📷 Capturar Foto
-                    </Button>
-                    <Button
-                      onClick={backToEmail}
-                      variant="outline"
-                      disabled={loading}
-                      size="lg"
-                    >
-                      ← Cambiar Email
-                    </Button>
-                  </div>
-
-                  <div className="text-center text-sm text-white/60">
-                    <p>💡 Asegúrate de tener buena iluminación</p>
-                    <p>💡 Mira directamente a la cámara</p>
-                    <p>💡 Mantén tu rostro centrado</p>
-                  </div>
-                </>
+                <FaceCaptureCamera
+                  onCapture={handleCapture}
+                  onCancel={backToEmail}
+                  disabled={loading}
+                  buttonText="📷 Capturar Foto"
+                  showCancel={true}
+                />
               ) : (
                 <>
                   {/* Preview de la foto capturada */}
@@ -310,7 +220,7 @@ export default function FaceLogin() {
                       disabled={loading}
                       size="lg"
                     >
-                      {loading ? 'Verificando...' : '✅ Verificar y Login'}
+                      {loading ? '⏳ Verificando...' : '✅ Verificar y Login'}
                     </Button>
                   </div>
                 </>
@@ -334,4 +244,3 @@ export default function FaceLogin() {
     </div>
   );
 }
-

@@ -6,7 +6,7 @@ import Button from './ui/Button';
 import VoiceAnswerButton from './VoiceAnswerButton';
 import voiceRecognitionService from '../services/voiceRecognitionService';
 
-export default function Question({ text, question, options, onSelect, selected, showResult = false, correctIndex = null }) {
+export default function Question({ text, question, options, onSelect, selected, showResult = false, correctIndex = null, imageSrc }) {
   const title = typeof text === 'string' && text.length > 0 ? text : question;
   const { isVoiceModeEnabled, speak, stopSpeaking, isVoiceAvailable, voiceInteractionsService } = useVoice();
   // Obtener el usuario autenticado (fallback a window.__USER__ si existiera)
@@ -159,6 +159,16 @@ export default function Question({ text, question, options, onSelect, selected, 
   return (
     <div className="w-full flex flex-col items-center justify-center">
       <div className="w-full max-w-xl mx-auto bg-white/10 border border-white/20 rounded-2xl shadow-lg p-6 mb-6 flex flex-col items-center">
+        {imageSrc && (
+          <div className="w-full mb-4 rounded-2xl border border-white/10 bg-black/20 overflow-hidden">
+            <img
+              src={imageSrc}
+              alt="Imagen de la pregunta"
+              className="w-full max-h-72 object-contain bg-black/40"
+              loading="lazy"
+            />
+          </div>
+        )}
         <h2 className="text-xl md:text-2xl font-bold leading-snug break-words text-center mb-2">{title}</h2>
         {/* Voice Controls: botón siempre visible en modo voz */}
         {isVoiceModeEnabled && (

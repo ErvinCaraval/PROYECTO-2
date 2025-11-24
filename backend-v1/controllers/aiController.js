@@ -16,13 +16,16 @@ class AIController {
       if (!useAI) {
         return res.status(400).json({ error: 'Debes activar el modo IA para generar preguntas. No se permiten preguntas locales.' });
       }
-      if (!count || typeof count !== 'number' || count < 1) {
+      
+      // Validar que count sea un número entero positivo
+      const parsedCount = parseInt(count, 10);
+      if (isNaN(parsedCount) || parsedCount < 1) {
         return res.status(400).json({ error: 'El número de preguntas debe ser mayor que cero.' });
       }
 
-      const result = await this.aiGenerator.generateQuestions(topic, difficulty, count);
-      if (!result.questions || !Array.isArray(result.questions) || result.questions.length < count) {
-        return res.status(500).json({ error: 'No se pudieron generar suficientes preguntas con IA. Intenta de nuevo o revisa tu API Key.' });
+      const result = await this.aiGenerator.generateQuestions(topic, difficulty, parsedCount);
+      if (!result.questions || !Array.isArray(result.questions) || result.questions.length === 0) {
+        return res.status(500).json({ error: 'No se pudieron generar preguntas con IA. Intenta de nuevo o revisa tu API Key.' });
       }
 
       res.json({
@@ -33,7 +36,8 @@ class AIController {
         questions: result.questions
       });
     } catch (error) {
-      res.status(500).json({ error: 'Error interno del servidor' });
+      console.error('❌ Error en generateQuestions:', error.message || error);
+      res.status(500).json({ error: error.message || 'Error al generar preguntas con IA. Por favor, intenta de nuevo.' });
     }
   }
 
@@ -46,8 +50,8 @@ class AIController {
         topics
       });
     } catch (error) {
-
-      res.status(500).json({ error: 'Error interno del servidor' });
+      console.error('❌ Error en getTopics:', error.message || error);
+      res.status(500).json({ error: 'Error al obtener temas disponibles' });
     }
   }
 
@@ -60,7 +64,8 @@ class AIController {
         levels
       });
     } catch (error) {
-      res.status(500).json({ error: 'Error interno del servidor' });
+      console.error('❌ Error en getDifficultyLevels:', error.message || error);
+      res.status(500).json({ error: 'Error al obtener niveles de dificultad' });
     }
   }
 
@@ -75,17 +80,17 @@ class AIController {
 
       const questions = await this.aiGenerator.generateQuestionsFree(topic, difficulty, count);
 
-
       res.json({
         success: true,
         gameId,
         topic,
         difficulty,
-        count: questions.questions.length,
-        questions: questions.questions
+        count: questions.questions?.length || 0,
+        questions: questions.questions || []
       });
     } catch (error) {
-      res.status(500).json({ error: 'Error interno del servidor' });
+      console.error('❌ Error en generateGameQuestions:', error.message || error);
+      res.status(500).json({ error: error.message || 'Error al generar preguntas para el juego' });
     }
   }
 }

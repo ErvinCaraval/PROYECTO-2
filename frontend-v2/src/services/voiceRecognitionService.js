@@ -6,7 +6,7 @@ class AssemblyAIVoiceRecognitionService {
     this.isRecording = false;
     this.mediaRecorder = null;
     this.audioChunks = [];
-    this.apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    this.apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
     this.stream = null;
   }
 
@@ -70,7 +70,7 @@ class AssemblyAIVoiceRecognitionService {
             // Use the voice-interactions public endpoint which proxies to AssemblyAI.
             // This avoids requiring an auth token here (the assemblyai route is authenticated).
             console.log('🚀 Enviando petición al backend...');
-            const response = await fetchWithRetry(`${this.apiBase}/api/voice-interactions/process-audio`, {
+            const response = await fetchWithRetry(`${this.apiBase}/voice-interactions/process-audio`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'

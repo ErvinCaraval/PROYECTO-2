@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useVoice } from '../VoiceContext';
 import { useAuth } from '../AuthContext';
 import ManualQuestionForm from './ManualQuestionForm';
+import OCRQuestionCapture from './OCRQuestionCapture';
+import ImageAnalysisQuestionCreator from './ImageAnalysisQuestionCreator';
+import ObjectDetectionQuestionCreator from './ObjectDetectionQuestionCreator';
 import { fetchTopics, fetchDifficultyLevels } from '../services/api';
 import Button from './ui/Button';
 import Input from './ui/Input';
@@ -20,11 +23,17 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
   const [questionCountInput, setQuestionCountInput] = useState('');
   const [useAI, setUseAI] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
+  const [showOCRForm, setShowOCRForm] = useState(false);
+  const [showImageAnalysisForm, setShowImageAnalysisForm] = useState(false);
+  const [showObjectDetectionForm, setShowObjectDetectionForm] = useState(false);
   const [manualCount, setManualCount] = useState(null);
   const [manualCountInput, setManualCountInput] = useState('');
   const [manualStep, setManualStep] = useState(0);
   const [manualQuestions, setManualQuestions] = useState([]);
   const [manualTopic, setManualTopic] = useState('');
+  const [ocrQuestions, setOcrQuestions] = useState([]);
+  const [visionQuestions, setVisionQuestions] = useState([]);
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   
   const [error, setError] = useState('');
@@ -67,17 +76,25 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
       return;
     }
 
+    if (!questionCount || questionCount < 1) {
+      setError('Por favor ingresa una cantidad válida de preguntas (mínimo 1)');
+      return;
+    }
+
     setLoading(true);
     setError('');
+    console.log(`🤖 Iniciando generación de ${questionCount} preguntas sobre "${selectedTopic}" (dificultad: ${selectedDifficulty})...`);
 
     try {
-      const apiBase = import.meta.env.VITE_API_URL;
+      const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       if (!apiBase) {
-        setError('Error de configuración: URL del API no definida');
-        return;
+        throw new Error('Error de configuración: URL del API no definida');
       }
+      
       const token = user && user.getIdToken ? await user.getIdToken() : null;
-      const response = await fetch(`${apiBase}/api/ai/generate-questions`, {
+      console.log('📡 Enviando solicitud al backend...');
+      
+      const response = await fetch(`${apiBase}/ai/generate-questions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,68 +108,71 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
         }),
       });
 
-      const data = await response.json();
-      if (data.success) {
-        // Guardar preguntas en Firestore y esperar confirmación exitosa antes de crear la partida
-        const questionsWithMeta = data.questions.map(q => ({
-          // Si las opciones existen, barajarlas y actualizar el índice de la respuesta correcta de forma robusta
-          ...(() => {
-            if (!Array.isArray(q.options) || typeof q.correctAnswerIndex !== 'number') return q;
-            // Asociar cada opción con su índice original
-            const optionsWithIndex = q.options.map((opt, idx) => ({ opt, origIdx: idx }));
-            // Barajar
-            for (let i = optionsWithIndex.length - 1; i > 0; i--) {
-              const j = Math.floor(Math.random() * (i + 1));
-              [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
-            }
-            // Buscar la nueva posición de la opción que era la correcta
-            const newCorrectIndex = optionsWithIndex.findIndex(o => o.origIdx === q.correctAnswerIndex);
-            return {
-              ...q,
-              options: optionsWithIndex.map(o => o.opt),
-              correctAnswerIndex: newCorrectIndex
-            };
-          })(),
-          createdBy: user?.uid || 'anon',
-          createdAt: Date.now(),
-          category: selectedTopic,
-          difficulty: selectedDifficulty
-        }));
-        let saveOk = false;
-        try {
-          const bulkToken = user && user.getIdToken ? await user.getIdToken() : null;
-          const response = await fetch(`${apiBase}/api/questions/bulk`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(bulkToken ? { Authorization: `Bearer ${bulkToken}` } : {})
-            },
-            body: JSON.stringify({ questions: questionsWithMeta })
-          });
-          const result = await response.json();
-          if (!result.success) {
-            setError((prev) => (prev ? prev + ' | ' : '') + (result.error || 'Error guardando preguntas en Firestore'));
-            setError('No se pudieron guardar las preguntas. ' + (result.error || 'Por favor, intenta de nuevo.'));
-          } else {
-            saveOk = true;
-          }
-        } catch (e) {
-          setError('Ocurrió un error al guardar las preguntas. Por favor, verifica tu conexión e intenta de nuevo.');
-        }
-        if (!saveOk) {
-          setLoading(false);
-          return;
-        }
-        // Redirigir al usuario a la pantalla principal para que pueda crear la partida manualmente
-        onQuestionsGenerated(data.questions);
-        setLoading(false);
-        // No navegues ni cierres aquí, deja que el Dashboard controle el cierre
-      } else {
-        setError(data.error || 'Error generando preguntas');
-        setError('No se pudieron generar las preguntas: ' + (data.error || 'Por favor, intenta de nuevo.'));
+      console.log(`📥 Respuesta recibida con status ${response.status}`);
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || `Error del servidor: ${response.status}`);
       }
+
+      const data = await response.json();
+      
+      if (!data.success || !data.questions || data.questions.length === 0) {
+        throw new Error(data.error || 'Error desconocido al generar preguntas');
+      }
+
+      console.log(`✅ Se generaron ${data.questions.length} preguntas exitosamente`);
+      
+      // Guardar preguntas en Firestore y esperar confirmación exitosa
+      const questionsWithMeta = data.questions.map(q => ({
+        // Si las opciones existen, barajarlas y actualizar el índice de la respuesta correcta de forma robusta
+        ...(() => {
+          if (!Array.isArray(q.options) || typeof q.correctAnswerIndex !== 'number') return q;
+          // Asociar cada opción con su índice original
+          const optionsWithIndex = q.options.map((opt, idx) => ({ opt, origIdx: idx }));
+          // Barajar
+          for (let i = optionsWithIndex.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
+          }
+          // Buscar la nueva posición de la opción que era la correcta
+          const newCorrectIndex = optionsWithIndex.findIndex(o => o.origIdx === q.correctAnswerIndex);
+          return {
+            ...q,
+            options: optionsWithIndex.map(o => o.opt),
+            correctAnswerIndex: newCorrectIndex
+          };
+        })(),
+        createdBy: user?.uid || 'anon',
+        createdAt: Date.now(),
+        category: selectedTopic,
+        difficulty: selectedDifficulty
+      }));
+      
+      console.log('💾 Guardando preguntas en Firestore...');
+      const bulkToken = user && user.getIdToken ? await user.getIdToken() : null;
+      const saveResponse = await fetch(`${apiBase}/questions/bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(bulkToken ? { Authorization: `Bearer ${bulkToken}` } : {})
+        },
+        body: JSON.stringify({ questions: questionsWithMeta })
+      });
+      
+      const saveResult = await saveResponse.json();
+      if (!saveResult.success) {
+        throw new Error(saveResult.error || 'Error al guardar las preguntas en la base de datos');
+      }
+
+      console.log('✅ Preguntas guardadas exitosamente');
+      
+      // Solo después de guardar exitosamente, notificar al componente padre
+      onQuestionsGenerated(data.questions);
+      
     } catch (error) {
-      setError('Error de conexión. Por favor, verifica tu conexión a internet e intenta nuevamente.');
+      console.error('❌ Error:', error.message);
+      setError(error.message || 'Error al generar preguntas. Por favor, intenta nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -162,7 +182,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
 
   return (
     <Modal open={true} title="🤖 Generador de Preguntas" onClose={onClose}>
-      {isVoiceModeEnabled && (!showManualForm) && (
+      {isVoiceModeEnabled && (!showManualForm && !showOCRForm && !showImageAnalysisForm && !showObjectDetectionForm) && (
         <div className="flex justify-end mb-2">
           <Button
             variant="outline"
@@ -194,42 +214,88 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
         </div>
       )}
       {loading && <LoadingOverlay text="Generando…" mobileOnly />}
-      {!showManualForm && !useAI && (
-        <div className="flex flex-col sm:flex-row gap-3">
+      {error && <Alert intent="error">{error}</Alert>}
+      {statusMessage && <Alert intent="success">{statusMessage}</Alert>}
+      {!showManualForm && !useAI && !showOCRForm && !showImageAnalysisForm && !showObjectDetectionForm && (
+        <div className="flex flex-col gap-3">
           <Button
-            onClick={() => setUseAI(true)}
+            onClick={() => {
+              setUseAI(true);
+              setShowManualForm(false);
+              setShowOCRForm(false);
+              setShowImageAnalysisForm(false);
+              setShowObjectDetectionForm(false);
+            }}
             size="lg"
             onFocus={() => isVoiceModeEnabled && speak('Crear con IA: genera preguntas automáticamente usando inteligencia artificial.', { force: true })}
             onMouseEnter={() => isVoiceModeEnabled && speak('Crear con IA: genera preguntas automáticamente usando inteligencia artificial.', { force: true })}
           >
-            Crear con IA
+            🤖 Crear con IA
           </Button>
           <Button
             variant="secondary"
             size="lg"
-            onClick={() => { setShowManualForm(true); setUseAI(false); setManualStep(0); setManualQuestions([]); }}
+            onClick={() => {
+              setShowManualForm(true);
+              setUseAI(false);
+              setShowOCRForm(false);
+              setShowImageAnalysisForm(false);
+              setShowObjectDetectionForm(false);
+              setManualStep(0);
+              setManualQuestions([]);
+            }}
             onFocus={() => isVoiceModeEnabled && speak('Escribir preguntas: te permite escribir preguntas manualmente.', { force: true })}
             onMouseEnter={() => isVoiceModeEnabled && speak('Escribir preguntas: te permite escribir preguntas manualmente.', { force: true })}
           >
-            Escribir preguntas
+            ✏️ Escribir preguntas
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={() => { setShowOCRForm(true); setUseAI(false); setShowImageAnalysisForm(false); setShowObjectDetectionForm(false); }}
+            onFocus={() => isVoiceModeEnabled && speak('Capturar pregunta: extrae preguntas de imágenes usando OCR.', { force: true })}
+            onMouseEnter={() => isVoiceModeEnabled && speak('Capturar pregunta: extrae preguntas de imágenes usando OCR.', { force: true })}
+          >
+            📸 Capturar pregunta
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={() => {
+              setShowImageAnalysisForm(true);
+              setUseAI(false);
+              setShowManualForm(false);
+              setShowOCRForm(false);
+              setShowObjectDetectionForm(false);
+            }}
+            onFocus={() => isVoiceModeEnabled && speak('Analizar imagen: genera preguntas automáticamente usando Azure Computer Vision.', { force: true })}
+            onMouseEnter={() => isVoiceModeEnabled && speak('Analizar imagen: genera preguntas automáticamente usando Azure Computer Vision.', { force: true })}
+          >
+            🖼️ Analizar imagen
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={() => {
+              setShowObjectDetectionForm(true);
+              setUseAI(false);
+              setShowManualForm(false);
+              setShowOCRForm(false);
+              setShowImageAnalysisForm(false);
+            }}
+            onFocus={() => isVoiceModeEnabled && speak('Detectar objetos: crea preguntas interactivas identificando objetos específicos en imágenes.', { force: true })}
+            onMouseEnter={() => isVoiceModeEnabled && speak('Detectar objetos: crea preguntas interactivas identificando objetos específicos en imágenes.', { force: true })}
+          >
+            🎯 Detectar objetos
           </Button>
         </div>
       )}
-      {useAI && !showManualForm && (
+      {!showManualForm && useAI && !showOCRForm && (
         <form
           className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4"
           onSubmit={async (e) => {
             e.preventDefault();
-            setLoading(true);
-            setError('');
-            try {
-              await generateQuestions();
-              setError('');
-            } catch (err) {
-              setError('Error al generar preguntas. Por favor, inténtalo de nuevo.');
-            } finally {
-              setLoading(false);
-            }
+            await generateQuestions();
           }}
         >
           <div>
@@ -314,7 +380,8 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !selectedTopic || questionCount === null}
+              title={!selectedTopic ? 'Selecciona un tema' : questionCount === null ? 'Ingresa la cantidad de preguntas' : 'Crear preguntas'}
               onFocus={() => isVoiceModeEnabled && speak('Crear preguntas: genera las preguntas con inteligencia artificial.', { force: true })}
               onMouseEnter={() => isVoiceModeEnabled && speak('Crear preguntas: genera las preguntas con inteligencia artificial.', { force: true })}
             >
@@ -406,7 +473,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
                                       setLoading(true);
                                       setError('');
 
-                                      const apiBase = import.meta.env.VITE_API_URL;
+                                      const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
                                       if (!apiBase) {
                                         throw new Error('Error de configuración: URL del API no definida');
                                       }
@@ -416,7 +483,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
                                       const token = await user.getIdToken();
 
                                       // Save single question
-                                      const response = await fetch(`${apiBase}/api/questions`, {
+                                      const response = await fetch(`${apiBase}/questions`, {
                                         method: 'POST',
                                         headers: {
                                           'Content-Type': 'application/json',
@@ -436,7 +503,7 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
                                       // If last question, bulk save (server may already store them individually, but keep compatibility)
                                       if (next.length === manualCount) {
                                         // Do a bulk save to keep existing API usage
-                                        const bulkResp = await fetch(`${apiBase}/api/questions/bulk`, {
+                                        const bulkResp = await fetch(`${apiBase}/questions/bulk`, {
                                           method: 'POST',
                                           headers: {
                                             'Content-Type': 'application/json',
@@ -477,6 +544,158 @@ const AIQuestionGenerator = ({ onQuestionsGenerated, onClose }) => {
             </div>
           )}
         </div>
+      )}
+      {showOCRForm && (
+        <OCRQuestionCapture
+          topics={topics}
+          onQuestionExtracted={async (questionPayload) => {
+            setLoading(true);
+            setError('');
+            try {
+              const apiBase = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+              const token = user && user.getIdToken ? await user.getIdToken() : null;
+              const response = await fetch(`${apiBase}/questions`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(questionPayload)
+              });
+
+              if (response.ok) {
+                const result = await response.json();
+                const savedQuestion = result.question || { ...questionPayload };
+                const updatedQuestions = [...ocrQuestions, savedQuestion];
+                setOcrQuestions(updatedQuestions);
+                
+                setStatusMessage(`✅ Pregunta ${updatedQuestions.length} guardada exitosamente. Puedes agregar más o finalizar.`);
+                setLoading(false);
+                
+                // Mantener modal abierto para agregar más preguntas
+                // No cierra automáticamente después de guardar
+              } else {
+                setError('No se pudo guardar la pregunta');
+                setLoading(false);
+              }
+            } catch (error) {
+              setError('Error al guardar la pregunta: ' + (error.message || 'Por favor, intenta de nuevo.'));
+              setLoading(false);
+            }
+          }}
+          onCancel={() => { 
+            setShowOCRForm(false);
+            
+            // Si hay preguntas guardadas, notifica al parent
+            if (ocrQuestions.length > 0) {
+              setStatusMessage(`✅ Se guardaron ${ocrQuestions.length} pregunta(s) de OCR`);
+              
+              setTimeout(() => {
+                onQuestionsGenerated(ocrQuestions);
+                setOcrQuestions([]);
+                setStatusMessage('');
+              }, 1500);
+            }
+          }}
+        />
+      )}
+      {showImageAnalysisForm && (
+        <ImageAnalysisQuestionCreator
+          topics={topics}
+          onQuestionCreated={async (questionPayload) => {
+            setLoading(true);
+            setError('');
+            try {
+              const apiBase =
+                (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) ||
+                import.meta.env.VITE_API_URL ||
+                'http://localhost:5000/api';
+              const token = user && user.getIdToken ? await user.getIdToken() : null;
+              const response = await fetch(`${apiBase}/questions`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(questionPayload)
+              });
+              const result = await response.json();
+              if (!response.ok) {
+                throw new Error(result.error || 'No se pudo guardar la pregunta');
+              }
+              const savedQuestion = result.question || { ...questionPayload };
+              const updated = [...visionQuestions, savedQuestion];
+              setVisionQuestions(updated);
+              setStatusMessage(`✅ Pregunta ${updated.length} guardada desde análisis de imagen`);
+              return savedQuestion;
+            } catch (err) {
+              setError('Error al guardar la pregunta: ' + (err.message || 'Intenta de nuevo.'));
+              throw err;
+            } finally {
+              setLoading(false);
+            }
+          }}
+          onCancel={() => {
+            setShowImageAnalysisForm(false);
+            if (visionQuestions.length > 0) {
+              setStatusMessage(`✅ Se guardaron ${visionQuestions.length} pregunta(s) desde análisis de imagen`);
+              setTimeout(() => {
+                onQuestionsGenerated(visionQuestions);
+                setVisionQuestions([]);
+                setStatusMessage('');
+              }, 1500);
+            }
+          }}
+        />
+      )}
+      {showObjectDetectionForm && (
+        <ObjectDetectionQuestionCreator
+          topics={topics}
+          onQuestionCreated={async (questionPayload) => {
+            setLoading(true);
+            setError('');
+            try {
+              const apiBase =
+                (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) ||
+                import.meta.env.VITE_API_URL ||
+                'http://localhost:5000/api';
+              const token = user && user.getIdToken ? await user.getIdToken() : null;
+              const response = await fetch(`${apiBase}/questions`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(questionPayload)
+              });
+              const result = await response.json();
+              if (!response.ok) {
+                throw new Error(result.error || 'No se pudo guardar la pregunta');
+              }
+              const savedQuestion = result.question || { ...questionPayload };
+              const updated = [...visionQuestions, savedQuestion];
+              setVisionQuestions(updated);
+              setStatusMessage(`✅ Pregunta detectada y guardada con éxito`);
+              setShowObjectDetectionForm(false);
+              
+              setTimeout(() => {
+                onQuestionsGenerated(updated);
+                setVisionQuestions([]);
+                setStatusMessage('');
+              }, 1500);
+              
+              return savedQuestion;
+            } catch (err) {
+              setError('Error al guardar la pregunta: ' + (err.message || 'Intenta de nuevo.'));
+              throw err;
+            } finally {
+              setLoading(false);
+            }
+          }}
+          onCancel={() => {
+            setShowObjectDetectionForm(false);
+          }}
+        />
       )}
     </Modal>
   );
