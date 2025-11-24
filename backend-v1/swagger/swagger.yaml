@@ -1785,6 +1785,198 @@ paths:
           description: "Error en el servidor"
 
   # ===========================================
+  # VISION - IMAGE ANALYSIS (HU-VC3)
+  # ===========================================
+
+  /api/vision/analyze-image:
+    post:
+      tags: [Vision]
+      summary: "HU-VC3 - Analizar imagen completa"
+      description: |
+        Realiza análisis completo de una imagen incluyendo descripción, etiquetas, categorías, objetos y colores.
+        Utiliza Azure Computer Vision para proporcionar información detallada de la imagen.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imageBase64:
+                  type: string
+                  description: "Imagen codificada en base64. Formato: 'data:image/jpeg;base64,...'"
+                  example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAA..."
+                imageUrl:
+                  type: string
+                  description: "URL pública de la imagen (alternativa a imageBase64)"
+                  example: "https://example.com/image.jpg"
+                mimeType:
+                  type: string
+                  description: "Tipo MIME de la imagen (opcional, se detecta automáticamente)"
+                  enum: ["image/jpeg", "image/png", "image/webp", "image/bmp"]
+                  example: "image/jpeg"
+                language:
+                  type: string
+                  default: "es"
+                  description: "Idioma para las etiquetas y descripción"
+                  enum: ["es", "en", "fr", "de", "pt", "it"]
+      responses:
+        '200':
+          description: "Análisis de imagen exitoso"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  analysis:
+                    type: object
+                    properties:
+                      description:
+                        type: string
+                        description: "Descripción textual de la imagen"
+                        example: "Un gato naranja descansando en un sofá azul"
+                      tags:
+                        type: array
+                        description: "Etiquetas detectadas en la imagen"
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            confidence:
+                              type: number
+                        example:
+                          - name: "gato"
+                            confidence: 0.98
+                          - name: "animal"
+                            confidence: 0.95
+                      categories:
+                        type: array
+                        description: "Categorías de la imagen"
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            score:
+                              type: number
+                      objects:
+                        type: array
+                        description: "Objetos detectados con bounding boxes"
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            rectangle:
+                              type: object
+                              properties:
+                                x: { type: number }
+                                y: { type: number }
+                                w: { type: number }
+                                h: { type: number }
+                            confidence:
+                              type: number
+                      colors:
+                        type: object
+                        description: "Análisis de colores predominantes"
+                        properties:
+                          accentColor:
+                            type: string
+                            example: "FF6B35"
+                          dominantColors:
+                            type: array
+                            items: { type: string }
+                          isBWImg:
+                            type: boolean
+                      metadata:
+                        type: object
+                        description: "Metadatos de la imagen"
+                        properties:
+                          width:
+                            type: number
+                          height:
+                            type: number
+                      objectSummary:
+                        type: array
+                        description: "Resumen de objetos detectados con conteo"
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            count:
+                              type: number
+                  questionSuggestions:
+                    type: object
+                    description: "Sugerencias automáticas de preguntas"
+                    properties:
+                      question:
+                        type: string
+                        example: "¿Qué se muestra en esta imagen?"
+                      options:
+                        type: array
+                        items:
+                          type: string
+                        example: ["gato", "perro", "aves", "reptil"]
+                      suggestedAnswer:
+                        type: string
+                      descriptionContext:
+                        type: string
+                      categorySuggestion:
+                        type: string
+                      confidence:
+                        type: number
+                  processedAt:
+                    type: string
+                    format: date-time
+                  language:
+                    type: string
+                    example: "es"
+        '400':
+          description: "Error en la solicitud"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    enum:
+                      - "Provide imageBase64, imageUrl or a file upload"
+                      - "Invalid base64 image data"
+                      - "Invalid image URL"
+                      - "Image is too large (max 4 MB)"
+                      - "Invalid image type. Supported: JPEG, PNG, WebP, BMP"
+        '401':
+          description: "No autenticado"
+        '403':
+          description: "No autorizado"
+        '429':
+          description: "Límite de tasa excedido"
+        '503':
+          description: "Servicio no disponible"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Azure Computer Vision service is not configured"
+
+  # ===========================================
   # VISION - OBJECT DETECTION (HU-VC4)
   # ===========================================
 
