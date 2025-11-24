@@ -1977,6 +1977,212 @@ paths:
                     example: "Azure Computer Vision service is not configured"
 
   # ===========================================
+  # OCR - OPTICAL CHARACTER RECOGNITION (HU-VC2)
+  # ===========================================
+
+  /api/ocr/health:
+    get:
+      tags: [OCR]
+      summary: "Verificar estado del servicio OCR"
+      description: "Comprueba la disponibilidad del servicio OCR (Azure Computer Vision)."
+      responses:
+        '200':
+          description: "Estado del servicio OCR"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  status:
+                    type: string
+                    enum: ["healthy", "disabled"]
+                    example: "healthy"
+                  service:
+                    type: string
+                    example: "azure-computer-vision-ocr"
+
+  /api/ocr/process-url:
+    post:
+      tags: [OCR]
+      summary: "Extraer texto de imagen desde URL"
+      description: |
+        Realiza OCR (reconocimiento óptico de caracteres) en una imagen desde una URL pública.
+        Extrae todo el texto visible en la imagen y lo parsea automáticamente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - imageUrl
+              properties:
+                imageUrl:
+                  type: string
+                  format: uri
+                  description: "URL pública de la imagen"
+                  example: "https://example.com/document.jpg"
+                language:
+                  type: string
+                  default: "es"
+                  description: "Idioma del texto en la imagen"
+                  enum: ["es", "en", "fr", "de", "pt", "it"]
+      responses:
+        '200':
+          description: "Texto extraído exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  rawText:
+                    type: string
+                    description: "Texto completo extraído de la imagen"
+                    example: "¿Cuál es la capital de Francia?\nParis\nLyon\nMarsella"
+                  pregunta:
+                    type: string
+                    description: "Pregunta parseada del texto"
+                    example: "¿Cuál es la capital de Francia?"
+                  opciones:
+                    type: array
+                    description: "Opciones extraídas y parseadas"
+                    items:
+                      type: string
+                    example: ["Paris", "Lyon", "Marsella"]
+                  confidence:
+                    type: string
+                    enum: ["low", "medium", "high"]
+                    example: "high"
+        '400':
+          description: "Error en la solicitud"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    enum:
+                      - "Invalid or missing imageUrl"
+                      - "No text found in the image. Please provide an image with clear, readable text."
+        '429':
+          description: "Límite de tasa excedido"
+        '503':
+          description: "Servicio no disponible"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "OCR service is not configured"
+
+  /api/ocr/process-image:
+    post:
+      tags: [OCR]
+      summary: "Extraer texto de imagen desde Base64"
+      description: |
+        Realiza OCR (reconocimiento óptico de caracteres) en una imagen codificada en Base64.
+        Extrae todo el texto visible y lo parsea automáticamente para crear preguntas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - imageBase64
+              properties:
+                imageBase64:
+                  type: string
+                  description: "Imagen en formato Base64. Formato: 'data:image/jpeg;base64,...' o solo Base64"
+                  example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAA..."
+                mimeType:
+                  type: string
+                  description: "Tipo MIME de la imagen (opcional, default: image/jpeg)"
+                  enum: ["image/jpeg", "image/png", "image/webp", "image/bmp"]
+                  default: "image/jpeg"
+                language:
+                  type: string
+                  default: "es"
+                  description: "Idioma del texto en la imagen"
+                  enum: ["es", "en", "fr", "de", "pt", "it"]
+      responses:
+        '200':
+          description: "Texto extraído exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  rawText:
+                    type: string
+                    description: "Texto completo extraído de la imagen"
+                    example: "¿Cuál es la capital de Francia?\nParis\nLyon\nMarsella"
+                  pregunta:
+                    type: string
+                    description: "Pregunta parseada del texto (vacío si no se detectó pregunta)"
+                    example: "¿Cuál es la capital de Francia?"
+                  opciones:
+                    type: array
+                    description: "Opciones parseadas (vacío si no se detectaron)"
+                    items:
+                      type: string
+                    example: ["Paris", "Lyon", "Marsella"]
+                  confidence:
+                    type: string
+                    enum: ["low", "high"]
+                    description: "Confianza basada en cantidad de texto extraído"
+                    example: "high"
+        '400':
+          description: "Error en la solicitud"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    enum:
+                      - "Invalid or missing imageBase64"
+                      - "Invalid base64 image data"
+                      - "Image size exceeds maximum allowed (50MB)"
+        '429':
+          description: "Límite de tasa excedido"
+        '503':
+          description: "Servicio no disponible"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "OCR service is not configured"
+
+  # ===========================================
   # VISION - OBJECT DETECTION (HU-VC4)
   # ===========================================
 
