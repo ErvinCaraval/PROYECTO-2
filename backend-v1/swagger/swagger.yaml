@@ -1441,6 +1441,350 @@ paths:
           description: "Error al eliminar"
 
   # ===========================================
+  # FACIAL RECOGNITION - BIOMETRIC AUTH
+  # ===========================================
+
+  /api/face/register:
+    post:
+      tags: [FacialRecognition]
+      summary: "Registrar rostro del usuario"
+      description: |
+        Registra el rostro de un usuario autenticado para habilitar login facial.
+        Requiere autenticación Firebase y una imagen clara del rostro.
+        
+        **Validaciones:**
+        - La imagen debe ser Base64 válida
+        - El token de Firebase debe ser válido
+        - El usuario no debe tener un registro facial previo
+        - La cara debe ser detectada en la imagen
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - image
+                - token
+              properties:
+                image:
+                  type: string
+                  description: "Imagen en formato Base64 (JPEG, PNG, WebP)"
+                  example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAA..."
+                token:
+                  type: string
+                  description: "Token de autenticación Firebase (idToken)"
+                  example: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyMzQifQ..."
+      responses:
+        '201':
+          description: "Registro facial exitoso"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Registro facial completado exitosamente"
+                  userId:
+                    type: string
+                    example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+                  registeredAt:
+                    type: string
+                    format: date-time
+                    example: "2025-11-24T10:30:00.000Z"
+        '400':
+          description: "Error en la solicitud"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    enum:
+                      - "Se requiere una imagen en Base64"
+                      - "Se requiere un token de autenticación"
+                      - "No se detectó una cara en la imagen. Por favor, asegúrate de que tu rostro sea claramente visible."
+                      - "El usuario ya tiene un registro facial. Elimina el registro anterior para crear uno nuevo."
+        '401':
+          description: "Autenticación inválida"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Token inválido o expirado"
+        '429':
+          description: "Límite de tasa excedido"
+        '500':
+          description: "Error en el servidor o microservicio"
+
+  /api/face/login:
+    post:
+      tags: [FacialRecognition]
+      summary: "Login facial - Autenticación biométrica"
+      description: |
+        Realiza login del usuario comparando su rostro actual con el registro facial guardado.
+        No requiere autenticación previa (endpoint público).
+        
+        **Flujo:**
+        1. Cliente envía imagen del rostro y email
+        2. Sistema busca el registro del usuario
+        3. Compara rostro actual con embedding guardado
+        4. Si coincide, genera token personalizado de Firebase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - image
+                - email
+              properties:
+                image:
+                  type: string
+                  description: "Imagen en formato Base64 (JPEG, PNG, WebP)"
+                  example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAA..."
+                email:
+                  type: string
+                  format: email
+                  description: "Email del usuario"
+                  example: "usuario@example.com"
+      responses:
+        '200':
+          description: "Login facial exitoso"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  verified:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Login facial exitoso"
+                  userId:
+                    type: string
+                    example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+                  customToken:
+                    type: string
+                    description: "Token personalizado de Firebase para sesión"
+                    example: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyMzQifQ..."
+                  confidence:
+                    type: number
+                    minimum: 0
+                    maximum: 1
+                    description: "Nivel de confianza de la coincidencia facial (0-1)"
+                    example: 0.95
+                  distance:
+                    type: number
+                    description: "Distancia euclidiana entre embeddings (menor = mejor coincidencia)"
+                    example: 0.3
+        '400':
+          description: "Error en los parámetros o validación"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    enum:
+                      - "Se requiere una imagen en Base64"
+                      - "Se requiere el email del usuario"
+                      - "El usuario no tiene un registro facial. Por favor, regístrate primero."
+                      - "Error en la verificación facial"
+        '401':
+          description: "Las caras no coinciden - Acceso denegado"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  verified:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Las caras no coinciden. Acceso denegado."
+                  confidence:
+                    type: number
+                    example: 0.45
+        '404':
+          description: "Usuario no encontrado"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Usuario no encontrado"
+        '429':
+          description: "Límite de tasa excedido"
+        '500':
+          description: "Error en el servidor o microservicio"
+
+  /api/face/exists:
+    get:
+      tags: [FacialRecognition]
+      summary: "Verificar si usuario tiene registro facial"
+      description: |
+        Comprueba si el usuario autenticado tiene un registro facial guardado.
+        Requiere autenticación Firebase.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Token de Firebase (alternativa a header Authorization)"
+          example: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyMzQifQ..."
+      responses:
+        '200':
+          description: "Estado del registro facial"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  exists:
+                    type: boolean
+                    description: "true si el usuario tiene registro facial, false si no"
+                    example: true
+        '401':
+          description: "Autenticación inválida"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Se requiere token de autenticación"
+        '500':
+          description: "Error en el servidor"
+
+  /api/face/{userId}:
+    delete:
+      tags: [FacialRecognition]
+      summary: "Eliminar registro facial"
+      description: |
+        Elimina el registro facial del usuario.
+        Requiere autenticación Firebase y el usuario solo puede eliminar su propio registro.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "ID del usuario (debe coincidir con el token autenticado)"
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  description: "Token de Firebase (alternativa a header Authorization)"
+      responses:
+        '200':
+          description: "Registro facial eliminado exitosamente"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  removed:
+                    type: boolean
+                    example: true
+        '400':
+          description: "Parámetros inválidos"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Se requiere userId"
+        '401':
+          description: "Autenticación inválida"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Se requiere token de autenticación"
+        '403':
+          description: "No autorizado"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "No autorizado para eliminar este registro"
+        '500':
+          description: "Error en el servidor"
+
+  # ===========================================
   # VISION - OBJECT DETECTION (HU-VC4)
   # ===========================================
 
@@ -1787,3 +2131,84 @@ components:
           type: string
         explanation:
           type: string
+
+    # ========== FACIAL RECOGNITION SCHEMAS ==========
+    
+    FaceRegistrationResponse:
+      type: object
+      description: "Respuesta de registro facial exitoso"
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Registro facial completado exitosamente"
+        userId:
+          type: string
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        registeredAt:
+          type: string
+          format: date-time
+
+    FaceLoginResponse:
+      type: object
+      description: "Respuesta de login facial exitoso"
+      properties:
+        success:
+          type: boolean
+          example: true
+        verified:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Login facial exitoso"
+        userId:
+          type: string
+          example: "u7d8f9g0h1i2j3k4l5m6n7o8p9"
+        customToken:
+          type: string
+          description: "Token personalizado de Firebase"
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: "Nivel de confianza de coincidencia (0-1)"
+        distance:
+          type: number
+          description: "Distancia euclidiana entre embeddings"
+
+    FaceExistsResponse:
+      type: object
+      description: "Respuesta de verificación de registro facial"
+      properties:
+        success:
+          type: boolean
+          example: true
+        exists:
+          type: boolean
+          description: "true si usuario tiene registro facial"
+          example: true
+
+    FaceDeleteResponse:
+      type: object
+      description: "Respuesta de eliminación de registro facial"
+      properties:
+        success:
+          type: boolean
+          example: true
+        removed:
+          type: boolean
+          example: true
+
+    FaceErrorResponse:
+      type: object
+      description: "Respuesta de error en operación facial"
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Mensaje de error específico"
