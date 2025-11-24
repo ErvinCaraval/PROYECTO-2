@@ -23,13 +23,22 @@ class AIQuestionGenerator {
   // Extrae JSON de respuestas que puedan venir con ``` o texto adicional
   extractJson(content) {
     if (!content) return null;
+    
+    try {
+      // Intenta parsear directamente primero
+      return JSON.parse(content);
+    } catch (e) {
+      // Si falla, intenta limpiar
+    }
+    
     // Elimina fences tipo ```json ... ```
     let cleaned = content.trim()
       .replace(/^```json\s*/i, '')
       .replace(/^```\s*/i, '')
       .replace(/```\s*$/i, '')
       .trim();
-    // Si aún no es JSON puro, intenta localizar el primer objeto
+    
+    // Si aún no es JSON puro, intenta localizar el primer { y último }
     if (!(cleaned.startsWith('{') && cleaned.endsWith('}'))) {
       const start = cleaned.indexOf('{');
       const end = cleaned.lastIndexOf('}');
@@ -37,9 +46,12 @@ class AIQuestionGenerator {
         cleaned = cleaned.slice(start, end + 1);
       }
     }
+    
     try {
-      return JSON.parse(cleaned);
+      const parsed = JSON.parse(cleaned);
+      return parsed;
     } catch (e) {
+      console.error('❌ Error al parsear JSON:', e.message);
       return null;
     }
   }
@@ -47,6 +59,8 @@ class AIQuestionGenerator {
   // Generar preguntas usando IA (Groq por defecto)
   async generateQuestions(topic, difficulty = 'medium', count = 5) {
     try {
+      console.log(`🤖 Generando ${count} preguntas sobre "${topic}" (dificultad: ${difficulty})...`);
+      
       const prompt = this.buildPrompt(topic, difficulty, count);
       let questions = [];
 
@@ -57,6 +71,7 @@ class AIQuestionGenerator {
       // Preferir Groq si hay API key
       if (this.groqApiKey) {
         try {
+          console.log(`📡 Conectando a API de Groq (modelo: ${this.groqModel})...`);
           const response = await axios.post(this.groqURL, {
             model: this.groqModel,
             messages: [
@@ -69,19 +84,27 @@ class AIQuestionGenerator {
             headers: {
               'Authorization': `Bearer ${this.groqApiKey}`,
               'Content-Type': 'application/json'
-            }
+            },
+            timeout: 30000 // 30 segundos timeout
           });
           const content = response.data.choices?.[0]?.message?.content || '';
+          console.log(`✅ Respuesta recibida de Groq (${content.length} caracteres)`);
           const parsed = this.extractJson(content);
           if (parsed && parsed.questions) {
             questions = parsed.questions;
+            console.log(`✅ ${questions.length} preguntas parseadas exitosamente`);
+          } else {
+            console.warn('⚠️ No se pudieron parsear las preguntas de la respuesta');
           }
         } catch (err) {
-          throw new Error('Error al conectar con la API de Groq: ' + (err.response?.data?.error?.message || err.message));
+          const errorMsg = err.response?.data?.error?.message || err.message;
+          console.error(`❌ Error de Groq: ${errorMsg}`);
+          throw new Error('Error al conectar con la API de Groq: ' + errorMsg);
         }
       } else if (this.openAiApiKey) {
         // Respaldo: OpenAI si está disponible
         try {
+          console.log(`📡 Conectando a API de OpenAI (modelo: ${this.openAiModel})...`);
           const response = await axios.post(this.openAiURL, {
             model: this.openAiModel,
             messages: [
@@ -94,15 +117,20 @@ class AIQuestionGenerator {
             headers: {
               'Authorization': `Bearer ${this.openAiApiKey}`,
               'Content-Type': 'application/json'
-            }
+            },
+            timeout: 30000
           });
           const content = response.data.choices?.[0]?.message?.content || '';
+          console.log(`✅ Respuesta recibida de OpenAI (${content.length} caracteres)`);
           const parsed = this.extractJson(content);
           if (parsed && parsed.questions) {
             questions = parsed.questions;
+            console.log(`✅ ${questions.length} preguntas parseadas exitosamente`);
           }
         } catch (err) {
-          throw new Error('Error al conectar con la API de OpenAI: ' + (err.response?.data?.error?.message || err.message));
+          const errorMsg = err.response?.data?.error?.message || err.message;
+          console.error(`❌ Error de OpenAI: ${errorMsg}`);
+          throw new Error('Error al conectar con la API de OpenAI: ' + errorMsg);
         }
       }
 
@@ -145,84 +173,110 @@ class AIQuestionGenerator {
           const key = text.toLowerCase();
           if (seenTexts.has(key)) continue; // dedupe by text
 
-          // Normalize options
-          let opts = Array.isArray(raw.options) ? raw.options.map(o => (typeof o === 'string' ? o.trim() : '')).filter(Boolean) : [];
-
-          // If the AI returned an object with labeled choices like {A:..., B:...}, flatten them
-          if (opts.length === 0 && raw.options && typeof raw.options === 'object') {
-            opts = Object.values(raw.options).map(o => (typeof o === 'string' ? o.trim() : '')).filter(Boolean);
+          // Normalize options - soportar múltiples formatos
+          let opts = [];
+          
+          if (Array.isArray(raw.options)) {
+            opts = raw.options.map(o => {
+              if (typeof o === 'string') return o.trim();
+              if (typeof o === 'object' && o !== null) return String(o.text || o.value || o.option || '').trim();
+              return String(o).trim();
+            }).filter(o => o && o.length > 0);
+          } else if (raw.options && typeof raw.options === 'object') {
+            // Si es un objeto con claves (A:, B:, C:, D:, etc)
+            opts = Object.values(raw.options)
+              .map(o => (typeof o === 'string' ? o.trim() : String(o).trim()))
+              .filter(o => o && o.length > 0);
           }
 
-          // Remove duplicates while preserving order
+          // Remove duplicates (case-insensitive) while preserving order
           const seenOpt = new Set();
-          opts = opts.filter(o => {
+          const uniqueOpts = [];
+          for (const o of opts) {
             const k = o.toLowerCase();
-            if (seenOpt.has(k)) return false;
-            seenOpt.add(k);
-            return true;
-          });
+            if (!seenOpt.has(k)) {
+              seenOpt.add(k);
+              uniqueOpts.push(o);
+            }
+          }
+          opts = uniqueOpts;
 
-          // If there are fewer than 4 options, skip this question (prefer valid ones)
-          if (opts.length < 4) continue;
+          // Si hay menos de 4 opciones, skip (no válida)
+          if (opts.length < 4) {
+            console.warn(`⚠️  Pregunta rechazada: solo ${opts.length} opciones válidas: "${text.substring(0, 50)}..."`);
+            continue;
+          }
 
-          // If more than 4, try to ensure the correct answer remains and trim others
+          // Si hay más de 4, encontrar la respuesta correcta y quedarse con 4
           let correctIndex = typeof raw.correctAnswerIndex === 'number' ? raw.correctAnswerIndex : undefined;
-          // If correctAnswerIndex not provided but raw.correctAnswer or raw.answer exists, try to find it
+          
+          // Si no se proporciona correctAnswerIndex, intentar encontrarlo de otras formas
           if ((correctIndex === undefined || correctIndex === null) && raw.correctAnswer) {
-            const idx = opts.findIndex(o => o.toLowerCase() === String(raw.correctAnswer).trim().toLowerCase());
+            const correctText = String(raw.correctAnswer).trim().toLowerCase();
+            const idx = opts.findIndex(o => o.toLowerCase() === correctText);
             if (idx !== -1) correctIndex = idx;
           }
 
-          // If still undefined, try common keys
+          // Fallback: asumir que la primera opción es correcta
           if (correctIndex === undefined || correctIndex === null) {
-            // assume first option is correct as fallback
             correctIndex = 0;
           }
 
-          // Ensure correctIndex within bounds
-          if (correctIndex < 0 || correctIndex >= opts.length) correctIndex = 0;
+          // Asegurar que correctIndex está dentro de los límites
+          if (correctIndex < 0 || correctIndex >= opts.length) {
+            correctIndex = Math.min(correctIndex, opts.length - 1);
+          }
 
-          // If more than 4 options, pick 3 distractors plus the correct answer
+          // Si hay más de 4 opciones, mantener la correcta + 3 distractoras aleatorias
           if (opts.length > 4) {
             const correctValue = opts[correctIndex];
-            // collect distractors (all except correct), then randomly pick 3
             const distractors = opts.filter((_, i) => i !== correctIndex);
-            // shuffle distractors
+            
+            // Barajar distractores
             for (let i = distractors.length - 1; i > 0; i--) {
               const j = Math.floor(Math.random() * (i + 1));
               [distractors[i], distractors[j]] = [distractors[j], distractors[i]];
             }
-            const chosen = distractors.slice(0, 3);
-            opts = [correctValue, ...chosen];
+            
+            // Tomar 3 distractores aleatorios
+            opts = [correctValue, ...distractors.slice(0, 3)];
+            correctIndex = 0; // La respuesta correcta es la primera antes de barajar
           }
 
-          // Now opts length should be >=4 (we skipped <4) and <=4 here; if somehow >4 still, trim
-          if (opts.length > 4) opts = opts.slice(0, 4);
-
-          // Shuffle options while tracking correct index
-          const correctValueFinal = opts[correctIndex] || opts[0];
-          // Ensure correctValueFinal is present
-          if (!opts.includes(correctValueFinal)) {
-            opts[0] = correctValueFinal;
+          // Asegurar que opts tiene exactamente 4 opciones
+          if (opts.length !== 4) {
+            console.warn(`⚠️  Pregunta tiene ${opts.length} opciones, ajustando a 4`);
+            opts = opts.slice(0, 4);
+            if (opts.length < 4) continue; // Skip si no se pueden obtener 4
           }
 
-          // Shuffle
+          // Barajar las opciones mientras se rastrea el índice correcto
+          const correctValue = opts[correctIndex];
+          
+          // Verificar que el valor correcto existe en las opciones
+          if (!opts.includes(correctValue)) {
+            opts[0] = correctValue;
+            correctIndex = 0;
+          }
+
+          // Barajar opciones
           const shuffled = opts.slice();
           for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
           }
 
-          const finalCorrectIndex = shuffled.findIndex(o => o === correctValueFinal);
+          // Encontrar la nueva posición del índice correcto después de barajar
+          const finalCorrectIndex = shuffled.findIndex(o => o === correctValue);
 
           const questionObj = {
             id: raw.id || `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            text,
-            options: shuffled,
+            text: text,
+            options: shuffled.slice(0, 4), // Asegurar exactamente 4
             correctAnswerIndex: finalCorrectIndex >= 0 ? finalCorrectIndex : 0,
             category: raw.category || raw.topic || topic,
             difficulty: raw.difficulty || difficulty,
-            explanation: raw.explanation || raw.explain || ''
+            explanation: (raw.explanation || raw.explain || '').trim()
           };
 
           // Cross-game dedupe: if DB available, skip questions already stored
@@ -233,6 +287,7 @@ class AIQuestionGenerator {
               const doc = await db.collection('ai_generated_questions').doc(hash).get();
               if (doc.exists) {
                 // already used in previous games, skip
+                console.warn(`⚠️  Pregunta duplicada en BD: "${text.substring(0, 40)}..."`);
                 continue;
               }
               // persist a lightweight record to avoid reuse
@@ -249,14 +304,28 @@ class AIQuestionGenerator {
 
           seenTexts.add(key);
           out.push(questionObj);
+          
+          console.log(`✅ Pregunta válida #${out.length}: "${text.substring(0, 50)}..."`);
+          
           if (out.length >= count) break; // stop early if we have enough
         }
         return out;
       };
 
       const sanitized = await sanitizeQuestions(questions);
-      if (!sanitized || sanitized.length < count) {
-        throw new Error('La IA no generó suficientes preguntas únicas y válidas con 4 opciones. Intenta de nuevo con otro prompt o reduce la cantidad.');
+      
+      console.log(`📊 Sanitización completa: ${sanitized.length} preguntas válidas de ${questions.length} generadas`);
+      
+      if (!sanitized || sanitized.length === 0) {
+        throw new Error('La IA no generó ninguna pregunta válida con 4 opciones. Por favor, intenta de nuevo.');
+      }
+      
+      if (sanitized.length < count) {
+        console.warn(`⚠️  Solo se obtuvieron ${sanitized.length} de ${count} preguntas solicitadas`);
+        // No fallar si al menos tenemos algunas preguntas válidas
+        if (sanitized.length < Math.max(1, Math.floor(count / 2))) {
+          throw new Error(`La IA no generó suficientes preguntas válidas (${sanitized.length}/${count}). Intenta de nuevo o reduce la cantidad.`);
+        }
       }
 
       return { questions: sanitized.slice(0, count) };
@@ -289,31 +358,40 @@ class AIQuestionGenerator {
 
   // Construir prompt para OpenAI
   buildPrompt(topic, difficulty, count) {
-    return `Genera ${count} preguntas de trivia sobre el tema "${topic}" con dificultad ${difficulty}.
+    // Aumentar número de preguntas solicitadas para compensar por descartes
+    const requestCount = Math.max(count + 3, Math.ceil(count * 1.5));
+    
+    return `Genera ${requestCount} preguntas de trivia sobre el tema "${topic}" con dificultad ${difficulty}.
 
-Formato requerido (JSON válido):
+INSTRUCCIONES CRÍTICAS:
+1. CADA pregunta DEBE tener EXACTAMENTE 4 opciones distintas
+2. TODAS las opciones deben ser únicas y claramente diferentes
+3. NUNCA duplicar opciones dentro de una pregunta
+4. NUNCA dejar opciones vacías o nulas
+5. Las preguntas DEBEN ser diferentes entre sí (no repetir el mismo contenido)
+
+Formato requerido (JSON válido - sin markdown, sin comillas escapadas):
 {
   "questions": [
     {
-      "id": "unique_id",
-      "text": "Pregunta aquí",
-      "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
+      "text": "Pregunta clara y específica aquí",
+      "options": ["Opción A claramente diferente", "Opción B claramente diferente", "Opción C claramente diferente", "Opción D claramente diferente"],
       "correctAnswerIndex": 0,
-      "category": "${topic}",
-      "difficulty": "${difficulty}",
-      "explanation": "Explicación de la respuesta correcta"
+      "explanation": "Explicación clara de por qué esta es la respuesta correcta"
     }
   ]
 }
 
-Requisitos:
-- Preguntas interesantes y educativas
-- 4 opciones de respuesta
-- Explicación clara de la respuesta correcta
-- Dificultad apropiada para el nivel ${difficulty}
+Requisitos obligatorios:
 - Tema: ${topic}
+- Dificultad: ${difficulty}
+- Preguntas interesantes, educativas y únicas
+- 4 opciones POR CADA PREGUNTA sin excepciones
+- Las opciones deben ser específicas y distintas
+- Explicación de la respuesta correcta en cada pregunta
+- Totalmente válidas, sin campos vacíos
 
-Responde solo con el JSON, sin texto adicional.`;
+Responde SOLO con el JSON válido, sin comentarios, markdown o texto adicional.`;
   }
 
   // Preguntas de respaldo si falla la IA

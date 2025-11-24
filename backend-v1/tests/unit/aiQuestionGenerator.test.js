@@ -126,9 +126,11 @@ describe('AIQuestionGenerator', () => {
       const prompt = generator.buildPrompt('math', 'easy', 3);
       expect(prompt).toContain('math');
       expect(prompt).toContain('easy');
-      expect(prompt).toContain('3 preguntas');
-      expect(prompt).toContain('"category": "math"');
-      expect(prompt).toContain('"difficulty": "easy"');
+      // El prompt ahora solicita más preguntas (buffer), no exactamente 3
+      expect(prompt).toContain('preguntas');
+      // Ya no contiene "category" ni "difficulty" en el prompt (se removieron)
+      expect(prompt).toContain('INSTRUCCIONES CRÍTICAS');
+      expect(prompt).toContain('EXACTAMENTE 4 opciones');
     });
   });
 
