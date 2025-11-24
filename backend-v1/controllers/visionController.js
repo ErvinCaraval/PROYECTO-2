@@ -298,6 +298,7 @@ exports.detectObjects = async (req, res) => {
 
 /**
  * Generate question suggestions based on detected objects
+ * IMPORTANTE: Todas las preguntas tienen EXACTAMENTE 4 opciones de respuesta
  * @param {object} detection
  * @returns {object}
  */
@@ -314,35 +315,72 @@ function generateObjectQuestionSuggestions(detection) {
   }
 
   const primaryObject = topObjects[0];
-  const secondaryObjects = topObjects.slice(1, 4);
 
-  // Suggestion 1: Identification question - MEJORADO
+  // Suggestion 1: Identification question - EXACTAMENTE 4 opciones
+  // Usar los 4 primeros objetos detectados, o rellenar con generics si hay menos
+  let identificationOptions = topObjects.slice(0, 4).map(o => ({
+    text: o.name,
+    confidence: o.confidence,
+    count: o.count,
+    isCorrect: o.name === primaryObject.name
+  }));
+
+  // Si hay menos de 4 objetos detectados, rellenar con opciones genéricas
+  const genericOptions = ['otro objeto', 'persona', 'animal', 'vehículo', 'mueble'];
+  while (identificationOptions.length < 4) {
+    const newOption = genericOptions.find(opt => 
+      !identificationOptions.some(o => o.text.toLowerCase() === opt.toLowerCase())
+    );
+    if (newOption) {
+      identificationOptions.push({
+        text: newOption,
+        confidence: 0,
+        count: 0,
+        isCorrect: false
+      });
+    } else {
+      break;
+    }
+  }
+
+  // Asegurar exactamente 4 opciones
+  identificationOptions = identificationOptions.slice(0, 4);
+
   const identificationSuggestion = {
     type: 'identification',
     question: `¿Qué objeto principal aparece en esta imagen?`,
     description: `Se detectó principalmente: ${primaryObject.name}`,
-    options: topObjects.slice(0, 4).map(o => ({
-      text: o.name,
-      confidence: o.confidence,
-      count: o.count,
-      isCorrect: o.name === primaryObject.name
-    })),
+    options: identificationOptions,
     correctAnswer: primaryObject.name,
     explanation: `Se detectaron ${detection.stats.totalObjects} objeto(s) en total. El más confiable es "${primaryObject.name}" con ${(primaryObject.confidence * 100).toFixed(0)}% de confianza.`,
     difficulty: detection.stats.averageConfidence > 0.8 ? 'fácil' : detection.stats.averageConfidence > 0.6 ? 'media' : 'difícil'
   };
 
-  // Suggestion 2: Counting question - MEJORADO
+  // Suggestion 2: Counting question - EXACTAMENTE 4 opciones
   const countingObjectName = primaryObject.name;
   const countingObjectCount = objectCounts[countingObjectName] || 0;
-  const countingCountOptions = ['0', '1', '2', '3', '4+'];
-  const correctCountOption = countingObjectCount > 4 ? '4+' : String(countingObjectCount);
+  
+  // Generar 4 opciones numéricas centradas alrededor del conteo real
+  let countingOptions = [];
+  if (countingObjectCount === 0) {
+    countingOptions = ['0', '1', '2', '3'];
+  } else if (countingObjectCount === 1) {
+    countingOptions = ['0', '1', '2', '3'];
+  } else if (countingObjectCount === 2) {
+    countingOptions = ['1', '2', '3', '4'];
+  } else if (countingObjectCount === 3) {
+    countingOptions = ['2', '3', '4', '5'];
+  } else {
+    countingOptions = ['3', '4', '5', '6+'];
+  }
+
+  const correctCountOption = String(countingObjectCount);
 
   const countingSuggestion = {
     type: 'counting',
     question: `¿Cuántos ${countingObjectName}(s) hay en la imagen?`,
     description: `Total detectado: ${countingObjectCount}`,
-    options: countingCountOptions.map(opt => ({
+    options: countingOptions.map(opt => ({
       text: opt,
       isCorrect: opt === correctCountOption
     })),
@@ -351,18 +389,38 @@ function generateObjectQuestionSuggestions(detection) {
     difficulty: 'fácil'
   };
 
-  // Suggestion 3: Multiple choice with different objects - MEJORADO
-  const multipleChoiceSuggestion = secondaryObjects.length > 0 ? {
+  // Suggestion 3: Multiple choice - EXACTAMENTE 4 opciones
+  const multipleChoiceOptions = topObjects.slice(0, 4).map(o => ({
+    text: o.name,
+    isCorrect: o.name === primaryObject.name
+  }));
+
+  // Si hay menos de 4, rellenar con opciones que NO aparecen en la imagen
+  const detectedNames = topObjects.map(o => o.name.toLowerCase());
+  const fillerOptions = ['árbol', 'coche', 'persona', 'gato', 'casa', 'teléfono', 'libro'].filter(
+    opt => !detectedNames.some(det => det.includes(opt.toLowerCase()))
+  );
+
+  while (multipleChoiceOptions.length < 4 && fillerOptions.length > 0) {
+    const newOption = fillerOptions.shift();
+    multipleChoiceOptions.push({
+      text: newOption,
+      isCorrect: false
+    });
+  }
+
+  // Asegurar exactamente 4 opciones
+  const finalOptions = multipleChoiceOptions.slice(0, 4);
+
+  const multipleChoiceSuggestion = {
     type: 'multipleChoice',
     question: `¿Cuál de estos objetos aparece en la imagen?`,
-    description: `Selecciona de la lista detectada`,
-    detectedObjects: topObjects.slice(0, 5).map(o => o.name),
-    notDetectedExamples: ['árbol', 'coche', 'persona', 'gato', 'libro'].filter(
-      obj => !topObjects.some(o => o.name.toLowerCase().includes(obj.toLowerCase()))
-    ).slice(0, 2),
+    description: `Selecciona de las 4 opciones disponibles`,
+    options: finalOptions,
+    correctAnswer: primaryObject.name,
     explanation: `Objetos detectados en la imagen: ${topObjects.map(o => `${o.name} (${o.count})`).join(', ')}`,
     difficulty: 'media'
-  } : null;
+  };
 
   return {
     identification: identificationSuggestion,
