@@ -84,7 +84,10 @@ const ImageAnalysisQuestionCreator = ({ topics = [], onQuestionCreated, onCancel
   const { user } = useAuth();
   const { isVoiceModeEnabled, speak } = useVoice();
   const fileInputRef = useRef(null);
-  const apiBase = import.meta.env.VITE_API_URL;
+  const apiBase =
+    (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) ||
+    import.meta.env.VITE_API_URL ||
+    'http://localhost:5000/api';
 
   const [selectedTopic, setSelectedTopic] = useState(topics[0] || '');
   const [imageFile, setImageFile] = useState(null);
