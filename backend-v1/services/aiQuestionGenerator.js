@@ -332,8 +332,6 @@ class AIQuestionGenerator {
           out.push(questionObj);
           
           console.log(`✅ Pregunta válida #${out.length}: "${text.substring(0, 50)}..."`);
-          
-          if (out.length >= count) break; // stop early if we have enough
         }
         return out;
       };
@@ -385,7 +383,8 @@ class AIQuestionGenerator {
   // Construir prompt para OpenAI
   buildPrompt(topic, difficulty, count) {
     // Aumentar número de preguntas solicitadas para compensar por descartes
-    const requestCount = Math.max(count + 3, Math.ceil(count * 1.5));
+    // Solicita el doble para asegurar suficientes preguntas válidas después de filtrado
+    const requestCount = Math.max(count * 2, count + 10);
     
     return `Genera ${requestCount} preguntas de trivia sobre el tema "${topic}" con dificultad ${difficulty}.
 

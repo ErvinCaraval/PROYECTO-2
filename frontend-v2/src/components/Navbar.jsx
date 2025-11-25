@@ -1,17 +1,30 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../AuthContext'
 import { useVoice } from '../VoiceContext'
+import clsx from 'clsx'
 
 function MenuIcon({ open }) {
   return (
-    <div className="relative w-6 h-6">
-      <span className={`block h-0.5 w-6 bg-white transition-transform ${open ? 'rotate-45 translate-y-2' : ''}`}></span>
-      <span className={`block h-0.5 w-6 bg-white my-1 transition-opacity ${open ? 'opacity-0' : 'opacity-100'}`}></span>
-      <span className={`block h-0.5 w-6 bg-white transition-transform ${open ? '-rotate-45 -translate-y-2' : ''}`}></span>
+    <div className="relative w-6 h-6 flex items-center justify-center">
+      <span className={clsx(
+        'block h-0.5 w-6 bg-white transition-all duration-300',
+        open ? 'rotate-45 translate-y-[10px]' : ''
+      )}></span>
+      <span className={clsx(
+        'block h-0.5 w-6 bg-white my-1 transition-opacity duration-300',
+        open ? 'opacity-0' : 'opacity-100'
+      )}></span>
+      <span className={clsx(
+        'block h-0.5 w-6 bg-white transition-all duration-300',
+        open ? '-rotate-45 -translate-y-[10px]' : ''
+      )}></span>
     </div>
   )
 }
+
+const navLinkClass = 'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-250 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bb-primary'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -20,212 +33,211 @@ export default function Navbar() {
   const { user } = useAuth()
   const { isVoiceModeEnabled, toggleVoiceMode, isVoiceAvailable, speak } = useVoice()
 
-  const announce = (text) => {
+  const announce = useCallback((text) => {
     if (isVoiceModeEnabled) {
-      // Short, non-blocking guidance
       speak(text, { action: 'text_read', questionId: 'nav', metadata: { origin: 'navbar' } })
     }
-  }
+  }, [isVoiceModeEnabled, speak])
+
+  const handleMobileClose = useCallback(() => setOpen(false), [])
+
+  const navItems = useMemo(() => [
+    !isHome && { label: 'Inicio', to: '/', ariaLabel: 'Ir a Inicio' },
+    { label: 'Panel', to: '/dashboard', ariaLabel: 'Ir al Panel' },
+    !isHome && { label: 'Ranking', to: '/ranking', ariaLabel: 'Ir al Ranking' },
+  ].filter(Boolean), [isHome])
 
   return (
-    <header className="bg-transparent backdrop-blur-md border-white/10 border-b w-full py-2">
+    <header className="sticky top-0 z-50 bg-bb-bg-primary/80 backdrop-blur-xl border-b border-white/10 w-full transition-all duration-300">
       <div className="flex justify-between items-center mx-auto px-4 py-3 container">
+        {/* Logo */}
         <Link
           to="/"
-          className="flex items-center gap-3"
-          onClick={() => setOpen(false)}
+          className="flex items-center gap-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bb-primary rounded-lg"
+          onClick={handleMobileClose}
           onFocus={() => announce('Inicio, ir a la página principal')}
-          onMouseEnter={() => announce('Inicio, ir a la página principal')}
         >
-          <div className="flex justify-center items-center bg-gradient-to-br from-bb-primary to-bb-accent rounded-md w-10 h-10 font-bold text-xl">⚡</div>
-          <span className="font-bold text-lg">BrainBlitz</span>
+          <motion.div
+            className="flex justify-center items-center bg-gradient-to-br from-bb-primary to-bb-accent rounded-lg w-10 h-10 font-bold text-xl shadow-glow-sm group-hover:shadow-glow transition-shadow"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            ⚡
+          </motion.div>
+          <span className="font-bold text-lg hidden sm:inline">BrainBlitz</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-4">
-          {!isHome && (
-            <Link
-              to="/"
-              className="text-sm hover:underline"
-              onFocus={() => announce('Ir a Inicio')}
-              onMouseEnter={() => announce('Ir a Inicio')}
-            >
-              Inicio
-            </Link>
-          )}
-          <Link
-            to="/dashboard"
-            className="text-sm hover:underline"
-            onFocus={() => announce('Ir al Panel')}
-            onMouseEnter={() => announce('Ir al Panel')}
-          >
-            Panel
-          </Link>
-          {!isHome && (
-            <Link
-              to="/ranking"
-              className="text-sm hover:underline"
-              onFocus={() => announce('Ir al Ranking')}
-              onMouseEnter={() => announce('Ir al Ranking')}
-            >
-              Ranking
-            </Link>
-          )}
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-2">
+          {navItems.map((item) => (
+            <motion.div key={item.to} whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
+              <Link
+                to={item.to}
+                className={navLinkClass}
+                onFocus={() => announce(item.ariaLabel)}
+              >
+                {item.label}
+              </Link>
+            </motion.div>
+          ))}
           
           {/* Voice Mode Toggle */}
           {isVoiceAvailable && (
-            <button
+            <motion.button
               onClick={() => {
                 const nextEnabled = !isVoiceModeEnabled
                 toggleVoiceMode()
                 announce(nextEnabled ? 'Modo de voz activado' : 'Modo de voz desactivado')
-                if (nextEnabled) {
-                  // Brief onboarding describing the navbar
-                  announce('Barra de navegación: Inicio, Panel, Ranking e Iniciar sesión. Usa tab para moverte y enter para activar.')
-                }
               }}
-              className={`px-3 py-2 rounded-md text-sm transition-colors ${
+              className={clsx(
+                'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-250 flex items-center gap-2',
                 isVoiceModeEnabled 
-                  ? 'bg-green-600 text-white' 
-                  : 'bg-gray-600 text-white hover:bg-gray-500'
-              }`}
-              title={isVoiceModeEnabled ? 'Desactivar modo de voz' : 'Activar modo de voz'}
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 hover:bg-emerald-500/30' 
+                  : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
+              )}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onFocus={() => announce('Alternar modo de voz')}
-              onMouseEnter={() => announce('Alternar modo de voz')}
             >
-              🎤 {isVoiceModeEnabled ? 'Voz ON' : 'Voz OFF'}
-            </button>
+              <span>🎤</span>
+              <span className="hidden lg:inline text-xs font-semibold">
+                {isVoiceModeEnabled ? 'ON' : 'OFF'}
+              </span>
+            </motion.button>
           )}
           
-          <Link
-            to="/login"
-            className="bg-bb-primary px-3 py-2 rounded-md text-sm"
-            onFocus={() => announce('Ir a Iniciar sesión')}
-            onMouseEnter={() => announce('Ir a Iniciar sesión')}
-          >
-            Iniciar
-          </Link>
-          <Link
-            to="/face-login"
-            className="bg-white/10 px-3 py-2 rounded-md text-sm border border-white/20 hover:bg-white/20"
-            onFocus={() => announce('Ir a Login Facial')}
-            onMouseEnter={() => announce('Ir a Login Facial')}
-            title="Iniciar sesión con reconocimiento facial"
-          >
-            🔐 Facial
-          </Link>
-          {user && (
-            <Link
-              to="/face-register"
-              className="bg-blue-500/20 px-3 py-2 rounded-md text-sm border border-blue-400/30 hover:bg-blue-500/30"
-              onFocus={() => announce('Ir a Registro Facial')}
-              onMouseEnter={() => announce('Ir a Registro Facial')}
-              title="Registrar tu cara para login facial"
-            >
-              📸 Registrar Cara
-            </Link>
+          {/* Auth Links */}
+          {!user ? (
+            <>
+              <motion.div whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
+                <Link
+                  to="/login"
+                  className={clsx(navLinkClass, 'bg-bb-primary text-white font-semibold hover:shadow-glow')}
+                  onFocus={() => announce('Ir a Iniciar sesión')}
+                >
+                  Iniciar
+                </Link>
+              </motion.div>
+              <motion.div whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
+                <Link
+                  to="/face-login"
+                  className={clsx(navLinkClass, 'border border-white/20 text-white')}
+                  onFocus={() => announce('Ir a Login Facial')}
+                >
+                  🔐 Facial
+                </Link>
+              </motion.div>
+            </>
+          ) : (
+            <motion.div whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
+              <Link
+                to="/face-register"
+                className={clsx(navLinkClass, 'border border-blue-400/30 bg-blue-500/10 text-blue-300')}
+                onFocus={() => announce('Ir a Registro Facial')}
+              >
+                📸
+              </Link>
+            </motion.div>
           )}
         </nav>
 
-        <button
+        {/* Mobile Menu Button */}
+        <motion.button
           aria-label="Abrir menú"
           aria-expanded={open}
-          className="md:hidden p-3 rounded-md"
+          className="md:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
           onClick={() => setOpen((v) => !v)}
+          whileTap={{ scale: 0.95 }}
         >
           <MenuIcon open={open} />
-        </button>
+        </motion.button>
       </div>
 
-      {/* Mobile drawer */}
-      <div className={`md:hidden bg-bb-bg-primary/95 border-t border-white/5 transition-[max-height] duration-300 overflow-hidden ${open ? 'max-h-80' : 'max-h-0'}`}>
-        <div className="flex flex-col gap-2 px-4 py-4">
-          {!isHome && (
-            <Link
-              to="/"
-              className="block px-3 py-3 rounded-md text-base"
-              onClick={() => setOpen(false)}
-              onFocus={() => announce('Ir a Inicio')}
-              onMouseEnter={() => announce('Ir a Inicio')}
-            >
-              Inicio
-            </Link>
-          )}
-          <Link
-            to="/dashboard"
-            className="block px-3 py-3 rounded-md text-base"
-            onClick={() => setOpen(false)}
-            onFocus={() => announce('Ir al Panel')}
-            onMouseEnter={() => announce('Ir al Panel')}
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="md:hidden bg-bb-bg-secondary/95 backdrop-blur-xl border-t border-white/10"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
           >
-            Panel
-          </Link>
-          {!isHome && (
-            <Link
-              to="/ranking"
-              className="block px-3 py-3 rounded-md text-base"
-              onClick={() => setOpen(false)}
-              onFocus={() => announce('Ir al Ranking')}
-              onMouseEnter={() => announce('Ir al Ranking')}
-            >
-              Ranking
-            </Link>
-          )}
-          
-          {/* Voice Mode Toggle - Mobile */}
-          {isVoiceAvailable && (
-            <button
-              onClick={() => {
-                const nextEnabled = !isVoiceModeEnabled
-                toggleVoiceMode();
-                setOpen(false);
-                announce(nextEnabled ? 'Modo de voz activado' : 'Modo de voz desactivado')
-                if (nextEnabled) {
-                  announce('Menú: Inicio, Panel, Ranking e Iniciar sesión. Desliza o usa tab y enter para navegar.')
-                }
-              }}
-              className={`block w-full text-left px-3 py-3 rounded-md text-base transition-colors ${
-                isVoiceModeEnabled 
-                  ? 'bg-green-600 text-white' 
-                  : 'bg-gray-600 text-white'
-              }`}
-              onFocus={() => announce('Alternar modo de voz')}
-              onMouseEnter={() => announce('Alternar modo de voz')}
-            >
-              🎤 {isVoiceModeEnabled ? 'Voz ON' : 'Voz OFF'}
-            </button>
-          )}
-          
-          <Link
-            to="/login"
-            className="block bg-bb-primary px-3 py-3 rounded-md text-white text-base"
-            onClick={() => setOpen(false)}
-            onFocus={() => announce('Ir a Iniciar sesión')}
-            onMouseEnter={() => announce('Ir a Iniciar sesión')}
-          >
-            Iniciar
-          </Link>
-          <Link
-            to="/face-login"
-            className="block bg-white/10 px-3 py-3 rounded-md text-white text-base border border-white/20 hover:bg-white/20"
-            onClick={() => setOpen(false)}
-            onFocus={() => announce('Ir a Login Facial')}
-            onMouseEnter={() => announce('Ir a Login Facial')}
-          >
-            🔐 Login Facial
-          </Link>
-          {user && (
-            <Link
-              to="/face-register"
-              className="block bg-blue-500/20 px-3 py-3 rounded-md text-white text-base border border-blue-400/30 hover:bg-blue-500/30"
-              onClick={() => setOpen(false)}
-              onFocus={() => announce('Ir a Registro Facial')}
-              onMouseEnter={() => announce('Ir a Registro Facial')}
-            >
-              📸 Registrar Cara
-            </Link>
-          )}
-        </div>
-      </div>
+            <div className="flex flex-col gap-2 px-4 py-4 max-h-[calc(100vh-70px)] overflow-y-auto">
+              {navItems.map((item) => (
+                <motion.div key={item.to} initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -10, opacity: 0 }}>
+                  <Link
+                    to={item.to}
+                    className="block px-4 py-3 rounded-lg text-base font-medium hover:bg-white/10 transition-colors"
+                    onClick={handleMobileClose}
+                    onFocus={() => announce(item.ariaLabel)}
+                  >
+                    {item.label}
+                  </Link>
+                </motion.div>
+              ))}
+              
+              {isVoiceAvailable && (
+                <motion.button
+                  onClick={() => {
+                    const nextEnabled = !isVoiceModeEnabled
+                    toggleVoiceMode()
+                    handleMobileClose()
+                    announce(nextEnabled ? 'Modo de voz activado' : 'Modo de voz desactivado')
+                  }}
+                  className={clsx(
+                    'w-full text-left px-4 py-3 rounded-lg text-base font-medium transition-colors',
+                    isVoiceModeEnabled 
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' 
+                      : 'bg-white/5 text-white border border-white/10'
+                  )}
+                  initial={{ x: -10, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: -10, opacity: 0 }}
+                >
+                  🎤 {isVoiceModeEnabled ? 'Voz ON' : 'Voz OFF'}
+                </motion.button>
+              )}
+              
+              {!user ? (
+                <>
+                  <motion.div initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -10, opacity: 0 }}>
+                    <Link
+                      to="/login"
+                      className="block bg-bb-primary px-4 py-3 rounded-lg text-white text-base font-semibold hover:shadow-glow transition-all"
+                      onClick={handleMobileClose}
+                      onFocus={() => announce('Ir a Iniciar sesión')}
+                    >
+                      Iniciar sesión
+                    </Link>
+                  </motion.div>
+                  <motion.div initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -10, opacity: 0 }}>
+                    <Link
+                      to="/face-login"
+                      className="block bg-white/10 px-4 py-3 rounded-lg text-white text-base border border-white/20 hover:bg-white/20 transition-colors"
+                      onClick={handleMobileClose}
+                      onFocus={() => announce('Ir a Login Facial')}
+                    >
+                      🔐 Login Facial
+                    </Link>
+                  </motion.div>
+                </>
+              ) : (
+                <motion.div initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -10, opacity: 0 }}>
+                  <Link
+                    to="/face-register"
+                    className="block bg-blue-500/20 px-4 py-3 rounded-lg text-white text-base border border-blue-400/30 hover:bg-blue-500/30 transition-colors"
+                    onClick={handleMobileClose}
+                    onFocus={() => announce('Ir a Registro Facial')}
+                  >
+                    📸 Registrar Cara
+                  </Link>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   )
 }

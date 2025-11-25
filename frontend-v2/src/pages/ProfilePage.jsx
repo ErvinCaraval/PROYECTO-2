@@ -156,16 +156,6 @@ function ProfilePage() {
             </CardHeader>
             <CardBody>
               {apiError && <Alert intent="error" className="mb-4">{apiError}</Alert>}
-              <div className="mb-6">
-                <Link to="/face-register">
-                  <Button variant="secondary" size="md" className="w-full sm:w-auto">
-                    📸 Registrar Reconocimiento Facial
-                  </Button>
-                </Link>
-                <p className="text-white/60 text-sm mt-2">
-                  Habilita el login facial para acceder más rápido a tu cuenta
-                </p>
-              </div>
               {stats ? (
                 <div className="gap-4 grid grid-cols-1 sm:grid-cols-3">
                   <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/20 px-6 py-5 border border-blue-500/20 rounded-xl hover:border-blue-400/30 transition-all duration-200 group">
