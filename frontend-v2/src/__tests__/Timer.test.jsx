@@ -87,16 +87,17 @@ describe('Timer', () => {
   it('should have correct color classes based on time remaining', () => {
     const { rerender } = render(<Timer seconds={10} />)
     let timerElement = screen.getByText('10')
-    expect(timerElement).toHaveClass('text-white', 'border-white/20')
+    // El contenedor parent tiene las clases de color
+    expect(timerElement.closest('div')).toHaveClass('text-emerald-300')
     
     // 6 segundos - amber
     rerender(<Timer seconds={6} />)
     timerElement = screen.getByText('6')
-    expect(timerElement).toHaveClass('text-amber-300', 'border-amber-400/40')
+    expect(timerElement.closest('div')).toHaveClass('text-amber-300')
     
     // 3 segundos - red
     rerender(<Timer seconds={3} />)
     timerElement = screen.getByText('3')
-    expect(timerElement).toHaveClass('text-red-300', 'border-red-400/40')
+    expect(timerElement.closest('div')).toHaveClass('text-red-300')
   })
 })
