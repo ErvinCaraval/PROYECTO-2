@@ -1,27 +1,52 @@
-import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { motion } from 'framer-motion'
 
-const HomePage = React.lazy(() => import('./pages/HomePage'));
-const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
-const LoginPage = React.lazy(() => import('./pages/LoginPage'));
-const PasswordResetPage = React.lazy(() => import('./pages/PasswordResetPage'));
-const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
-const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
-const GameLobbyPage = React.lazy(() => import('./pages/GameLobbyPage'));
-const GamePage = React.lazy(() => import('./pages/GamePage'));
-const GameSummaryPage = React.lazy(() => import('./pages/GameSummaryPage'));
-const AdminPage = React.lazy(() => import('./pages/AdminPage'));
-const CompleteProfilePage = React.lazy(() => import('./pages/CompleteProfilePage'));
-const VoiceTestPage = React.lazy(() => import('./pages/VoiceTestPage'));
-const FaceRegister = React.lazy(() => import('./pages/FaceRegister'));
-const FaceLogin = React.lazy(() => import('./pages/FaceLogin'));
-const ProtectedRoute = React.lazy(() => import('./components/ProtectedRoute'));
-const AuthRedirect = React.lazy(() => import('./components/AuthRedirect'));
+// Lazy load all page components for better code splitting
+const HomePage = lazy(() => import('./pages/HomePage'))
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const PasswordResetPage = lazy(() => import('./pages/PasswordResetPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const GameLobbyPage = lazy(() => import('./pages/GameLobbyPage'))
+const GamePage = lazy(() => import('./pages/GamePage'))
+const GameSummaryPage = lazy(() => import('./pages/GameSummaryPage'))
+const AdminPage = lazy(() => import('./pages/AdminPage'))
+const CompleteProfilePage = lazy(() => import('./pages/CompleteProfilePage'))
+const VoiceTestPage = lazy(() => import('./pages/VoiceTestPage'))
+const FaceRegister = lazy(() => import('./pages/FaceRegister'))
+const FaceLogin = lazy(() => import('./pages/FaceLogin'))
+const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'))
+const AuthRedirect = lazy(() => import('./components/AuthRedirect'))
+
+// Loading fallback component
+function LoadingFallback() {
+  return (
+    <motion.div
+      className="min-h-screen flex items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        className="flex flex-col items-center gap-4"
+        animate={{ y: [0, -10, 0] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        <div className="text-5xl font-bold bg-gradient-to-r from-bb-primary via-bb-secondary to-bb-accent bg-clip-text text-transparent">
+          ⚡
+        </div>
+        <p className="text-white/60 text-lg font-medium">Cargando...</p>
+      </motion.div>
+    </motion.div>
+  )
+}
 
 export default function AppRoutes() {
   return (
     <Router>
-      <Suspense fallback={null}>
+      <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/register" element={<AuthRedirect><RegisterPage /></AuthRedirect>} />
@@ -40,5 +65,5 @@ export default function AppRoutes() {
         </Routes>
       </Suspense>
     </Router>
-  );
+  )
 }
